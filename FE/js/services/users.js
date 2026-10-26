@@ -16,6 +16,7 @@ export async function updateMockUser(id, updates = {}) {
   if (updates.nim !== undefined) user.nim = String(updates.nim).trim();
   if (updates.email !== undefined) user.email = String(updates.email).trim();
   if (updates.businessUnit !== undefined) user.businessUnit = String(updates.businessUnit).trim();
+  if (updates.displayOrganization !== undefined) user.displayOrganization = String(updates.displayOrganization).trim();
   if (updates.role !== undefined) {
     if (![ROLES.PEMINJAM, ROLES.PENANGGUNG_JAWAB].includes(updates.role)) throw new Error('Peran pengguna tidak valid.');
     user.role = updates.role;
@@ -32,17 +33,18 @@ export async function addMockUser(data = {}) {
   await delay(30);
   const nama = String(data.nama || '').trim();
   const nim = String(data.nim || '').trim();
-  const email = String(data.email || '').trim();
-  if (!nama || !nim || !email) throw new Error('Nama, NIM, dan email wajib diisi.');
+  const email = String(data.email || (nim ? `${nim}@mail.uma.ac.id` : '')).trim();
+  if (!nama || !nim) throw new Error('Nama dan NIM wajib diisi.');
   if (mockUsers.some((user) => user.nim === nim)) throw new Error('NIM sudah terdaftar.');
-  if (mockUsers.some((user) => user.email?.toLowerCase() === email.toLowerCase())) throw new Error('Email sudah terdaftar.');
+  if (email && mockUsers.some((user) => user.email?.toLowerCase() === email.toLowerCase())) throw new Error('Email sudah terdaftar.');
   const user = {
     id: `user-${Date.now()}`,
     nama,
     nim,
     email,
     organisasi: null,
-    businessUnit: String(data.businessUnit || 'Software Engineering').trim(),
+    displayOrganization: String(data.displayOrganization || 'HMTI').trim(),
+    businessUnit: String(data.businessUnit || '').trim(),
     role: data.role === ROLES.PENANGGUNG_JAWAB ? ROLES.PENANGGUNG_JAWAB : ROLES.PEMINJAM,
     statusAkun: data.statusAkun === STATUS_AKUN.NONAKTIF ? STATUS_AKUN.NONAKTIF : STATUS_AKUN.AKTIF,
     status_akun: data.statusAkun === STATUS_AKUN.NONAKTIF ? STATUS_AKUN.NONAKTIF : STATUS_AKUN.AKTIF,

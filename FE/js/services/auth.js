@@ -67,11 +67,12 @@ function captchaError() {
 
 /**
  * Layanan autentikasi login.
- * @param {{ email?: string, password?: string, captchaId?: string, captchaAnswer?: string }} payload
+ * Mendukung login menggunakan NIM (utama) maupun email (kompatibilitas).
+ * @param {{ nim?: string, email?: string, password?: string, captchaId?: string, captchaAnswer?: string }} payload
  * @returns {Promise<{ user: object }>}
  */
 export async function login(payload) {
-  const { email, password, captchaId, captchaAnswer } = payload || {};
+  const { nim, email, password, captchaId, captchaAnswer } = payload || {};
   void password; // MOCK: kata sandi tidak diverifikasi
 
   if (isMockEnabled()) {
@@ -84,13 +85,16 @@ export async function login(payload) {
       }
     }
 
+    const nimKey = String(nim || '').trim();
     const emailKey = String(email || '').trim().toLowerCase();
-    const user = getUsersMock().find(
-      (u) => typeof u.email === 'string' && u.email.toLowerCase() === emailKey
-    );
+    const user = getUsersMock().find((u) => {
+      if (nimKey && String(u.nim || '').trim() === nimKey) return true;
+      if (emailKey && typeof u.email === 'string' && u.email.toLowerCase() === emailKey) return true;
+      return false;
+    });
 
     if (!user) {
-      const err = new Error('Email tidak terdaftar.');
+      const err = new Error(nimKey ? 'NIM tidak terdaftar.' : 'Email tidak terdaftar.');
       err.statusCode = 401;
       throw err;
     }
