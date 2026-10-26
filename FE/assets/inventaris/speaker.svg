@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 280" preserveAspectRatio="xMidYMid meet">
+  <defs>
+    <linearGradient id="bg2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FEF3C7"/>
+      <stop offset="100%" stop-color="#FDE68A"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="280" fill="url(#bg2)"/>
+  <g transform="translate(200,150)" fill="none" stroke="#78350F" stroke-width="5" stroke-linejoin="round">
+    <rect x="-55" y="-75" width="110" height="140" rx="16"/>
+    <circle cx="0" cy="-10" r="22"/>
+    <path d="M -40 75 L -40 85 L 40 85 L 40 75"/>
+    <circle cx="0" cy="-10" r="5" fill="#78350F"/>
+  </g>
+  <text x="200" y="260" text-anchor="middle" font-family="Poppins, sans-serif" font-size="14" font-weight="600" fill="#78350F">Speaker Portable</text>
+</svg>

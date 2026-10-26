@@ -1,0 +1,11 @@
+_sumber/
+node_modules/
+.DS_Store
+Thumbs.db
+
+# Environment dan sistem
+.env
+.env.*
+!.env.example
+/package-lock.json
+.vscode/

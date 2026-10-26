@@ -1,0 +1,67 @@
+:root {
+  --background: #FAFAFA;
+  --foreground: #151517;
+
+  --card: #FFFFFF;
+  --card-foreground: #151517;
+
+  --popover: #FFFFFF;
+  --popover-foreground: #151517;
+
+  --primary: #142C52;
+  --primary-foreground: #FFFFFF;
+
+  --secondary: #F3F4F6;
+  --secondary-foreground: #111827;
+
+  --muted: #F4F4F5;
+  --muted-foreground: #71717A;
+
+  --accent: #1E4E9A;
+  --accent-foreground: #FFFFFF;
+
+  --destructive: #B91C1C;
+  --destructive-foreground: #FFFFFF;
+
+  --border: #EDEDEF;
+  --input: #E5E7EB;
+  --ring: #142C52;
+
+  --radius: 1rem;
+
+  --info: #DBEAFE;
+  --info-foreground: #1E3A8A;
+
+  --success: #DCFCE7;
+  --success-foreground: #14532D;
+
+  --warning: #FEF3C7;
+  --warning-foreground: #78350F;
+
+  --danger: #FEE2E2;
+  --danger-foreground: #7F1D1D;
+
+  --chart-1: #1E4E9A;
+  --chart-2: #22C55E;
+  --chart-3: #F59E0B;
+  --chart-4: #EC4899;
+  --chart-5: #8B5CF6;
+
+  --brand: #1F51C6;
+  --brand-foreground: #FFFFFF;
+
+  --brand-solid: #1F51C6;
+  --brand-solid-foreground: #FFFFFF;
+
+  --avatar: #3571EE;
+  --avatar-foreground: #FFFFFF;
+
+  --day-booked: #E7B8B0;
+  --day-booked-foreground: #7A2E22;
+  --day-buffer: #F2DFAE;
+  --day-buffer-foreground: #6B5210;
+  --day-blocked: #ECEEEA;
+  --day-blocked-foreground: #A5ACA7;
+  --day-partial: #B9863C;
+  --day-partial-foreground: #FFFFFF;
+}

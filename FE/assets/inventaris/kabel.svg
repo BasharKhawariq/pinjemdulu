@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 280" preserveAspectRatio="xMidYMid meet">
+  <defs>
+    <linearGradient id="bg3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E0E7FF"/>
+      <stop offset="100%" stop-color="#C7D2FE"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="280" fill="url(#bg3)"/>
+  <g transform="translate(200,140)" fill="none" stroke="#3730A3" stroke-width="5">
+    <rect x="-110" y="-10" width="50" height="20" rx="3"/>
+    <rect x="60" y="-10" width="50" height="20" rx="3"/>
+    <rect x="-60" y="-30" width="120" height="60" rx="6"/>
+    <line x1="-30" y1="0" x2="30" y2="0"/>
+    <line x1="-10" y1="-18" x2="-10" y2="18"/>
+    <line x1="10" y1="-18" x2="10" y2="18"/>
+  </g>
+  <text x="200" y="250" text-anchor="middle" font-family="Poppins, sans-serif" font-size="14" font-weight="600" fill="#3730A3">Kabel HDMI</text>
+</svg>
