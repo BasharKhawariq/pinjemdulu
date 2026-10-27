@@ -29,16 +29,24 @@ function buatPeminjaman({
   alasanPenolakan = null,
   kondisiSebelum = null,
   deskripsiSebelum = null,
+  kondisiSesudah = null,
+  deskripsiSesudah = null,
+  tanggalPengembalian = null,
+  sanksi = null,
+  waktuTerlambat = null,
+  diprosesOleh = null,
+  peminjamCustom = null,
 }) {
   const barang = mockInventaris[indeksInventaris];
+  const p = peminjamCustom || peminjam;
   return {
     id: `pinjam-${nomor}`,
     idPeminjaman: nomor,
     pengguna: {
-      nim: peminjam.nim,
-      nama: peminjam.nama,
+      nim: p.nim,
+      nama: p.nama,
     },
-    peminjam,
+    peminjam: p,
     inventaris: {
       idInventaris: barang.idInventaris,
       namaBarang,
@@ -53,26 +61,26 @@ function buatPeminjaman({
     selesai,
     bufferStartDate: geserTanggal(mulai, -1),
     bufferEndDate: geserTanggal(selesai, 1),
-    tanggalPengembalian: null,
+    tanggalPengembalian,
     status,
     alasanPenolakan,
     keperluan,
     jumlahPinjam: 1,
     kondisiSebelum,
     deskripsiSebelum,
-    kondisiSesudah: null,
-    deskripsiSesudah: null,
-    sanksi: null,
+    kondisiSesudah,
+    deskripsiSesudah,
+    sanksi,
+    waktuTerlambat,
+    diprosesOleh,
   };
 }
 
 /*
- * Data contoh Pengajuan Saya > Peminjaman, mengikuti desain Figma:
- *   Diajukan  : pinjam-1, 4, 5, 6      Disetujui : pinjam-7, 8
- *   Dipinjam  : pinjam-2, 9            Ditolak   : pinjam-10
- * pinjam-3 (selesai) tidak tampil di halaman ini; urutannya (indeks 2) dipakai data/pengembalian.js.
+ * Data contoh Pengajuan Saya > Peminjaman dan Pengembalian sesuai desain UI:
+ * Mencakup semua status: Diajukan, Disetujui, Dipinjam, Ditolak, Menunggu, Dikembalikan, Terlambat.
  */
-const INITIAL_MOCK_PEMINJAMAN = [
+export const INITIAL_MOCK_PEMINJAMAN = [
   buatPeminjaman({
     nomor: 1, indeksInventaris: 0, namaBarang: 'Proyektor Epson', namaOrganisasi: 'HMTI',
     pengajuan: '2026-10-17', mulai: '2026-10-20', selesai: '2026-10-25',
@@ -84,39 +92,13 @@ const INITIAL_MOCK_PEMINJAMAN = [
     status: STATUS_PEMINJAMAN.DIPINJAM, keperluan: 'Dokumentasi acara kampus',
     kondisiSebelum: 'baik', deskripsiSebelum: 'Lensa bersih, baterai terpasang',
   }),
-  {
-    id: 'pinjam-3',
-    idPeminjaman: 3,
-    pengguna: {
-      nim: peminjam.nim,
-      nama: peminjam.nama,
-    },
-    peminjam,
-    inventaris: {
-      idInventaris: mockInventaris[1].idInventaris,
-      namaBarang: mockInventaris[1].namaBarang,
-      namaOrganisasi: mockInventaris[1].namaOrganisasi,
-      thumbnail: mockInventaris[1].thumbnail,
-    },
-    barang: mockInventaris[1],
-    tanggalPengajuan: '2026-09-15T10:00:00',
-    startDate: '2026-09-20',
-    endDate: '2026-09-22',
-    mulai: '2026-09-20',
-    selesai: '2026-09-22',
-    bufferStartDate: '2026-09-19',
-    bufferEndDate: '2026-09-23',
-    tanggalPengembalian: '2026-09-22',
-    status: STATUS_PEMINJAMAN.DIKEMBALIKAN,
-    alasanPenolakan: null,
-    keperluan: 'Pelatihan internal',
-    jumlahPinjam: 1,
-    kondisiSebelum: 'baik',
-    deskripsiSebelum: 'Kabel lengkap',
-    kondisiSesudah: 'baik',
-    deskripsiSesudah: 'Kembali lengkap',
-    sanksi: null,
-  },
+  buatPeminjaman({
+    nomor: 3, indeksInventaris: 0, namaBarang: 'Proyektor Epson', namaOrganisasi: 'HMTI',
+    pengajuan: '2026-10-10', mulai: '2026-10-20', selesai: '2026-10-17',
+    tanggalPengembalian: '2026-10-25', status: STATUS_PEMINJAMAN.DIKEMBALIKAN,
+    keperluan: 'Seminar BEM', diprosesOleh: 'Hanin Maizah',
+    kondisiSebelum: 'baik', kondisiSesudah: 'baik', deskripsiSesudah: 'Lengkap dan berfungsi normal',
+  }),
   buatPeminjaman({
     nomor: 4, indeksInventaris: 2, namaBarang: 'Kabel HDMI', namaOrganisasi: 'HME',
     pengajuan: '2026-08-12', mulai: '2026-08-15', selesai: '2026-08-20',
@@ -153,6 +135,33 @@ const INITIAL_MOCK_PEMINJAMAN = [
     pengajuan: '2026-10-17', mulai: '2026-10-20', selesai: '2026-10-25',
     status: STATUS_PEMINJAMAN.DITOLAK, keperluan: 'Seminar BEM',
     alasanPenolakan: 'Peminjaman tidak dapat diproses karena alasan operasional',
+  }),
+  buatPeminjaman({
+    nomor: 11, indeksInventaris: 0, namaBarang: 'Proyektor Epson', namaOrganisasi: 'HMTI',
+    pengajuan: '2026-10-15', mulai: '2026-10-20', selesai: '2026-10-17',
+    status: STATUS_PEMINJAMAN.MENUNGGU_KONFIRMASI_PENGEMBALIAN, keperluan: 'Seminar BEM',
+    kondisiSebelum: 'baik', deskripsiSebelum: 'Kabel dan remote lengkap',
+  }),
+  buatPeminjaman({
+    nomor: 12, indeksInventaris: 2, namaBarang: 'Kabel HDMI', namaOrganisasi: 'HME',
+    pengajuan: '2026-10-10', mulai: '2026-10-20', selesai: '2026-10-17',
+    tanggalPengembalian: '2026-10-25', status: STATUS_PEMINJAMAN.TERLAMBAT,
+    waktuTerlambat: 3, keperluan: 'Seminar BEM', diprosesOleh: 'Hanin Maizah',
+    sanksi: 'Sanksi Keterlambatan: Pembatasan peminjaman sementara selama 7 hari.',
+    kondisiSebelum: 'baik', deskripsiSebelum: 'Kabel utuh',
+  }),
+  buatPeminjaman({
+    nomor: 13, indeksInventaris: 5, namaBarang: 'Mikrofon Wireless', namaOrganisasi: 'THEATRISIC',
+    pengajuan: '2026-10-15', mulai: '2026-10-20', selesai: '2026-10-25',
+    status: STATUS_PEMINJAMAN.MENUNGGU_KONFIRMASI_PENGEMBALIAN, keperluan: 'Seminar BEM',
+    kondisiSebelum: 'baik', deskripsiSebelum: 'Mic dan receiver lengkap',
+  }),
+  buatPeminjaman({
+    nomor: 14, indeksInventaris: 3, namaBarang: 'Tripod Kamera', namaOrganisasi: 'HMTI',
+    pengajuan: '2026-09-28', mulai: '2026-10-01', selesai: '2026-10-03',
+    tanggalPengembalian: '2026-10-03', status: STATUS_PEMINJAMAN.DIKEMBALIKAN,
+    keperluan: 'Dokumentasi internal', diprosesOleh: 'Siti Rahma',
+    kondisiSebelum: 'baik', kondisiSesudah: 'baik', deskripsiSesudah: 'Lengkap',
   }),
 ];
 
