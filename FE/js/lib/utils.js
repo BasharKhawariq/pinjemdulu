@@ -30,9 +30,7 @@ export function cn(...inputs) {
     if (/^text-(left|center|right|justify|start|end)$/.test(c)) return 'text-align';
     if (/^font-(thin|extralight|light|normal|medium|semibold|bold|extrabold|black)$/.test(c)) return 'font-weight';
     if (/^rounded(-[a-z0-9]+)?$/.test(c)) return 'rounded';
-    if (/^h-[^\s]+$/.test(c)) return 'h';
-    if (/^w-[^\s]+$/.test(c)) return 'w';
-    const match = c.match(/^(p|px|py|pt|pb|pl|pr|m|mx|my|mt|mb|ml|mr|bg)-/);
+    const match = c.match(/^(p|px|py|pt|pb|pl|pr|m|mx|my|mt|mb|ml|mr|bg|h|w)-/);
     if (match) return match[1];
     return null;
   }
