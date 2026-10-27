@@ -157,7 +157,7 @@ export class RangeCalendar {
   renderInitialStructure() {
     this.root.innerHTML = html`
       <dialog
-        class="fixed inset-0 z-50 m-auto w-full max-w-[380px] overflow-hidden rounded-2xl border border-zinc-200 bg-white p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
+        class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 z-50 w-full max-w-[380px] overflow-hidden rounded-2xl border border-zinc-200 bg-white p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
         aria-labelledby="calendar-title"
       >
         <div id="calendar-content" class="flex flex-col">
