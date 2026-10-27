@@ -74,6 +74,9 @@ function initApp() {
   }
 
   async function route() {
+    if (drawerOpen) {
+      drawerOpen = false;
+    }
     renderShell();
     const user = getUser();
     await handleRouteChange(mainEl, { user });
@@ -110,7 +113,19 @@ function initApp() {
       renderShell();
     } else if (action === 'toggle-group') {
       const groupKey = actionEl.getAttribute('data-group');
-      const sub = document.getElementById(`sub-${groupKey}`);
+      if (collapsed && !drawerOpen) {
+        collapsed = false;
+        try {
+          window.localStorage.setItem(STORAGE_KEY_SIDEBAR, '0');
+        } catch {
+          /* abaikan */
+        }
+        renderShell();
+        return;
+      }
+      const targetId = actionEl.getAttribute('aria-controls');
+      const container = actionEl.closest('li');
+      const sub = (targetId ? document.getElementById(targetId) : null) || container?.querySelector('ul') || document.getElementById(`sub-${groupKey}`);
       if (sub) {
         const isHidden = sub.classList.contains('hidden');
         sub.classList.toggle('hidden', !isHidden);
