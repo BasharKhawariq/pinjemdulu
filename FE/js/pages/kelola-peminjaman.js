@@ -7,6 +7,8 @@ import { STATUS_PEMINJAMAN } from '../lib/constants.js';
 import { formatTanggal } from '../lib/format.js';
 import { renderIcon } from '../ui/icons.js';
 import { escapeHtml } from '../ui/html.js';
+import { renderSearchInput } from '../ui/search-input.js';
+import { renderModal as renderModalComponent } from '../ui/modal.js';
 
 let rows = [];
 let searchTerm = '';
@@ -18,6 +20,7 @@ let inputHandler = null;
 let toastMessage = '';
 let toastType = 'success';
 let modalRow = null;
+let feedbackModal = null;
 let pendingOnly = false;
 
 function dateLabel(value) {
@@ -92,6 +95,17 @@ function renderPagination() {
   return `<div class="flex items-center justify-end gap-2"><button type="button" data-action="prev" aria-label="Halaman sebelumnya" ${currentPage <= 1 ? 'disabled' : ''} class="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-100 text-slate-400 hover:bg-slate-50 disabled:opacity-40">${renderIcon('ChevronLeft', 'h-4 w-4')}</button><span class="flex h-10 min-w-10 items-center justify-center rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground">${currentPage}</span><button type="button" data-action="next" aria-label="Halaman berikutnya" ${currentPage >= pages ? 'disabled' : ''} class="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-100 text-slate-400 hover:bg-slate-50 disabled:opacity-40">${renderIcon('ChevronRight', 'h-4 w-4')}</button></div>`;
 }
 function renderModal() {
+  if (feedbackModal) {
+    return renderModalComponent({
+      variant: feedbackModal.variant,
+      title: feedbackModal.title,
+      description: feedbackModal.description,
+      primaryAction: {
+        label: 'Tutup',
+        action: 'close-feedback-modal',
+      },
+    });
+  }
   if (!modalRow) return '';
   const row = modalRow;
   const status = statusInfo(row.status);
@@ -100,7 +114,7 @@ function renderModal() {
     ['Tanggal mulai', dateLabel(row.startDate || row.mulai)], ['Tanggal selesai', dateLabel(row.endDate || row.selesai)],
     ['Jumlah unit', row.jumlahPinjam ?? 1], ['Keperluan', row.keperluan || '—'], ['Status', status.label],
   ];
-  return `<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4" data-modal-backdrop><section role="dialog" aria-modal="true" aria-labelledby="detail-title" class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl"><div class="mb-5 flex items-start justify-between"><div><p class="text-xs font-medium uppercase tracking-wide text-slate-400">Detail transaksi</p><h2 id="detail-title" class="mt-1 text-xl font-semibold text-slate-900">Detail Peminjaman</h2></div><button type="button" data-action="close-modal" aria-label="Tutup detail" class="rounded-lg p-2 text-slate-400 hover:bg-slate-100">${renderIcon('X', 'h-5 w-5')}</button></div><dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">${details.map(([label, value]) => `<div><dt class="text-xs text-slate-400">${escapeHtml(label)}</dt><dd class="mt-1 text-sm font-medium text-slate-800">${escapeHtml(value)}</dd></div>`).join('')}</dl><div class="mt-6 flex justify-end"><button type="button" data-action="close-modal" class="rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground">Tutup</button></div></section></div>`;
+  return `<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4" data-modal-backdrop><section role="dialog" aria-modal="true" aria-labelledby="detail-title" class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl"><div class="mb-5 flex items-start justify-between"><div><p class="text-xs font-medium uppercase tracking-wide text-slate-400">Detail transaksi</p><h2 id="detail-title" class="mt-1 text-xl font-semibold text-slate-900">Detail Peminjaman</h2></div><button type="button" data-action="close-modal" aria-label="Tutup detail" class="rounded-lg p-2 text-slate-400 hover:bg-slate-100">${renderIcon('X', 'h-5 w-5')}</button></div><dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">${details.map(([label, value]) => `<div><dt class="text-xs text-slate-400">${escapeHtml(label)}</dt><dd class="mt-1 text-sm font-medium text-slate-800">${escapeHtml(value)}</dd></div>`).join('')}</dl><div class="mt-6 flex justify-end"><button type="button" data-action="close-modal" class="rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground">Tutup</button></div></section></div>`;
 }
 async function loadRows() {
   const all = await getPeminjaman();
@@ -118,7 +132,7 @@ function renderContent() {
   return `<section class="w-full px-5 pb-8 pt-8 sm:px-6 lg:px-7">
     <div class="mb-9"><h1 class="text-3xl font-semibold tracking-tight text-slate-900">Kelola Peminjaman</h1><p class="mt-1 text-sm text-slate-400">Pantau dan kelola pengajuan peminjaman barang dari peminjam.</p></div>
     <div class="rounded-xl bg-white p-4 shadow-[0_1px_4px_rgba(15,23,42,0.025)] sm:p-4">
-      <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><h2 class="text-lg font-semibold text-slate-900">List Peminjam</h2><div class="flex items-center gap-3"><label class="flex h-12 min-w-0 items-center gap-2 rounded-full bg-slate-50 px-4 sm:w-[250px]">${renderIcon('Search', 'h-5 w-5 shrink-0 text-slate-400')}<input id="search-peminjam" type="search" value="${escapeHtml(searchTerm)}" placeholder="Cari nama peminjam" class="w-full min-w-0 bg-transparent text-xs text-slate-600 outline-none placeholder:text-slate-400" /></label><button type="button" data-action="filter" title="Tampilkan pengajuan yang perlu diproses" aria-label="Filter pengajuan" class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-slate-50 text-slate-400 hover:bg-slate-100">${renderIcon('ListFilter', 'h-5 w-5')}</button></div></div>
+      <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><h2 class="text-lg font-semibold text-slate-900">List Peminjam</h2><div class="flex items-center gap-3">${renderSearchInput({ id: 'search-peminjam', value: searchTerm, placeholder: 'Cari nama peminjam', ariaLabel: 'Cari nama peminjam', className: 'w-full sm:w-[260px]' })}<button type="button" data-action="filter" title="Tampilkan pengajuan yang perlu diproses" aria-label="Filter pengajuan" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm hover:bg-slate-50">${renderIcon('ListFilter', 'h-5 w-5')}</button></div></div>
       ${toastMessage ? `<div role="status" class="mb-3 rounded-lg px-4 py-2 text-sm ${toastType === 'error' ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}">${escapeHtml(toastMessage)}</div>` : ''}
       <div class="w-full overflow-x-auto"><table class="w-full min-w-full border-collapse text-left"><thead><tr class="border-b border-slate-100 text-[11px] font-semibold uppercase tracking-wide text-slate-400"><th class="px-4 py-4 text-center">No</th><th class="px-4 py-4">Nama Peminjam</th><th class="px-4 py-4">Barang Dipinjam</th><th class="px-4 py-4 text-center">Tanggal Mulai</th><th class="px-4 py-4 text-center">Tanggal Selesai</th><th class="px-4 py-4 text-center">Jumlah Unit</th><th class="px-4 py-4 text-center">Status</th><th class="px-4 py-4 text-center">Aksi</th></tr></thead><tbody>${renderTableRows()}</tbody></table></div>
       <div class="mt-6 flex items-center justify-between gap-3"><p class="text-xs text-slate-400">Menampilkan ${count ? Math.min((currentPage - 1) * PAGE_SIZE + 1, count) : 0}–${Math.min(currentPage * PAGE_SIZE, count)} dari ${count} pengajuan</p>${renderPagination()}</div>
@@ -155,6 +169,7 @@ export async function mount(root) {
     const action = button.dataset.action;
     const id = button.dataset.id;
     if (action === 'close-modal') { modalRow = null; refresh(); return; }
+    if (action === 'close-feedback-modal') { feedbackModal = null; refresh(); return; }
     if (action === 'detail') { modalRow = rows.find((row) => String(row.id || row.idPeminjaman) === String(id)) || null; refresh(); return; }
     if (action === 'prev') { currentPage = Math.max(1, currentPage - 1); refresh(); return; }
     if (action === 'next') { currentPage = Math.min(Math.max(1, Math.ceil(visibleRows().length / PAGE_SIZE)), currentPage + 1); refresh(); return; }
@@ -171,6 +186,13 @@ export async function mount(root) {
         rows = await loadRows();
         toastType = 'success';
         toastMessage = action === 'approve' ? 'Pengajuan berhasil disetujui.' : 'Pengajuan berhasil ditolak.';
+        feedbackModal = {
+          variant: action === 'approve' ? 'approve' : 'reject',
+          title: action === 'approve' ? 'Pengajuan Disetujui' : 'Pengajuan Ditolak',
+          description: action === 'approve'
+            ? 'Pengajuan peminjaman barang berhasil disetujui dan status telah diperbarui.'
+            : 'Pengajuan peminjaman barang telah ditolak.',
+        };
       } catch (error) {
         toastType = 'error'; toastMessage = error?.message || 'Status pengajuan gagal diperbarui.';
       }
@@ -196,5 +218,5 @@ export async function mount(root) {
 export function unmount() {
   if (rootElement && clickHandler) rootElement.removeEventListener('click', clickHandler);
   if (rootElement && inputHandler) rootElement.removeEventListener('input', inputHandler);
-  rootElement = null; clickHandler = null; inputHandler = null; rows = []; modalRow = null;
+  rootElement = null; clickHandler = null; inputHandler = null; rows = []; modalRow = null; feedbackModal = null;
 }

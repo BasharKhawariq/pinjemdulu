@@ -3,6 +3,8 @@ import { getUsers, updateMockUser, addMockUser } from '../services/users.js';
 import { ROLES, STATUS_AKUN } from '../lib/constants.js';
 import { renderIcon } from '../ui/icons.js';
 import { escapeHtml } from '../ui/html.js';
+import { renderSearchInput } from '../ui/search-input.js';
+import { renderModal as renderModalComponent } from '../ui/modal.js';
 
 const DEMO_ORDER = ['Bintang Putra', 'Berbinar Neira', 'Gama Punta', 'Gentala Arka', 'Hanin Maizah', 'Jingga Pratama', 'Maitri Sakti', 'Maria Khalda', 'Rion Ardian', 'Tiara Ayudya'];
 const PAGE_SIZE = 10;
@@ -94,7 +96,19 @@ function renderPagination() {
   return `<div class="flex items-center justify-end gap-2"><button type="button" data-action="prev" aria-label="Halaman sebelumnya" ${currentPage <= 1 ? 'disabled' : ''} class="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-100 text-slate-400 hover:bg-slate-50 disabled:opacity-40">${renderIcon('ChevronLeft', 'h-4 w-4')}</button><span class="flex h-8 min-w-8 items-center justify-center rounded-xl bg-primary px-3 text-xs font-semibold text-white">${currentPage}</span><button type="button" data-action="next" aria-label="Halaman berikutnya" ${currentPage >= pages ? 'disabled' : ''} class="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-100 text-slate-400 hover:bg-slate-50 disabled:opacity-40">${renderIcon('ChevronRight', 'h-4 w-4')}</button></div>`;
 }
 function renderModal() {
-  if (!modalMode || !selectedUser) return '';
+  if (!modalMode) return '';
+  if (modalMode === 'success-edit') {
+    return renderModalComponent({
+      id: 'modal-success-edit-user',
+      title: 'Data Pengguna Berhasil Diperbarui!',
+      description: 'Perubahan data pengguna telah berhasil disimpan ke dalam sistem.',
+      variant: 'success',
+      actions: [
+        { label: 'Tutup', action: 'close-modal', variant: 'default' }
+      ]
+    });
+  }
+  if (!selectedUser) return '';
   const u = selectedUser;
   if (modalMode === 'detail') {
     const roleClass = normalizeRole(u.role) === ROLES.PENANGGUNG_JAWAB ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-700';
@@ -108,7 +122,7 @@ function renderModal() {
 }
 function renderContent() {
   const filtered = visibleUsers();
-  return `<section class="w-full px-5 pb-8 pt-5 sm:px-6 lg:px-7"><div class="rounded-xl bg-white p-3 shadow-[0_1px_4px_rgba(15,23,42,0.025)] sm:p-3"><div class="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><h1 class="text-base font-semibold text-slate-900">List Pengguna</h1><div class="flex items-center justify-end gap-2"><label class="flex h-9 w-10 items-center justify-center rounded-full bg-white text-slate-400 focus-within:w-[190px] focus-within:bg-slate-50 sm:transition-all"><span class="shrink-0">${renderIcon('Search', 'h-4 w-4')}</span><input id="search-users" type="search" value="${escapeHtml(searchTerm)}" placeholder="Cari nama pengguna" class="w-0 min-w-0 bg-transparent text-[11px] outline-none placeholder:text-slate-400 focus:w-full focus:pl-2" /></label><button type="button" data-action="filter" title="Filter pengguna" aria-label="Filter pengguna" class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-50 text-slate-400 hover:bg-slate-100">${renderIcon('Funnel', 'h-4 w-4')}</button><button type="button" data-action="add" class="inline-flex h-9 items-center gap-2 whitespace-nowrap rounded-lg bg-primary px-3.5 text-[11px] font-medium text-white hover:bg-primary/90">Tambah Pengguna</button></div></div>
+  return `<section class="w-full px-5 pb-8 pt-5 sm:px-6 lg:px-7"><div class="rounded-xl bg-white p-3 shadow-[0_1px_4px_rgba(15,23,42,0.025)] sm:p-3"><div class="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><h1 class="text-base font-semibold text-slate-900">List Pengguna</h1><div class="flex items-center justify-end gap-2">${renderSearchInput({ id: 'search-users', value: searchTerm, placeholder: 'Cari nama pengguna', ariaLabel: 'Cari nama pengguna', className: 'w-full sm:w-64' })}<button type="button" data-action="filter" title="Filter pengguna" aria-label="Filter pengguna" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-50 text-slate-400 hover:bg-slate-100">${renderIcon('Funnel', 'h-4 w-4')}</button><button type="button" data-action="add" class="inline-flex h-11 items-center gap-2 whitespace-nowrap rounded-xl bg-primary px-4 text-xs font-semibold text-white hover:bg-primary/90">Tambah Pengguna</button></div></div>
     ${showFilters ? `<div class="mb-3 flex flex-wrap items-center gap-2 rounded-xl bg-slate-50 p-3"><span class="text-xs text-slate-500">Filter role:</span><button type="button" data-action="role-filter" data-role="all" class="rounded-lg px-3 py-1.5 text-xs ${roleFilter === 'all' ? 'bg-primary text-white' : 'bg-white text-slate-600'}">Semua</button><button type="button" data-action="role-filter" data-role="${ROLES.PEMINJAM}" class="rounded-lg px-3 py-1.5 text-xs ${roleFilter === ROLES.PEMINJAM ? 'bg-primary text-white' : 'bg-white text-slate-600'}">Peminjam</button><button type="button" data-action="role-filter" data-role="${ROLES.PENANGGUNG_JAWAB}" class="rounded-lg px-3 py-1.5 text-xs ${roleFilter === ROLES.PENANGGUNG_JAWAB ? 'bg-primary text-white' : 'bg-white text-slate-600'}">Penanggung Jawab</button></div>` : ''}
     ${toastMessage ? `<div role="status" class="mb-3 rounded-lg px-4 py-2 text-sm ${toastType === 'error' ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}">${escapeHtml(toastMessage)}</div>` : ''}
     <div class="w-full overflow-x-auto"><table class="w-full min-w-[680px] border-collapse text-left"><thead><tr class="border-b border-slate-100 text-[10px] font-semibold uppercase tracking-wide text-slate-400"><th class="px-3 py-3 text-center">No</th><th class="px-3 py-3">Nama</th><th class="px-3 py-3">NIM</th><th class="px-3 py-3 text-center">Status</th><th class="px-3 py-3">Role</th><th class="px-3 py-3 text-center">Aksi</th></tr></thead><tbody>${renderRows()}</tbody></table></div>
@@ -167,8 +181,16 @@ export async function mount(root) {
       if (wasEditing) await updateMockUser(selectedUser.id, data);
       else await addMockUser(data);
       users = await getUsers();
-      modalMode = null; selectedUser = null; toastType = 'success';
-      toastMessage = wasEditing ? 'Data pengguna berhasil diperbarui.' : 'Pengguna berhasil ditambahkan.';
+      if (wasEditing) {
+        modalMode = 'success-edit';
+        toastType = 'success';
+        toastMessage = '';
+      } else {
+        modalMode = null;
+        selectedUser = null;
+        toastType = 'success';
+        toastMessage = 'Pengguna berhasil ditambahkan.';
+      }
       refresh();
     } catch (error) {
       if (errorBox) { errorBox.textContent = error.message || 'Data pengguna gagal disimpan.'; errorBox.classList.remove('hidden'); }

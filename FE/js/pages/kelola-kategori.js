@@ -13,6 +13,7 @@ import {
   skeletonClass,
 } from '../ui/classes.js';
 import { renderIcon } from '../ui/icons.js';
+import { renderSearchInput } from '../ui/search-input.js';
 import {
   getKategoriDenganJumlah,
   createKategori,
@@ -110,7 +111,7 @@ export function renderFormModal({ dialog, editItem, inputNama = '', inputError =
     <dialog
       id="dialog-form-kategori"
       aria-labelledby="dialog-form-kategori-title"
-      class="fixed inset-0 m-auto z-50 w-full max-w-md rounded-2xl border border-border bg-background p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
+      class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 z-50 w-full max-w-md rounded-2xl border border-border bg-background p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
       ${isOpen ? 'open' : ''}
     >
       <form id="form-kategori" class="p-6" onsubmit="return false;">
@@ -189,13 +190,13 @@ export function renderConfirmModal({ dialog, editItem, inputNama = '', isSubmitt
     <dialog
       id="dialog-confirm-kategori"
       aria-labelledby="dialog-confirm-kategori-title"
-      class="fixed inset-0 m-auto z-50 w-full max-w-md rounded-2xl border border-border bg-background p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
+      class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 z-50 w-full max-w-md rounded-2xl border border-border bg-background p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
       ${isOpen ? 'open' : ''}
     >
       <div class="flex flex-col p-6 text-center items-center">
         <!-- Icon Send / Pesawat Kertas -->
-        <div class="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-          ${renderIcon('Send', 'h-7 w-7')}
+        <div class="mb-4 inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 p-1">
+          <img src="assets/animations/modal-send.gif" alt="Send" class="h-full w-full object-contain select-none pointer-events-none drop-shadow-sm" loading="eager" />
         </div>
 
         <h2 id="dialog-confirm-kategori-title" class="text-lg font-bold text-foreground">${title}</h2>
@@ -243,13 +244,13 @@ export function renderDeleteModal(deleteItem, isSubmitting = false) {
     <dialog
       id="dialog-delete-kategori"
       aria-labelledby="dialog-delete-kategori-title"
-      class="fixed inset-0 m-auto z-50 w-full max-w-md rounded-2xl border border-border bg-background p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
+      class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 z-50 w-full max-w-md rounded-2xl border border-border bg-background p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
       ${isOpen ? 'open' : ''}
     >
       <div class="flex flex-col p-6 text-center items-center">
         <!-- Icon Trash Merah -->
-        <div class="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
-          ${renderIcon('Trash2', 'h-7 w-7')}
+        <div class="mb-4 inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-rose-50 text-rose-600 p-1">
+          <img src="assets/animations/modal-delete.gif" alt="Hapus" class="h-full w-full object-contain select-none pointer-events-none drop-shadow-sm" loading="eager" />
         </div>
 
         <h2 id="dialog-delete-kategori-title" class="text-lg font-bold text-foreground">Hapus kategori?</h2>
@@ -300,12 +301,14 @@ export function renderFeedbackModal(feedback) {
     <dialog
       id="dialog-feedback-kategori"
       aria-labelledby="dialog-feedback-kategori-title"
-      class="fixed inset-0 m-auto z-50 w-full max-w-md rounded-2xl border border-border bg-background p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
+      class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 z-50 w-full max-w-md rounded-2xl border border-border bg-background p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
       ${isOpen ? 'open' : ''}
     >
       <div class="flex flex-col p-6 text-center items-center">
-        <div class="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl ${iconColor}">
-          ${renderIcon(iconName, 'h-7 w-7')}
+        <div class="mb-4 inline-flex h-20 w-20 items-center justify-center rounded-2xl ${iconColor} p-1">
+          ${isDipakai || isError
+            ? html`<img src="assets/animations/modal-reject.gif" alt="Galat" class="h-full w-full object-contain select-none pointer-events-none drop-shadow-sm" loading="eager" />`
+            : html`<img src="assets/animations/modal-success.gif" alt="Sukses" class="h-full w-full object-contain select-none pointer-events-none drop-shadow-sm" loading="eager" />`}
         </div>
 
         <h2 id="dialog-feedback-kategori-title" class="text-lg font-bold text-foreground">${title}</h2>
@@ -595,37 +598,22 @@ export function renderKelolaKategoriContent(state = {}) {
 
           <div class="flex flex-wrap items-center gap-2">
             <!-- Kolom Pencarian -->
-            <div id="kelola-search-wrapper" class="relative min-w-[200px] flex-1 sm:w-64 sm:flex-none">
-              <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" aria-hidden="true">
-                ${renderIcon('Search', 'h-4 w-4')}
-              </span>
-              <input
-                id="input-cari-kategori"
-                type="search"
-                placeholder="Cari kategori"
-                value="${cari}"
-                class="${inputClass('pl-9 pr-8 h-10')}"
-                aria-label="Cari kategori"
-              />
-              ${cari
-                ? html`
-                    <button
-                      type="button"
-                      data-action="clear-search"
-                      aria-label="Bersihkan pencarian"
-                      class="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground inline-flex h-5 w-5 items-center justify-center rounded"
-                    >
-                      ${renderIcon('X', 'h-3.5 w-3.5')}
-                    </button>
-                  `
-                : ''}
-            </div>
+            ${raw(renderSearchInput({
+              id: 'input-cari-kategori',
+              wrapperId: 'kelola-search-wrapper',
+              value: cari,
+              placeholder: 'Cari kategori',
+              ariaLabel: 'Cari kategori',
+              className: 'min-w-[200px] flex-1 sm:w-64 sm:flex-none',
+              clearable: true,
+              clearAction: 'clear-search',
+            }))}
 
             <!-- Tombol Tambah Kategori -->
             <button
               type="button"
               data-action="open-tambah-dialog"
-              class="${buttonClass({ variant: 'default', size: 'default', className: 'h-10 gap-1.5' })}"
+              class="${buttonClass({ variant: 'default', size: 'default', className: 'h-11 rounded-full px-5 gap-1.5' })}"
             >
               ${renderIcon('Plus', 'h-4 w-4')}
               <span>Tambah Kategori</span>

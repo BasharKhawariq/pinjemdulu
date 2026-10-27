@@ -5,6 +5,7 @@
 import { formatTanggal } from '../lib/format.js';
 import { renderIcon } from '../ui/icons.js';
 import { escapeHtml } from '../ui/html.js';
+import { renderSearchInput } from '../ui/search-input.js';
 
 const TABS = [
   { key: 'menunggu', label: 'Menunggu' },
@@ -97,7 +98,7 @@ function renderPagination() {
 }
 
 function renderDetail(row) {
-  return `<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/35 p-4" data-modal-overlay>
+  return `<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4" data-modal-overlay>
     <section role="dialog" aria-modal="true" aria-labelledby="return-detail-title" class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
       <div class="flex items-start justify-between gap-4"><div><p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Detail pengembalian</p><h2 id="return-detail-title" class="mt-1 text-lg font-semibold text-slate-900">${escapeHtml(row.namaBarang)}</h2></div><button type="button" data-close-detail aria-label="Tutup detail" class="rounded-lg p-2 text-slate-400 hover:bg-slate-100">${renderIcon('X', 'h-4 w-4')}</button></div>
       <dl class="mt-5 grid grid-cols-2 gap-x-4 gap-y-4 text-sm">
@@ -128,8 +129,8 @@ export function render() {
     <div class="mb-6"><h1 class="text-[22px] font-semibold leading-tight text-slate-900">Pengembalian</h1><p class="mt-1 text-[11px] text-slate-400 sm:text-xs">Pantau status pengembalian dan riwayat pengembalian barangmu.</p></div>
     <div class="mb-3 inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-xl bg-white p-1.5" data-tabs role="tablist" aria-label="Filter status pengembalian">${renderTabs()}</div>
     <section class="overflow-hidden rounded-xl border border-zinc-100/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.02)]">
-      <div class="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5"><h2 data-list-title class="text-[15px] font-semibold text-slate-900">List Barang Menunggu</h2><label class="flex h-9 w-full items-center gap-2 rounded-full bg-background px-3 text-slate-400 sm:w-[192px]">${renderIcon('Search', 'h-4 w-4 shrink-0')}<input data-search type="search" value="" placeholder="Cari barang inventaris" aria-label="Cari barang inventaris" class="min-w-0 w-full border-0 bg-transparent p-0 text-[11px] text-slate-700 outline-none placeholder:text-slate-400 focus:ring-0" /></label></div>
-      <div class="overflow-x-auto"><table class="w-full min-w-[900px] border-collapse text-left"><thead class="bg-white text-[10px] font-semibold uppercase tracking-[0.02em] text-slate-400"><tr class="border-b border-zinc-100"><th class="px-4 py-3 text-center font-semibold">No</th><th class="px-4 py-3 font-semibold">Nama Barang</th><th class="px-4 py-3 text-center font-semibold">Tanggal Mulai</th><th class="px-4 py-3 text-center font-semibold">Tanggal Selesai</th><th class="px-4 py-3 text-center font-semibold">Tanggal Dikembalikan</th><th class="px-4 py-3 text-center font-semibold">Jumlah Unit</th><th class="px-4 py-3 text-center font-semibold">Status</th><th class="px-4 py-3 text-center font-semibold">Aksi</th></tr></thead><tbody data-table-body class="divide-y divide-zinc-50">${renderRows()}</tbody></table></div>
+      <div class="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5"><h2 data-list-title class="text-[15px] font-semibold text-slate-900">List Barang Menunggu</h2>${renderSearchInput({ dataSearch: true, value: searchTerm, placeholder: 'Cari barang inventaris', ariaLabel: 'Cari barang inventaris', className: 'w-full sm:w-64' })}</div>
+      <div class="overflow-x-auto"><table class="w-full min-w-[900px] border-collapse text-left"><thead class="bg-white text-[10px] font-semibold uppercase tracking-[0.02em] text-slate-400"><tr class="border-b border-zinc-100"><th class="px-4 py-3 text-center font-semibold">No</th><th class="px-4 py-3 font-semibold">Nama Barang</th><th class="px-4 py-3 text-center font-semibold">Tanggal Mulai</th><th class="px-4 py-3 text-center font-semibold">Tanggal Selesai</th><th class="px-4 py-3 text-center font-semibold">Tanggal Dikembalikan</th><th class="px-4 py-3 text-center font-semibold">Jumlah Unit</th><th class="px-4 py-3 text-center font-semibold">Status</th><th class="px-4 py-4 text-center font-semibold">Aksi</th></tr></thead><tbody data-table-body class="divide-y divide-zinc-50">${renderRows()}</tbody></table></div>
       <div data-pagination>${renderPagination()}</div>
     </section><div data-detail-modal></div>
   </section>`;

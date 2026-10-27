@@ -14,6 +14,7 @@ import {
   skeletonClass,
 } from '../ui/classes.js';
 import { renderIcon } from '../ui/icons.js';
+import { renderModal } from '../ui/modal.js';
 import {
   getInventarisById,
   createInventaris,
@@ -184,50 +185,37 @@ export function renderConfirmSubmitModal({ mode = 'tambah', formData = {}, isSub
       : 'Simpan';
   const kondisiText = formData.kondisi === 'rusak' ? 'Rusak' : 'Baik';
 
-  return html`
-    <dialog
-      id="dialog-confirm-submit"
-      aria-labelledby="dialog-submit-title"
-      class="fixed inset-0 m-auto z-50 w-full max-w-md rounded-2xl border border-border bg-background p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
-    >
-      <div class="flex flex-col p-6 text-center items-center">
-        <!-- Icon HelpCircle -->
-        <div class="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-          ${renderIcon('HelpCircle', 'h-7 w-7')}
-        </div>
-
-        <h2 id="dialog-submit-title" class="text-lg font-bold text-foreground">${title}</h2>
-        <p class="mt-1.5 text-sm text-muted-foreground">${desc}</p>
-
-        <!-- Kotak Ringkasan Data -->
-        <div class="mt-4 w-full rounded-xl bg-muted/30 p-3 text-left text-xs space-y-1.5 border border-border">
-          <p><strong class="font-medium text-foreground">Nama:</strong> ${formData.namaBarang || '-'}</p>
-          <p><strong class="font-medium text-foreground">Jumlah:</strong> ${formData.totalBarang || 1} unit</p>
-          <p><strong class="font-medium text-foreground">Kondisi:</strong> ${kondisiText}</p>
-        </div>
-
-        <!-- Tombol Aksi -->
-        <div class="mt-6 flex w-full items-center justify-center gap-3">
-          <button
-            type="button"
-            data-action="close-submit-dialog"
-            class="${buttonClass({ variant: 'outline', size: 'default', className: 'flex-1 rounded-xl' })}"
-            ${isSubmitting ? 'disabled' : ''}
-          >
-            Kembali
-          </button>
-          <button
-            type="button"
-            data-action="confirm-submit"
-            class="${buttonClass({ variant: 'default', size: 'default', className: 'flex-1 rounded-xl' })}"
-            ${isSubmitting ? 'disabled' : ''}
-          >
-            ${submitText}
-          </button>
-        </div>
-      </div>
-    </dialog>
+  const summaryContent = html`
+    <div class="mt-4 w-full rounded-xl bg-slate-50 p-3.5 text-left text-xs space-y-1.5 border border-slate-100">
+      <p><strong class="font-medium text-slate-800">Nama:</strong> ${formData.namaBarang || '-'}</p>
+      <p><strong class="font-medium text-slate-800">Jumlah:</strong> ${formData.totalBarang || 1} unit</p>
+      <p><strong class="font-medium text-slate-800">Kondisi:</strong> ${kondisiText}</p>
+    </div>
   `;
+
+  return renderModal({
+    asDialog: true,
+    id: 'dialog-confirm-submit',
+    titleId: 'dialog-submit-title',
+    variant: isTambah ? 'send' : 'save',
+    title,
+    description: desc,
+    content: summaryContent,
+    actions: [
+      {
+        label: 'Kembali',
+        action: 'close-submit-dialog',
+        variant: 'outline',
+        disabled: isSubmitting,
+      },
+      {
+        label: submitText,
+        action: 'confirm-submit',
+        variant: 'default',
+        disabled: isSubmitting,
+      },
+    ],
+  });
 }
 
 /**
@@ -239,39 +227,26 @@ export function renderConfirmCancelModal({ mode = 'tambah' } = {}) {
   const isTambah = mode === 'tambah';
   const title = isTambah ? 'Batal Tambah Inventaris?' : 'Batal Edit Inventaris?';
 
-  return html`
-    <dialog
-      id="dialog-confirm-cancel"
-      aria-labelledby="dialog-cancel-title"
-      class="fixed inset-0 m-auto z-50 w-full max-w-md rounded-2xl border border-border bg-background p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
-    >
-      <div class="flex flex-col p-6 text-center items-center">
-        <div class="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
-          ${renderIcon('AlertCircle', 'h-7 w-7')}
-        </div>
-        <h2 id="dialog-cancel-title" class="text-lg font-bold text-foreground">${title}</h2>
-        <p class="mt-2 text-sm text-muted-foreground">
-          Apakah anda yakin ingin membatalkan? Perubahan yang belum disimpan akan hilang.
-        </p>
-        <div class="mt-6 flex w-full items-center justify-center gap-3">
-          <button
-            type="button"
-            data-action="close-cancel-dialog"
-            class="${buttonClass({ variant: 'outline', size: 'default', className: 'flex-1' })}"
-          >
-            Kembali
-          </button>
-          <button
-            type="button"
-            data-action="confirm-discard"
-            class="${buttonClass({ variant: 'destructive', size: 'default', className: 'flex-1' })}"
-          >
-            Batalkan
-          </button>
-        </div>
-      </div>
-    </dialog>
-  `;
+  return renderModal({
+    asDialog: true,
+    id: 'dialog-confirm-cancel',
+    titleId: 'dialog-cancel-title',
+    variant: 'cancel',
+    title,
+    description: 'Apakah anda yakin ingin membatalkan? Perubahan yang belum disimpan akan hilang.',
+    actions: [
+      {
+        label: 'Kembali',
+        action: 'close-cancel-dialog',
+        variant: 'outline',
+      },
+      {
+        label: 'Batalkan',
+        action: 'confirm-discard',
+        variant: 'destructive',
+      },
+    ],
+  });
 }
 
 /**
@@ -282,39 +257,29 @@ export function renderConfirmCancelModal({ mode = 'tambah' } = {}) {
 export function renderFeedbackModal(feedback) {
   if (!feedback) {
     return html`
-      <dialog id="dialog-form-feedback" aria-labelledby="dialog-form-feedback-title" class="fixed inset-0 m-auto z-50 w-full max-w-md rounded-2xl border border-border bg-background p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm">
+      <dialog id="dialog-form-feedback" aria-labelledby="dialog-form-feedback-title" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 z-50 w-full max-w-md rounded-2xl border border-border bg-background p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm">
         <div class="p-6"><h2 id="dialog-form-feedback-title" class="sr-only">Notifikasi</h2></div>
       </dialog>
     `;
   }
 
   const isSuccess = feedback.type === 'success';
-  return html`
-    <dialog
-      id="dialog-form-feedback"
-      aria-labelledby="dialog-form-feedback-title"
-      class="fixed inset-0 m-auto z-50 w-full max-w-md rounded-2xl border border-border bg-background p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
-    >
-      <div class="flex flex-col p-6 text-center items-center">
-        <div class="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl ${
-          isSuccess ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
-        }">
-          ${renderIcon(isSuccess ? 'CheckCircle2' : 'AlertCircle', 'h-7 w-7')}
-        </div>
-        <h2 id="dialog-form-feedback-title" class="text-lg font-bold text-foreground">${feedback.title}</h2>
-        <p class="mt-2 text-sm text-muted-foreground">${feedback.message}</p>
-        <div class="mt-6 flex w-full items-center justify-center">
-          <button
-            type="button"
-            data-action="close-feedback-dialog"
-            class="${buttonClass({ variant: 'default', size: 'default', className: 'w-full' })}"
-          >
-            Kembali ke Kelola Inventaris
-          </button>
-        </div>
-      </div>
-    </dialog>
-  `;
+  return renderModal({
+    asDialog: true,
+    id: 'dialog-form-feedback',
+    titleId: 'dialog-form-feedback-title',
+    variant: isSuccess ? 'success' : 'reject',
+    title: feedback.title,
+    description: feedback.message,
+    actions: [
+      {
+        label: 'Kembali ke Kelola Inventaris',
+        action: 'close-feedback-dialog',
+        variant: 'default',
+        className: 'w-full rounded-xl',
+      },
+    ],
+  });
 }
 
 /**

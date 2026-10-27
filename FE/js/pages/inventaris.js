@@ -6,6 +6,7 @@
 import { html, raw, escapeHtml } from '../ui/html.js';
 import { buttonClass, inputClass, badgeClass, skeletonClass } from '../ui/classes.js';
 import { renderIcon } from '../ui/icons.js';
+import { renderSearchInput } from '../ui/search-input.js';
 import { getInventarisList } from '../services/inventaris.js';
 import { getKategori } from '../services/kategori.js';
 import { getOrganisasi } from '../services/organisasi.js';
@@ -253,19 +254,13 @@ export function render(ctx = {}) {
       <!-- Baris Kontrol: Cari (col 6), Filter Kategori (col 3), Filter OKI (col 3) -->
       <div class="mb-6 grid grid-cols-1 gap-3 md:grid-cols-12">
         <!-- Kolom Pencarian -->
-        <div class="relative md:col-span-6">
-          <span class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400">
-            ${renderIcon('Search', 'h-4 w-4')}
-          </span>
-          <input
-            id="katalog-search-input"
-            type="search"
-            value="${cariValue}"
-            placeholder="Cari barang inventaris..."
-            aria-label="Cari barang inventaris"
-            class="${inputClass('h-11 rounded-xl pl-10 pr-4')}"
-          />
-        </div>
+        ${renderSearchInput({
+          id: 'katalog-search-input',
+          value: cariValue,
+          placeholder: 'Cari barang inventaris...',
+          ariaLabel: 'Cari barang inventaris',
+          className: 'md:col-span-6',
+        })}
 
         <!-- Filter Dropdown Kategori -->
         <div class="relative md:col-span-3" id="dropdown-kategori-container">

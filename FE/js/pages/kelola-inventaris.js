@@ -15,6 +15,8 @@ import {
   alertClass,
 } from '../ui/classes.js';
 import { renderIcon } from '../ui/icons.js';
+import { renderSearchInput } from '../ui/search-input.js';
+import { renderModal } from '../ui/modal.js';
 import {
   getInventarisKelola,
   createInventaris,
@@ -328,7 +330,7 @@ export function renderFilterModal({ filters = {}, kategoriList = [], countActive
   ];
 
   return html`
-    <dialog id="dialog-filter-kelola" aria-labelledby="dialog-filter-title" class="fixed inset-0 m-auto z-50 w-full max-w-sm rounded-2xl border border-border bg-background p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm">
+    <dialog id="dialog-filter-kelola" aria-labelledby="dialog-filter-title" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 z-50 w-full max-w-sm rounded-2xl border border-border bg-background p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm">
       <div class="flex flex-col">
         <!-- Header -->
         <div class="flex items-center justify-between border-b border-border px-5 py-4">
@@ -450,7 +452,7 @@ export function renderFilterModal({ filters = {}, kategoriList = [], countActive
 export function renderDetailModal(item) {
   if (!item) {
     return html`
-      <dialog id="dialog-detail-kelola" aria-labelledby="dialog-detail-title" class="fixed inset-0 m-auto z-50 w-full max-w-xl rounded-2xl border border-border bg-background p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm">
+      <dialog id="dialog-detail-kelola" aria-labelledby="dialog-detail-title" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 z-50 w-full max-w-xl rounded-2xl border border-border bg-background p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm">
         <div class="p-6">
           <h2 id="dialog-detail-title" class="sr-only">Detail Inventaris</h2>
         </div>
@@ -463,7 +465,7 @@ export function renderDetailModal(item) {
   const jumlahText = sisa === total ? `${total} unit` : `${sisa} dari ${total} unit tersedia`;
 
   return html`
-    <dialog id="dialog-detail-kelola" aria-labelledby="dialog-detail-title" class="fixed inset-0 m-auto z-50 w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-2xl border border-border bg-background p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm">
+    <dialog id="dialog-detail-kelola" aria-labelledby="dialog-detail-title" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 z-50 w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-2xl border border-border bg-background p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm">
       <div class="flex flex-col max-h-[90vh]">
         <!-- Header -->
         <div class="flex items-center justify-between border-b border-border px-6 py-4">
@@ -650,7 +652,7 @@ export function renderFormModal({
       : 'Tambah Inventaris';
 
   return html`
-    <dialog id="dialog-form-kelola" aria-labelledby="dialog-form-title" class="fixed inset-0 m-auto z-50 w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-2xl border border-border bg-background p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm">
+    <dialog id="dialog-form-kelola" aria-labelledby="dialog-form-title" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 z-50 w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-2xl border border-border bg-background p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm">
       <form id="kelola-inventaris-form" class="flex flex-col max-h-[90vh]" onsubmit="return false;">
         <!-- Header Dialog -->
         <div class="flex items-center justify-between border-b border-border px-6 py-4">
@@ -889,7 +891,7 @@ export function renderFormModal({
 export function renderDeleteModal(item, isSubmitting = false) {
   if (!item) {
     return html`
-      <dialog id="dialog-delete-kelola" aria-labelledby="dialog-delete-title" class="fixed inset-0 m-auto z-50 w-full max-w-md rounded-2xl border border-border bg-background p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm">
+      <dialog id="dialog-delete-kelola" aria-labelledby="dialog-delete-title" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 z-50 w-full max-w-md rounded-2xl border border-border bg-background p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm">
         <div class="p-6">
           <h2 id="dialog-delete-title" class="sr-only">Hapus Inventaris</h2>
         </div>
@@ -897,46 +899,31 @@ export function renderDeleteModal(item, isSubmitting = false) {
     `;
   }
 
-  return html`
-    <dialog
-      id="dialog-delete-kelola"
-      aria-labelledby="dialog-delete-title"
-      class="fixed inset-0 m-auto z-50 w-full max-w-md rounded-2xl border border-border bg-background p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
-    >
-      <div class="flex flex-col p-6 text-center items-center">
-        <!-- Icon Trash Merah -->
-        <div class="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-rose-50 text-rose-600">
-          ${renderIcon('Trash2', 'h-8 w-8')}
-        </div>
+  const descHtml = html`Apakah anda yakin ingin menghapus inventaris <strong class="text-foreground">${item.namaBarang}</strong>? Tindakan ini tidak dapat dibatalkan.`;
 
-        <h2 id="dialog-delete-title" class="text-xl font-bold text-foreground">Hapus Inventaris?</h2>
-        <p class="mt-2 text-sm text-muted-foreground">
-          Apakah anda yakin ingin menghapus inventaris <strong class="text-foreground">${item.namaBarang}</strong>? Tindakan ini tidak dapat dibatalkan.
-        </p>
-
-        <!-- Tombol Aksi -->
-        <div class="mt-6 flex w-full items-center justify-center gap-3">
-          <button
-            type="button"
-            data-action="close-delete-dialog"
-            class="${buttonClass({ variant: 'outline', size: 'default', className: 'flex-1' })}"
-            ${isSubmitting ? 'disabled' : ''}
-          >
-            Kembali
-          </button>
-          <button
-            type="button"
-            data-action="confirm-delete-inventaris"
-            data-id="${item.idInventaris}"
-            class="${buttonClass({ variant: 'destructive', size: 'default', className: 'flex-1' })}"
-            ${isSubmitting ? 'disabled' : ''}
-          >
-            ${isSubmitting ? 'Menghapus...' : 'Hapus'}
-          </button>
-        </div>
-      </div>
-    </dialog>
-  `;
+  return renderModal({
+    asDialog: true,
+    id: 'dialog-delete-kelola',
+    titleId: 'dialog-delete-title',
+    variant: 'delete',
+    title: 'Hapus Inventaris?',
+    description: descHtml,
+    actions: [
+      {
+        label: 'Kembali',
+        action: 'close-delete-dialog',
+        variant: 'outline',
+        disabled: isSubmitting,
+      },
+      {
+        label: isSubmitting ? 'Menghapus...' : 'Hapus',
+        action: 'confirm-delete-inventaris',
+        dataId: item.idInventaris,
+        variant: 'destructive',
+        disabled: isSubmitting,
+      },
+    ],
+  });
 }
 
 /**
@@ -947,7 +934,7 @@ export function renderDeleteModal(item, isSubmitting = false) {
 export function renderFeedbackModal(feedback) {
   if (!feedback) {
     return html`
-      <dialog id="dialog-feedback-kelola" aria-labelledby="dialog-feedback-title" class="fixed inset-0 m-auto z-50 w-full max-w-md rounded-2xl border border-border bg-background p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm">
+      <dialog id="dialog-feedback-kelola" aria-labelledby="dialog-feedback-title" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 z-50 w-full max-w-md rounded-2xl border border-border bg-background p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm">
         <div class="p-6">
           <h2 id="dialog-feedback-title" class="sr-only">Notifikasi</h2>
         </div>
@@ -956,34 +943,22 @@ export function renderFeedbackModal(feedback) {
   }
 
   const isSuccess = feedback.type === 'success';
-  return html`
-    <dialog
-      id="dialog-feedback-kelola"
-      aria-labelledby="dialog-feedback-title"
-      class="fixed inset-0 m-auto z-50 w-full max-w-md rounded-2xl border border-border bg-background p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
-    >
-      <div class="flex flex-col p-6 text-center items-center">
-        <div class="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl ${
-          isSuccess ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
-        }">
-          ${renderIcon(isSuccess ? 'CheckCircle2' : 'AlertCircle', 'h-8 w-8')}
-        </div>
-
-        <h2 id="dialog-feedback-title" class="text-xl font-bold text-foreground">${feedback.title}</h2>
-        <p class="mt-2 text-sm text-muted-foreground">${feedback.message}</p>
-
-        <div class="mt-6 flex w-full items-center justify-center">
-          <button
-            type="button"
-            data-action="close-feedback-dialog"
-            class="${buttonClass({ variant: 'default', size: 'default', className: 'w-full' })}"
-          >
-            Kembali
-          </button>
-        </div>
-      </div>
-    </dialog>
-  `;
+  return renderModal({
+    asDialog: true,
+    id: 'dialog-feedback-kelola',
+    titleId: 'dialog-feedback-title',
+    variant: isSuccess ? 'success' : 'reject',
+    title: feedback.title,
+    description: feedback.message,
+    actions: [
+      {
+        label: 'Kembali',
+        action: 'close-feedback-dialog',
+        variant: 'default',
+        className: 'w-full rounded-xl',
+      },
+    ],
+  });
 }
 
 /**
@@ -1124,29 +1099,16 @@ export function renderKelolaContent(state = {}) {
 
           <div class="flex flex-wrap items-center gap-2">
             <!-- Kolom Cari -->
-            <div id="kelola-search-wrapper" class="relative min-w-[200px] flex-1 sm:w-64 sm:flex-none">
-              <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" aria-hidden="true">
-                ${renderIcon('Search', 'h-4 w-4')}
-              </span>
-              <input
-                type="search"
-                id="kelola-search-input"
-                placeholder="Cari barang inventaris"
-                value="${cari}"
-                class="${inputClass('pl-9 pr-8 h-10')}"
-                aria-label="Cari barang inventaris"
-              />
-              ${cari ? html`
-                <button
-                  type="button"
-                  data-action="clear-search"
-                  aria-label="Hapus kata kunci pencarian"
-                  class="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground inline-flex h-5 w-5 items-center justify-center rounded"
-                >
-                  ${renderIcon('X', 'h-3.5 w-3.5')}
-                </button>
-              ` : raw('')}
-            </div>
+            ${raw(renderSearchInput({
+              id: 'kelola-search-input',
+              wrapperId: 'kelola-search-wrapper',
+              value: cari,
+              placeholder: 'Cari barang inventaris',
+              ariaLabel: 'Cari barang inventaris',
+              className: 'min-w-[200px] flex-1 sm:w-64 sm:flex-none',
+              clearable: true,
+              clearAction: 'clear-search',
+            }))}
 
             <!-- Tombol Filter -->
             <button
@@ -1154,7 +1116,7 @@ export function renderKelolaContent(state = {}) {
               data-action="open-filter-dialog"
               aria-label="Filter barang inventaris"
               title="Filter barang inventaris"
-              class="relative inline-flex h-10 w-10 items-center justify-center rounded-xl border border-input bg-background text-foreground transition hover:bg-accent"
+              class="relative inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:bg-slate-50"
             >
               ${renderIcon('Funnel', 'h-4 w-4')}
               <span
@@ -1169,7 +1131,7 @@ export function renderKelolaContent(state = {}) {
             <!-- Tombol Tambah Inventaris (Link Halaman Terpisah) -->
             <a
               href="#/kelola/inventaris/tambah"
-              class="${buttonClass({ variant: 'default', size: 'default', className: 'h-10 gap-1.5' })}"
+              class="${buttonClass({ variant: 'default', size: 'default', className: 'h-11 rounded-full px-5 gap-1.5' })}"
             >
               ${renderIcon('Plus', 'h-4 w-4')}
               <span>Tambah Inventaris</span>

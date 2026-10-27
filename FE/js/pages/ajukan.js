@@ -7,6 +7,7 @@
 import { html, raw, escapeHtml } from '../ui/html.js';
 import { renderIcon } from '../ui/icons.js';
 import { buttonClass, inputClass, iconButtonClass, cn } from '../ui/classes.js';
+import { renderModal } from '../ui/modal.js';
 import { getInventarisById, getPeminjamanAktif } from '../services/inventaris.js';
 import { createPeminjaman, getSystemToday } from '../services/peminjaman.js';
 import { getUser } from '../state/session.js';
@@ -369,103 +370,68 @@ export function render({
       <div id="calendar-container"></div>
 
       <!-- Dialog Konfirmasi Kirim Pengajuan -->
-      <dialog
-        id="dialog-konfirmasi-kirim"
-        aria-labelledby="dialog-konfirmasi-kirim-title"
-        class="fixed inset-0 m-auto z-50 w-full max-w-sm rounded-2xl border border-border bg-background p-6 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
-      >
-        <div class="flex flex-col text-center items-center">
-          <div class="mb-4 inline-flex h-16 w-16 items-center justify-center text-primary">
-            ${renderIcon('Send', 'h-12 w-12 text-primary')}
-          </div>
-          <h2 id="dialog-konfirmasi-kirim-title" class="text-xl font-bold text-foreground">
-            Kirim Pengajuan?
-          </h2>
-          <p class="mt-2 text-xs text-muted-foreground leading-relaxed">
-            Periksa kembali data pengajuan yang akan anda kirim
-          </p>
-          <div class="mt-6 flex w-full items-center justify-center gap-3">
-            <button
-              type="button"
-              data-action="tutup-dialog-konfirmasi"
-              class="${buttonClass({ variant: 'outline', className: 'flex-1' })} rounded-xl py-2.5 font-medium border-border"
-            >
-              Kembali
-            </button>
-            <button
-              type="button"
-              data-action="konfirmasi-kirim"
-              class="${buttonClass({ variant: 'default', className: 'flex-1' })} rounded-xl py-2.5 bg-primary text-white font-medium hover:bg-primary/90"
-            >
-              Kirim
-            </button>
-          </div>
-        </div>
-      </dialog>
+      ${renderModal({
+        asDialog: true,
+        id: 'dialog-konfirmasi-kirim',
+        titleId: 'dialog-konfirmasi-kirim-title',
+        variant: 'send',
+        title: 'Kirim Pengajuan?',
+        description: 'Periksa kembali data pengajuan yang akan anda kirim',
+        maxWidth: 'max-w-sm',
+        actions: [
+          {
+            label: 'Kembali',
+            action: 'tutup-dialog-konfirmasi',
+            variant: 'outline',
+          },
+          {
+            label: 'Kirim',
+            action: 'konfirmasi-kirim',
+            variant: 'default',
+          },
+        ],
+      })}
 
       <!-- Dialog Konfirmasi Batal -->
-      <dialog
-        id="dialog-batal"
-        aria-labelledby="dialog-batal-title"
-        class="fixed inset-0 m-auto z-50 w-full max-w-sm rounded-2xl border border-border bg-background p-6 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
-      >
-        <div class="flex flex-col text-center items-center">
-          <div class="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-destructive/20 text-destructive">
-            <span class="h-6 w-6 rounded-full bg-destructive"></span>
-          </div>
-          <h2 id="dialog-batal-title" class="text-xl font-bold text-foreground">
-            Batal Mengajukan
-          </h2>
-          <p class="mt-2 text-xs text-muted-foreground leading-relaxed">
-            Apakah anda yakin ingin membatalkan pengajuan?
-          </p>
-          <div class="mt-6 flex w-full items-center justify-center gap-3">
-            <button
-              type="button"
-              data-action="tutup-dialog-batal"
-              class="${buttonClass({ variant: 'outline', className: 'flex-1' })} rounded-xl py-2.5 font-medium border-border"
-            >
-              Kembali
-            </button>
-            <button
-              type="button"
-              data-action="konfirmasi-batal"
-              class="${buttonClass({ variant: 'default', className: 'flex-1' })} rounded-xl py-2.5 bg-primary text-white font-medium hover:bg-primary/90"
-            >
-              Batalkan
-            </button>
-          </div>
-        </div>
-      </dialog>
+      ${renderModal({
+        asDialog: true,
+        id: 'dialog-batal',
+        titleId: 'dialog-batal-title',
+        variant: 'cancel',
+        title: 'Batal Mengajukan',
+        description: 'Apakah anda yakin ingin membatalkan pengajuan?',
+        maxWidth: 'max-w-sm',
+        actions: [
+          {
+            label: 'Kembali',
+            action: 'tutup-dialog-batal',
+            variant: 'outline',
+          },
+          {
+            label: 'Batalkan',
+            action: 'konfirmasi-batal',
+            variant: 'destructive',
+          },
+        ],
+      })}
 
       <!-- Dialog Umpan Balik Sukses -->
-      <dialog
-        id="dialog-sukses"
-        aria-labelledby="dialog-sukses-title"
-        class="fixed inset-0 m-auto z-50 w-full max-w-sm rounded-2xl border border-border bg-background p-6 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
-      >
-        <div class="flex flex-col text-center items-center">
-          <div class="mb-4 inline-flex h-16 w-16 items-center justify-center text-primary">
-            ${renderIcon('CheckCircle2', 'h-12 w-12 text-primary')}
-          </div>
-          <h2 id="dialog-sukses-title" class="text-xl font-bold text-foreground">
-            Pengajuan Berhasil Dikirim!
-          </h2>
-          <p class="mt-2 text-xs text-muted-foreground leading-relaxed">
-            Anda telah berhasil mengirimkan pengajuan peminjaman
-          </p>
-
-          <div class="mt-6 w-full">
-            <button
-              type="button"
-              data-action="ke-detail-sukses"
-              class="${buttonClass({ variant: 'default', className: 'w-full' })} rounded-xl py-2.5 bg-primary text-white font-medium hover:bg-primary/90"
-            >
-              Kembali
-            </button>
-          </div>
-        </div>
-      </dialog>
+      ${renderModal({
+        asDialog: true,
+        id: 'dialog-sukses',
+        titleId: 'dialog-sukses-title',
+        variant: 'success',
+        title: 'Pengajuan Berhasil Dikirim!',
+        description: 'Anda telah berhasil mengirimkan pengajuan peminjaman',
+        maxWidth: 'max-w-sm',
+        actions: [
+          {
+            label: 'Kembali',
+            action: 'ke-detail-sukses',
+            variant: 'default',
+          },
+        ],
+      })}
     </div>
   `;
 }

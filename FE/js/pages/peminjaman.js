@@ -8,6 +8,7 @@ import { STATUS_PEMINJAMAN, LABEL_STATUS_PEMINJAMAN } from '../lib/constants.js'
 import { formatTanggal } from '../lib/format.js';
 import { renderIcon } from '../ui/icons.js';
 import { escapeHtml } from '../ui/html.js';
+import { renderSearchInput } from '../ui/search-input.js';
 
 const TABS = [
   { key: 'diajukan', label: 'Diajukan', statuses: [STATUS_PEMINJAMAN.DIAJUKAN, 'diajukan'] },
@@ -156,7 +157,7 @@ function renderDetail(row) {
   const name = item.namaBarang || 'Barang inventaris';
   const org = item.namaOrganisasi || row.namaOrganisasi || '—';
   return `
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/35 p-4" data-modal-overlay>
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4" data-modal-overlay>
       <section role="dialog" aria-modal="true" aria-labelledby="detail-title" class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
         <div class="flex items-start justify-between gap-4">
           <div><p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Detail peminjaman</p><h2 id="detail-title" class="mt-1 text-lg font-semibold text-slate-900">${escapeHtml(name)}</h2></div>
@@ -192,10 +193,13 @@ export function render() {
       <section class="overflow-hidden rounded-xl border border-zinc-100/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.02)]">
         <div class="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
           <h2 class="text-[15px] font-semibold text-slate-900">List Barang ${TABS.find((tab) => tab.key === activeTab)?.label || 'Peminjaman'}</h2>
-          <label class="flex h-9 w-full items-center gap-2 rounded-full bg-background px-3 text-slate-400 sm:w-[192px]">
-            ${renderIcon('Search', 'h-4 w-4 shrink-0')}
-            <input data-search type="search" value="${escapeHtml(searchTerm)}" placeholder="Cari barang inventaris" aria-label="Cari barang inventaris" class="min-w-0 w-full border-0 bg-transparent p-0 text-[11px] text-slate-700 outline-none placeholder:text-slate-400 focus:ring-0" />
-          </label>
+          ${renderSearchInput({
+            dataSearch: true,
+            value: searchTerm,
+            placeholder: 'Cari barang inventaris',
+            ariaLabel: 'Cari barang inventaris',
+            className: 'w-full sm:w-64',
+          })}
         </div>
         <div class="overflow-x-auto">
           <table class="w-full min-w-[900px] border-collapse text-left">

@@ -4,6 +4,8 @@ import { STATUS_REQUEST_PJ } from '../lib/constants.js';
 import { formatTanggal } from '../lib/format.js';
 import { renderIcon } from '../ui/icons.js';
 import { escapeHtml } from '../ui/html.js';
+import { renderSearchInput } from '../ui/search-input.js';
+import { renderModal as renderModalComponent } from '../ui/modal.js';
 
 let rows = [];
 let activeTab = STATUS_REQUEST_PJ.MENUNGGU;
@@ -16,6 +18,7 @@ let inputHandler = null;
 let toastMessage = '';
 let toastType = 'success';
 let modalRow = null;
+let feedbackModal = null;
 
 function personName(row) { return row.pemohon?.nama || row.namaPemohon || 'Pemohon'; }
 function initials(name) { return String(name).trim().split(/\s+/).slice(0, 2).map((part) => part[0] || '').join('').toUpperCase() || 'P'; }
@@ -64,6 +67,17 @@ function renderPagination() {
   return `<div class="flex items-center justify-end gap-2"><button type="button" data-action="prev" aria-label="Halaman sebelumnya" ${currentPage <= 1 ? 'disabled' : ''} class="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-100 text-slate-400 hover:bg-slate-50 disabled:opacity-40">${renderIcon('ChevronLeft', 'h-4 w-4')}</button><span class="flex h-8 min-w-8 items-center justify-center rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground">${currentPage}</span><button type="button" data-action="next" aria-label="Halaman berikutnya" ${currentPage >= pages ? 'disabled' : ''} class="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-100 text-slate-400 hover:bg-slate-50 disabled:opacity-40">${renderIcon('ChevronRight', 'h-4 w-4')}</button></div>`;
 }
 function renderModal() {
+  if (feedbackModal) {
+    return renderModalComponent({
+      id: 'modal-feedback-pj',
+      title: feedbackModal.title,
+      description: feedbackModal.message,
+      variant: feedbackModal.type,
+      actions: [
+        { label: 'Tutup', action: 'close-feedback-modal', variant: 'default' }
+      ]
+    });
+  }
   if (!modalRow) return '';
   const row = modalRow;
   const status = statusInfo(row.status);
@@ -89,7 +103,7 @@ function renderContent() {
     <div class="mb-6"><h1 class="text-2xl font-semibold tracking-tight text-slate-900 sm:text-[22px]">List Pengajuan Penanggung Jawab</h1><p class="mt-1 text-xs text-slate-400">Pantau dan kelola proses pengajuan penanggung jawab inventaris.</p></div>
     <div class="mb-3 inline-flex items-center gap-1 rounded-xl bg-white p-1.5">${tabs.map(([value, label]) => `<button type="button" data-action="tab" data-tab="${value}" class="rounded-lg px-4 py-2 text-[11px] font-medium transition ${activeTab === value ? 'bg-blue-100 text-slate-900' : 'text-slate-600 hover:bg-slate-50'}">${label}</button>`).join('')}</div>
     <div class="rounded-xl bg-white p-3 shadow-[0_1px_4px_rgba(15,23,42,0.025)] sm:p-3">
-      <div class="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><h2 class="text-base font-semibold text-slate-900">List ${activeTab === STATUS_REQUEST_PJ.MENUNGGU ? 'Menunggu' : activeTab === STATUS_REQUEST_PJ.DISETUJUI ? 'Disetujui' : 'Ditolak'}</h2><div class="flex items-center gap-3"><label class="flex h-10 min-w-0 items-center gap-2 rounded-full bg-slate-50 px-3 sm:w-[185px]">${renderIcon('Search', 'h-4 w-4 shrink-0 text-slate-400')}<input id="search-pemohon-pj" type="search" value="${escapeHtml(searchTerm)}" placeholder="Cari nama pemohon" class="w-full min-w-0 bg-transparent text-[11px] text-slate-600 outline-none placeholder:text-slate-400" /></label><button type="button" data-action="filter" title="Filter nama pemohon" aria-label="Filter pengajuan" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-50 text-slate-400 hover:bg-slate-100">${renderIcon('ListFilter', 'h-4 w-4')}</button></div></div>
+      <div class="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><h2 class="text-base font-semibold text-slate-900">List ${activeTab === STATUS_REQUEST_PJ.MENUNGGU ? 'Menunggu' : activeTab === STATUS_REQUEST_PJ.DISETUJUI ? 'Disetujui' : 'Ditolak'}</h2><div class="flex items-center gap-3">${renderSearchInput({ id: 'search-pemohon-pj', value: searchTerm, placeholder: 'Cari nama pemohon', ariaLabel: 'Cari nama pemohon', className: 'w-full sm:w-64' })}<button type="button" data-action="filter" title="Filter nama pemohon" aria-label="Filter pengajuan" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-50 text-slate-400 hover:bg-slate-100">${renderIcon('ListFilter', 'h-4 w-4')}</button></div></div>
       ${toastMessage ? `<div role="status" class="mb-3 rounded-lg px-4 py-2 text-sm ${toastType === 'error' ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}">${escapeHtml(toastMessage)}</div>` : ''}
       <div class="w-full overflow-x-auto"><table class="w-full min-w-[650px] border-collapse text-left"><thead><tr class="border-b border-slate-100 text-[10px] font-semibold uppercase tracking-wide text-slate-400"><th class="px-3 py-3 text-center">No</th><th class="px-3 py-3">Nama Pemohon</th><th class="px-3 py-3 text-center">Tanggal Pengajuan</th><th class="px-3 py-3 text-center">Status</th><th class="px-3 py-3 text-center">Aksi</th></tr></thead><tbody>${renderTableRows()}</tbody></table></div>
       <div class="mt-5 flex items-center justify-between gap-3"><p class="text-[11px] text-slate-400">Menampilkan ${count ? Math.min((currentPage - 1) * PAGE_SIZE + 1, count) : 0}–${Math.min(currentPage * PAGE_SIZE, count)} dari ${count} pengajuan</p>${renderPagination()}</div>
@@ -110,12 +124,12 @@ export async function mount(root) {
   clickHandler = async (event) => {
     const button = event.target.closest('[data-action]');
     if (!button) {
-      if (event.target.closest('[data-modal-backdrop]') && event.target === event.target.closest('[data-modal-backdrop]')) { modalRow = null; refresh(); }
+      if (event.target.closest('[data-modal-backdrop]') && event.target === event.target.closest('[data-modal-backdrop]')) { modalRow = null; feedbackModal = null; refresh(); }
       return;
     }
     const action = button.dataset.action;
     const id = button.dataset.id;
-    if (action === 'close-modal') { modalRow = null; refresh(); return; }
+    if (action === 'close-modal' || action === 'close-feedback-modal') { modalRow = null; feedbackModal = null; refresh(); return; }
     if (action === 'detail') { modalRow = rows.find((row) => String(row.id) === String(id)) || null; refresh(); return; }
     if (action === 'tab') { activeTab = button.dataset.tab; currentPage = 1; toastMessage = ''; refresh(); return; }
     if (action === 'prev') { currentPage = Math.max(1, currentPage - 1); refresh(); return; }
@@ -125,8 +139,21 @@ export async function mount(root) {
       try {
         await updateMockRequestPjStatus(id, action === 'approve' ? STATUS_REQUEST_PJ.DISETUJUI : STATUS_REQUEST_PJ.DITOLAK);
         rows = await getRequestPj();
+        if (action === 'approve') {
+          feedbackModal = {
+            type: 'approve',
+            title: 'Pengajuan PJ Berhasil Disetujui!',
+            message: 'Pemohon kini resmi menjadi Penanggung Jawab inventaris.',
+          };
+        } else {
+          feedbackModal = {
+            type: 'reject',
+            title: 'Pengajuan PJ Ditolak',
+            message: 'Pengajuan penanggung jawab telah ditolak.',
+          };
+        }
         toastType = 'success';
-        toastMessage = action === 'approve' ? 'Pengajuan PJ berhasil disetujui.' : 'Pengajuan PJ berhasil ditolak.';
+        toastMessage = '';
       } catch (error) {
         toastType = 'error'; toastMessage = error?.message || 'Status pengajuan gagal diperbarui.';
       }
