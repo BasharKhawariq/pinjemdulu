@@ -22,4 +22,14 @@
   dialog::backdrop {
     @apply bg-zinc-950/40 backdrop-blur-sm;
   }
+
+  dialog[open],
+  dialog {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    margin: 0 !important;
+  }
 }
+
