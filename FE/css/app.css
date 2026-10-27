@@ -344,13 +344,15 @@ select {
 */
 
 button,
-input:where([type="button"]),
-input:where([type="reset"]),
-input:where([type="submit"]) {
-  appearance: button;
+input:where([type='button']),
+input:where([type='reset']),
+input:where([type='submit']) {
   -webkit-appearance: button;
+  /* 1 */
   background-color: transparent;
+  /* 2 */
   background-image: none;
+  /* 2 */
 }
 
 /*
@@ -385,11 +387,22 @@ Correct the cursor style of increment and decrement buttons in Safari.
 ::-webkit-outer-spin-button {
   height: auto;
 }
-[type="search"] {
-  appearance: textfield;
+
+/*
+1. Correct the odd appearance in Chrome and Safari.
+2. Correct the outline style in Safari.
+*/
+
+[type='search'] {
   -webkit-appearance: textfield;
+  /* 1 */
   outline-offset: -2px;
+  /* 2 */
 }
+
+/*
+Remove the inner padding in Chrome and Safari on macOS.
+*/
 
 ::-webkit-search-decoration {
   -webkit-appearance: none;
@@ -520,7 +533,9 @@ iframe,
 embed,
 object {
   display: block;
-
+  /* 1 */
+  vertical-align: middle;
+  /* 2 */
 }
 
 /*
@@ -551,6 +566,23 @@ body {
   background-color: var(--background);
   color: var(--foreground);
   font-family: 'Poppins', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+h1,
+  h1.font-bold,
+  h1.font-extrabold {
+  font-weight: 600 !important;
+  letter-spacing: -0.02em;
+}
+
+h2,
+  h2.font-bold {
+  font-weight: 600 !important;
+}
+
+h3,
+  h3.font-bold {
+  font-weight: 600 !important;
 }
 
 :focus-visible {
@@ -592,6 +624,22 @@ dialog[open],
   left: 50% !important;
   transform: translate(-50%, -50%) !important;
   margin: 0 !important;
+}
+
+/* Dropdown item hover global: background biru primary (biru tua), teks putih */
+
+[role="listbox"] [role="option"]:hover,
+  .dropdown-item:hover,
+  [data-dropdown-item]:hover {
+  background-color: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+}
+
+select option:hover,
+  select option:focus,
+  select option:checked {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
 }
 
 .sr-only {
@@ -855,10 +903,6 @@ dialog[open],
   margin-left: 0.25rem;
 }
 
-.ml-2 {
-  margin-left: 0.5rem;
-}
-
 .ml-auto {
   margin-left: auto;
 }
@@ -928,7 +972,6 @@ dialog[open],
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
-  line-clamp: 2;
 }
 
 .block {
@@ -1061,12 +1104,12 @@ dialog[open],
   height: 24rem;
 }
 
-.h-\[13px\] {
-  height: 13px;
-}
-
 .h-\[17px\] {
   height: 17px;
+}
+
+.h-\[18px\] {
+  height: 18px;
 }
 
 .h-\[42px\] {
@@ -1087,6 +1130,10 @@ dialog[open],
 
 .h-screen {
   height: 100vh;
+}
+
+.max-h-40 {
+  max-height: 10rem;
 }
 
 .max-h-56 {
@@ -1229,20 +1276,16 @@ dialog[open],
   width: 24rem;
 }
 
-.w-\[13px\] {
-  width: 13px;
-}
-
 .w-\[17px\] {
   width: 17px;
 }
 
-.w-\[280px\] {
-  width: 280px;
+.w-\[18px\] {
+  width: 18px;
 }
 
-.w-\[30px\] {
-  width: 30px;
+.w-\[280px\] {
+  width: 280px;
 }
 
 .w-\[42px\] {
@@ -1285,10 +1328,6 @@ dialog[open],
   min-width: 120px;
 }
 
-.min-w-\[125px\] {
-  min-width: 125px;
-}
-
 .min-w-\[140px\] {
   min-width: 140px;
 }
@@ -1305,8 +1344,8 @@ dialog[open],
   min-width: 180px;
 }
 
-.min-w-\[185px\] {
-  min-width: 185px;
+.min-w-\[190px\] {
+  min-width: 190px;
 }
 
 .min-w-\[200px\] {
@@ -1446,8 +1485,8 @@ dialog[open],
   transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
 }
 
-.translate-x-\[14px\] {
-  --tw-translate-x: 14px;
+.translate-x-\[18px\] {
+  --tw-translate-x: 18px;
   transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
 }
 
@@ -1974,6 +2013,11 @@ dialog[open],
   background-color: rgb(37 99 235 / var(--tw-bg-opacity, 1));
 }
 
+.bg-blue-700 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(29 78 216 / var(--tw-bg-opacity, 1));
+}
+
 .bg-brand {
   background-color: var(--brand);
 }
@@ -2071,6 +2115,11 @@ dialog[open],
   background-color: rgb(254 242 242 / var(--tw-bg-opacity, 1));
 }
 
+.bg-red-700 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(185 28 28 / var(--tw-bg-opacity, 1));
+}
+
 .bg-rose-100 {
   --tw-bg-opacity: 1;
   background-color: rgb(255 228 230 / var(--tw-bg-opacity, 1));
@@ -2079,6 +2128,11 @@ dialog[open],
 .bg-rose-200 {
   --tw-bg-opacity: 1;
   background-color: rgb(254 205 211 / var(--tw-bg-opacity, 1));
+}
+
+.bg-rose-300 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(253 164 175 / var(--tw-bg-opacity, 1));
 }
 
 .bg-rose-50 {
@@ -2121,6 +2175,11 @@ dialog[open],
 .bg-slate-200 {
   --tw-bg-opacity: 1;
   background-color: rgb(226 232 240 / var(--tw-bg-opacity, 1));
+}
+
+.bg-slate-400 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(148 163 184 / var(--tw-bg-opacity, 1));
 }
 
 .bg-slate-50 {
@@ -2875,6 +2934,11 @@ dialog[open],
   color: rgb(136 19 55 / var(--tw-text-opacity, 1));
 }
 
+.text-rose-950 {
+  --tw-text-opacity: 1;
+  color: rgb(76 5 25 / var(--tw-text-opacity, 1));
+}
+
 .text-secondary-foreground {
   color: var(--secondary-foreground);
 }
@@ -3171,6 +3235,10 @@ dialog[open],
   transition-duration: 150ms;
 }
 
+.duration-150 {
+  transition-duration: 150ms;
+}
+
 .duration-200 {
   transition-duration: 200ms;
 }
@@ -3241,6 +3309,14 @@ dialog[open],
   transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
 }
 
+.hover\:border-primary:hover {
+  border-color: var(--primary);
+}
+
+.hover\:border-secondary-hover:hover {
+  border-color: var(--secondary-hover);
+}
+
 .hover\:bg-accent:hover {
   background-color: var(--accent);
 }
@@ -3250,6 +3326,11 @@ dialog[open],
   background-color: rgb(239 246 255 / var(--tw-bg-opacity, 1));
 }
 
+.hover\:bg-emerald-50:hover {
+  --tw-bg-opacity: 1;
+  background-color: rgb(236 253 245 / var(--tw-bg-opacity, 1));
+}
+
 .hover\:bg-green-50:hover {
   --tw-bg-opacity: 1;
   background-color: rgb(240 253 244 / var(--tw-bg-opacity, 1));
@@ -3257,6 +3338,10 @@ dialog[open],
 
 .hover\:bg-muted:hover {
   background-color: var(--muted);
+}
+
+.hover\:bg-primary:hover {
+  background-color: var(--primary);
 }
 
 .hover\:bg-red-50:hover {
@@ -3272,6 +3357,10 @@ dialog[open],
 .hover\:bg-rose-700:hover {
   --tw-bg-opacity: 1;
   background-color: rgb(190 18 60 / var(--tw-bg-opacity, 1));
+}
+
+.hover\:bg-secondary-hover:hover {
+  background-color: var(--secondary-hover);
 }
 
 .hover\:bg-slate-100:hover {
@@ -3332,6 +3421,10 @@ dialog[open],
   color: var(--primary);
 }
 
+.hover\:text-secondary-hover-foreground:hover {
+  color: var(--secondary-hover-foreground);
+}
+
 .hover\:text-slate-600:hover {
   --tw-text-opacity: 1;
   color: rgb(71 85 105 / var(--tw-text-opacity, 1));
@@ -3345,6 +3438,11 @@ dialog[open],
 .hover\:text-slate-900:hover {
   --tw-text-opacity: 1;
   color: rgb(15 23 42 / var(--tw-text-opacity, 1));
+}
+
+.hover\:text-white:hover {
+  --tw-text-opacity: 1;
+  color: rgb(255 255 255 / var(--tw-text-opacity, 1));
 }
 
 .hover\:text-zinc-600:hover {
@@ -3682,6 +3780,21 @@ dialog[open],
     justify-content: space-between;
   }
 
+  .sm\:gap-0 {
+    gap: 0px;
+  }
+
+  .sm\:divide-x > :not([hidden]) ~ :not([hidden]) {
+    --tw-divide-x-reverse: 0;
+    border-right-width: calc(1px * var(--tw-divide-x-reverse));
+    border-left-width: calc(1px * calc(1 - var(--tw-divide-x-reverse)));
+  }
+
+  .sm\:divide-zinc-200 > :not([hidden]) ~ :not([hidden]) {
+    --tw-divide-opacity: 1;
+    border-color: rgb(228 228 231 / var(--tw-divide-opacity, 1));
+  }
+
   .sm\:self-auto {
     align-self: auto;
   }
@@ -3702,6 +3815,10 @@ dialog[open],
     padding: 1rem;
   }
 
+  .sm\:p-5 {
+    padding: 1.25rem;
+  }
+
   .sm\:p-6 {
     padding: 1.5rem;
   }
@@ -3712,6 +3829,11 @@ dialog[open],
 
   .sm\:p-8 {
     padding: 2rem;
+  }
+
+  .sm\:px-4 {
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
 
   .sm\:px-5 {
@@ -3736,6 +3858,14 @@ dialog[open],
 
   .sm\:pb-5 {
     padding-bottom: 1.25rem;
+  }
+
+  .sm\:pl-4 {
+    padding-left: 1rem;
+  }
+
+  .sm\:pr-4 {
+    padding-right: 1rem;
   }
 
   .sm\:text-2xl {

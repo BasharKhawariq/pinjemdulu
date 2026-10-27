@@ -13,6 +13,8 @@
 
   --secondary: #F3F4F6;
   --secondary-foreground: #111827;
+  --secondary-hover: #0D1E38;
+  --secondary-hover-foreground: #FFFFFF;
 
   --muted: #F4F4F5;
   --muted-foreground: #71717A;

@@ -13,6 +13,20 @@
     @apply bg-background text-foreground;
     font-family: 'Poppins', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   }
+  h1,
+  h1.font-bold,
+  h1.font-extrabold {
+    font-weight: 600 !important;
+    letter-spacing: -0.02em;
+  }
+  h2,
+  h2.font-bold {
+    font-weight: 600 !important;
+  }
+  h3,
+  h3.font-bold {
+    font-weight: 600 !important;
+  }
   :focus-visible {
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
@@ -30,6 +44,21 @@
     left: 50% !important;
     transform: translate(-50%, -50%) !important;
     margin: 0 !important;
+  }
+
+  /* Dropdown item hover global: background biru primary (biru tua), teks putih */
+  [role="listbox"] [role="option"]:hover,
+  .dropdown-item:hover,
+  [data-dropdown-item]:hover {
+    background-color: var(--primary) !important;
+    color: var(--primary-foreground) !important;
+  }
+
+  select option:hover,
+  select option:focus,
+  select option:checked {
+    background-color: var(--primary);
+    color: var(--primary-foreground);
   }
 }
 
