@@ -18,14 +18,21 @@ export const STORAGE_KEY_SIDEBAR = 'pd:v1:sidebar-collapsed';
 function renderSidebarBrand(collapsed) {
   if (collapsed) {
     return `
-      <div class="flex w-full items-center justify-center px-2 pt-5 pb-5">
+      <div class="flex flex-col w-full items-center justify-center gap-3 px-2 pt-5 pb-5">
+        <a href="#/inventaris" aria-label="PinjemDulu beranda" title="PinjemDulu beranda" class="inline-flex items-center justify-center transition hover:opacity-90">
+          <img
+            src="assets/img/Logo-PinjemDulu.png"
+            alt="Logo PinjemDulu"
+            class="h-10 w-10 shrink-0 rounded-[12px] object-contain shadow-sm"
+          />
+        </a>
         <button
           type="button"
           data-action="toggle-sidebar"
           aria-label="Lebarkan sidebar"
           title="Lebarkan sidebar"
           aria-expanded="false"
-          class="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-zinc-200 bg-white text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-800"
+          class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-zinc-200 bg-white text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-800"
         >
           ${renderIcon('PanelLeft', 'h-5 w-5')}
         </button>
@@ -35,10 +42,12 @@ function renderSidebarBrand(collapsed) {
 
   return `
     <div class="flex w-full items-center justify-between px-4 pt-6 pb-5">
-      <a href="#/inventaris" aria-label="PinjemDulu beranda" class="inline-flex min-w-0 items-center gap-3">
-        <span class="inline-flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[14px] bg-brand-solid text-white shadow-sm sm:h-[44px] sm:w-[44px]">
-          ${renderIcon('Sparkles', 'h-6 w-6')}
-        </span>
+      <a href="#/inventaris" aria-label="PinjemDulu beranda" class="inline-flex min-w-0 items-center gap-3 transition hover:opacity-90">
+        <img
+          src="assets/img/Logo-PinjemDulu.png"
+          alt="Logo PinjemDulu"
+          class="h-[42px] w-[42px] shrink-0 rounded-[14px] object-contain shadow-sm sm:h-[44px] sm:w-[44px]"
+        />
         <div class="flex min-w-0 flex-col leading-none">
           <span class="truncate text-[20px] font-bold tracking-tight sm:text-[24px]">
             <span class="text-zinc-900">Pinjem</span><span class="text-primary">Dulu</span>
@@ -70,7 +79,7 @@ function renderSidebarBrand(collapsed) {
  * @param {string} [role]
  * @returns {string}
  */
-function renderSidebarNav(items, collapsed, currentHash, role = '') {
+function renderSidebarNav(items, collapsed, currentHash, role = '', idPrefix = 'sidebar') {
   const listItems = items
     .map((item) => {
       const isGroup = item.type === 'group' || (Array.isArray(item.children) && item.children.length > 0);
@@ -136,6 +145,8 @@ function renderSidebarNav(items, collapsed, currentHash, role = '') {
           })
           .join('');
 
+        const subId = `sub-${idPrefix}-${item.key}`;
+
         return `
           <li class="flex flex-col gap-1">
             <button
@@ -143,7 +154,7 @@ function renderSidebarNav(items, collapsed, currentHash, role = '') {
               data-action="toggle-group"
               data-group="${escapeHtml(item.key)}"
               aria-expanded="${isOpen}"
-              aria-controls="sub-${escapeHtml(item.key)}"
+              aria-controls="${escapeHtml(subId)}"
               class="group flex w-full items-center justify-between rounded-2xl px-3 py-3 text-[15px] text-zinc-400 transition hover:bg-zinc-50/60 hover:text-zinc-900 font-medium"
             >
               <div class="flex items-center gap-3">
@@ -160,7 +171,7 @@ function renderSidebarNav(items, collapsed, currentHash, role = '') {
               </div>
             </button>
             <ul
-              id="sub-${escapeHtml(item.key)}"
+              id="${escapeHtml(subId)}"
               class="flex flex-col gap-1 pl-4 ${isOpen ? '' : 'hidden'}"
             >
               ${childItems}
@@ -294,7 +305,7 @@ export function renderSidebar({ user = null, currentHash = '#/dashboard-peminjam
       class="sticky top-0 hidden h-screen shrink-0 flex-col border-r border-zinc-100 bg-white transition-[width] duration-200 ease-out md:flex ${widthClass}"
     >
       ${renderSidebarBrand(collapsed)}
-      ${renderSidebarNav(items, collapsed, currentHash, user?.role)}
+      ${renderSidebarNav(items, collapsed, currentHash, user?.role, 'sidebar')}
       ${renderSidebarUserCard(user, collapsed)}
     </aside>
   `;
@@ -328,10 +339,12 @@ export function renderMobileDrawer({ user = null, currentHash = '#/dashboard-pem
       }"
     >
       <div class="flex w-full items-center justify-between px-4 pt-6 pb-5">
-        <a href="#/inventaris" aria-label="PinjemDulu beranda" class="inline-flex min-w-0 items-center gap-3">
-          <span class="inline-flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[14px] bg-brand-solid text-white shadow-sm">
-            ${renderIcon('Sparkles', 'h-6 w-6')}
-          </span>
+        <a href="#/inventaris" aria-label="PinjemDulu beranda" class="inline-flex min-w-0 items-center gap-3 transition hover:opacity-90">
+          <img
+            src="assets/img/Logo-PinjemDulu.png"
+            alt="Logo PinjemDulu"
+            class="h-[42px] w-[42px] shrink-0 rounded-[14px] object-contain shadow-sm"
+          />
           <div class="flex min-w-0 flex-col leading-none">
             <span class="truncate text-[20px] font-bold tracking-tight">
               <span class="text-zinc-900">Pinjem</span><span class="text-primary">Dulu</span>
@@ -351,7 +364,7 @@ export function renderMobileDrawer({ user = null, currentHash = '#/dashboard-pem
         </button>
       </div>
 
-      ${renderSidebarNav(items, false, currentHash, user?.role)}
+      ${renderSidebarNav(items, false, currentHash, user?.role, 'drawer')}
       ${renderSidebarUserCard(user, false)}
     </aside>
   `;
