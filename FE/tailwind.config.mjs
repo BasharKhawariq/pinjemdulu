@@ -23,6 +23,8 @@ export default {
         secondary: {
           DEFAULT: 'var(--secondary)',
           foreground: 'var(--secondary-foreground)',
+          hover: 'var(--secondary-hover)',
+          'hover-foreground': 'var(--secondary-hover-foreground)',
         },
         destructive: {
           DEFAULT: 'var(--destructive)',
