@@ -152,7 +152,7 @@ function getStatusBadge(status) {
     return { label: 'Disetujui', cls: 'bg-emerald-100 text-emerald-700' };
   }
   if (normalized === 'dipinjam' || normalized === STATUS_PEMINJAMAN.DIPINJAM) {
-    return { label: 'Dipinjam', cls: 'bg-amber-100 text-amber-700' };
+    return { label: 'Dipinjam', cls: 'bg-purple-50 text-purple-700' };
   }
   if (normalized === 'ditolak' || normalized === STATUS_PEMINJAMAN.DITOLAK) {
     return { label: 'Ditolak', cls: 'bg-rose-100 text-rose-700' };

@@ -47,7 +47,7 @@ function badgeClass(status) {
   const styles = {
     diajukan: 'bg-blue-100 text-blue-700',
     disetujui: 'bg-emerald-100 text-emerald-700',
-    dipinjam: 'bg-amber-100 text-amber-700',
+    dipinjam: 'bg-purple-50 text-purple-700',
     ditolak: 'bg-rose-100 text-rose-700',
   };
   return styles[key] || 'bg-zinc-100 text-zinc-700';
