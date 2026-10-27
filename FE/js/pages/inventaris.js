@@ -7,6 +7,7 @@ import { html, raw, escapeHtml } from '../ui/html.js';
 import { buttonClass, inputClass, badgeClass, skeletonClass } from '../ui/classes.js';
 import { renderIcon } from '../ui/icons.js';
 import { renderSearchInput } from '../ui/search-input.js';
+import { renderFilterButton, renderFilterModal } from '../ui/filter.js';
 import { getInventarisList } from '../services/inventaris.js';
 import { getKategori } from '../services/kategori.js';
 import { getOrganisasi } from '../services/organisasi.js';
@@ -243,7 +244,7 @@ export function render(ctx = {}) {
     <div class="w-full">
       <!-- Header Halaman -->
       <div class="mb-6">
-        <h1 class="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">
+        <h1 class="text-2xl font-semibold tracking-tight text-zinc-900 sm:text-3xl">
           Katalog Barang Inventaris
         </h1>
         <p class="mt-1 text-sm text-zinc-500">
@@ -254,13 +255,23 @@ export function render(ctx = {}) {
       <!-- Baris Kontrol: Cari (col 6), Filter Kategori (col 3), Filter OKI (col 3) -->
       <div class="mb-6 grid grid-cols-1 gap-3 md:grid-cols-12">
         <!-- Kolom Pencarian -->
-        ${renderSearchInput({
-          id: 'katalog-search-input',
-          value: cariValue,
-          placeholder: 'Cari barang inventaris...',
-          ariaLabel: 'Cari barang inventaris',
-          className: 'md:col-span-6',
-        })}
+        <div class="flex items-center gap-2 md:col-span-6">
+          ${renderSearchInput({
+            id: 'katalog-search-input',
+            value: cariValue,
+            placeholder: 'Cari barang inventaris...',
+            ariaLabel: 'Cari barang inventaris',
+            className: 'flex-1',
+          })}
+          <div class="md:hidden">
+            ${renderFilterButton({
+              id: 'btn-filter-katalog-mobile',
+              action: 'open-filter-dialog',
+              title: 'Filter inventaris',
+              countActive: (currentParams.kategoriIds || []).length + (currentParams.okiIds || []).length,
+            })}
+          </div>
+        </div>
 
         <!-- Filter Dropdown Kategori -->
         <div class="relative md:col-span-3" id="dropdown-kategori-container">
@@ -270,10 +281,10 @@ export function render(ctx = {}) {
             data-action="toggle-filter-kategori"
             aria-expanded="false"
             aria-haspopup="true"
-            class="${buttonClass({ variant: 'outline' })} h-11 w-full justify-between rounded-xl font-normal text-zinc-700"
+            class="${buttonClass({ variant: 'outline' })} h-11 w-full justify-between rounded-xl px-4 font-normal text-zinc-700"
           >
             <span id="label-filter-kategori" class="truncate">Semua Kategori</span>
-            ${renderIcon('ChevronsUpDown', 'ml-2 h-4 w-4 shrink-0 opacity-50')}
+            ${renderIcon('ChevronDown', 'h-4 w-4 shrink-0 text-muted-foreground')}
           </button>
           <div
             id="popover-kategori"
@@ -294,10 +305,10 @@ export function render(ctx = {}) {
             data-action="toggle-filter-oki"
             aria-expanded="false"
             aria-haspopup="true"
-            class="${buttonClass({ variant: 'outline' })} h-11 w-full justify-between rounded-xl font-normal text-zinc-700"
+            class="${buttonClass({ variant: 'outline' })} h-11 w-full justify-between rounded-xl px-4 font-normal text-zinc-700"
           >
             <span id="label-filter-oki" class="truncate">Semua OKI</span>
-            ${renderIcon('ChevronsUpDown', 'ml-2 h-4 w-4 shrink-0 opacity-50')}
+            ${renderIcon('ChevronDown', 'h-4 w-4 shrink-0 text-muted-foreground')}
           </button>
           <div
             id="popover-oki"
@@ -317,6 +328,33 @@ export function render(ctx = {}) {
           ${Array.from({ length: KATALOG_DEFAULTS.LIMIT }).map(() => renderCardSkeleton())}
         </div>
       </div>
+
+      <!-- Filter Modal Katalog -->
+      ${renderFilterModal({
+        id: 'dialog-filter-katalog',
+        title: 'Filter Katalog Inventaris',
+        countActive: (currentParams.kategoriIds || []).length + (currentParams.okiIds || []).length,
+        closeAction: 'close-filter-dialog',
+        resetAction: 'reset-filters',
+        applyAction: 'close-filter-dialog',
+        formId: 'form-filter-katalog',
+        bodyContent: html`
+          <div class="space-y-4">
+            <div>
+              <span class="text-sm font-medium text-foreground block mb-2">Kategori</span>
+              <div id="modal-options-kategori" class="max-h-40 overflow-y-auto space-y-1 rounded-xl border border-border p-2">
+                <div class="text-xs text-muted-foreground p-1">Memuat kategori...</div>
+              </div>
+            </div>
+            <div>
+              <span class="text-sm font-medium text-foreground block mb-2">Organisasi (OKI)</span>
+              <div id="modal-options-oki" class="max-h-40 overflow-y-auto space-y-1 rounded-xl border border-border p-2">
+                <div class="text-xs text-muted-foreground p-1">Memuat organisasi...</div>
+              </div>
+            </div>
+          </div>
+        `,
+      })}
     </div>
   `.toString();
 }
@@ -421,7 +459,7 @@ export async function mount(root, ctx = {}) {
         .map((k) => {
           const checked = currentKategoriIds.includes(k.idKategori);
           return `
-            <label class="flex cursor-pointer items-center gap-2 rounded-lg p-1.5 text-sm hover:bg-zinc-50">
+            <label class="flex cursor-pointer items-center gap-2 rounded-lg p-2 text-sm transition hover:bg-primary hover:text-white group">
               <input
                 type="checkbox"
                 data-action="select-kategori"
@@ -429,7 +467,28 @@ export async function mount(root, ctx = {}) {
                 ${checked ? 'checked' : ''}
                 class="rounded border-zinc-300 text-primary focus:ring-primary h-4 w-4"
               />
-              <span class="flex-1 truncate">${escapeHtml(k.namaKategori)}</span>
+              <span class="flex-1 truncate group-hover:text-white">${escapeHtml(k.namaKategori)}</span>
+            </label>
+          `;
+        })
+        .join('');
+    }
+
+    const modalOptionsKat = root.querySelector('#modal-options-kategori');
+    if (modalOptionsKat && allKategori.length > 0) {
+      modalOptionsKat.innerHTML = allKategori
+        .map((k) => {
+          const checked = currentKategoriIds.includes(k.idKategori);
+          return `
+            <label class="flex cursor-pointer items-center gap-2 rounded-lg p-2 text-sm transition hover:bg-primary hover:text-white group">
+              <input
+                type="checkbox"
+                data-action="select-kategori"
+                value="${escapeHtml(k.idKategori)}"
+                ${checked ? 'checked' : ''}
+                class="rounded border-zinc-300 text-primary focus:ring-primary h-4 w-4"
+              />
+              <span class="flex-1 truncate group-hover:text-white">${escapeHtml(k.namaKategori)}</span>
             </label>
           `;
         })
@@ -476,7 +535,7 @@ export async function mount(root, ctx = {}) {
         .map((o) => {
           const checked = currentOkiIds.includes(o.idOrganisasi);
           return `
-            <label class="flex cursor-pointer items-center gap-2 rounded-lg p-1.5 text-sm hover:bg-zinc-50">
+            <label class="flex cursor-pointer items-center gap-2 rounded-lg p-2 text-sm transition hover:bg-primary hover:text-white group">
               <input
                 type="checkbox"
                 data-action="select-oki"
@@ -484,7 +543,28 @@ export async function mount(root, ctx = {}) {
                 ${checked ? 'checked' : ''}
                 class="rounded border-zinc-300 text-primary focus:ring-primary h-4 w-4"
               />
-              <span class="flex-1 truncate">${escapeHtml(o.namaOrganisasi)}</span>
+              <span class="flex-1 truncate group-hover:text-white">${escapeHtml(o.namaOrganisasi)}</span>
+            </label>
+          `;
+        })
+        .join('');
+    }
+
+    const modalOptionsOki = root.querySelector('#modal-options-oki');
+    if (modalOptionsOki && allOrganisasi.length > 0) {
+      modalOptionsOki.innerHTML = allOrganisasi
+        .map((o) => {
+          const checked = currentOkiIds.includes(o.idOrganisasi);
+          return `
+            <label class="flex cursor-pointer items-center gap-2 rounded-lg p-2 text-sm transition hover:bg-primary hover:text-white group">
+              <input
+                type="checkbox"
+                data-action="select-oki"
+                value="${escapeHtml(o.idOrganisasi)}"
+                ${checked ? 'checked' : ''}
+                class="rounded border-zinc-300 text-primary focus:ring-primary h-4 w-4"
+              />
+              <span class="flex-1 truncate group-hover:text-white">${escapeHtml(o.namaOrganisasi)}</span>
             </label>
           `;
         })
@@ -646,6 +726,18 @@ export async function mount(root, ctx = {}) {
 
     // Cegah penutupan jika klik di dalam popover
     if (e.target.closest('#popover-kategori') || e.target.closest('#popover-oki')) {
+      return;
+    }
+
+    // Buka/Tutup Filter Modal Dialog
+    const openFilterModal = e.target.closest('[data-action="open-filter-dialog"]');
+    if (openFilterModal) {
+      root.querySelector('#dialog-filter-katalog')?.showModal();
+      return;
+    }
+    const closeFilterModal = e.target.closest('[data-action="close-filter-dialog"]');
+    if (closeFilterModal) {
+      root.querySelector('#dialog-filter-katalog')?.close();
       return;
     }
 

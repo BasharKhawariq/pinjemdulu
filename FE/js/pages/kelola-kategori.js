@@ -579,7 +579,7 @@ export function renderKelolaKategoriContent(state = {}) {
     <div class="space-y-6" id="kelola-kategori-root">
       <!-- Header Halaman -->
       <div class="space-y-1">
-        <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Kelola Inventaris</h1>
+        <h1 class="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Kelola Inventaris</h1>
         <p class="text-sm text-muted-foreground">
           Kelola Kategori Inventaris OKI Anda.
         </p>

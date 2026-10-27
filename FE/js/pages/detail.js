@@ -268,7 +268,7 @@ export function renderDetailContent(vm, hrefKatalog = '#/inventaris') {
           >
             ${renderIcon('ArrowLeft', 'h-4 w-4')}
           </a>
-          <h1 class="truncate text-xl font-bold tracking-tight text-zinc-900 sm:text-2xl">
+          <h1 class="truncate text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">
             ${vm.namaBarang}
           </h1>
         </div>

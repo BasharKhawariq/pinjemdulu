@@ -4,6 +4,8 @@
  * Sumber data saat ini masih menggunakan service mock frontend.
  */
 import { getPeminjaman } from '../services/peminjaman.js';
+import { ajukanPengembalian } from '../services/pengembalian.js';
+import { getRowActions } from '../lib/peminjaman-aksi.js';
 import { STATUS_PEMINJAMAN, LABEL_STATUS_PEMINJAMAN } from '../lib/constants.js';
 import { formatTanggal } from '../lib/format.js';
 import { renderIcon } from '../ui/icons.js';
@@ -25,6 +27,26 @@ const PAGE_SIZE = 5;
 let rootElement = null;
 let onClickHandler = null;
 let onInputHandler = null;
+let onKeydownHandler = null;
+// null | { type: 'detail', row } | { type: 'konfirmasi', row, submitting, error } | { type: 'sukses' }
+let dialog = null;
+let lastTrigger = null;
+
+// Warna titik organisasi (nama kelas harus utuh agar ikut di-build Tailwind).
+const ORG_DOT = {
+  BEM: 'bg-blue-700',
+  HMTI: 'bg-amber-400',
+  HME: 'bg-rose-700',
+  HIMANIA: 'bg-blue-600',
+  RISPOL: 'bg-emerald-600',
+  HMS: 'bg-slate-800',
+  THEATRISIC: 'bg-red-700',
+  PP: 'bg-teal-600',
+};
+
+function orgDotClass(org) {
+  return ORG_DOT[String(org || '').trim().toUpperCase()] || 'bg-slate-400';
+}
 
 function normalizeStatus(status) {
   return String(status || '').trim().toLowerCase().replaceAll('_', ' ');
@@ -49,7 +71,7 @@ function badgeClass(status) {
     diajukan: 'bg-blue-100 text-blue-700',
     disetujui: 'bg-emerald-100 text-emerald-700',
     dipinjam: 'bg-purple-50 text-purple-700',
-    ditolak: 'bg-rose-100 text-rose-700',
+    ditolak: 'bg-rose-300 text-rose-950',
   };
   return styles[key] || 'bg-zinc-100 text-zinc-700';
 }
@@ -82,6 +104,21 @@ function renderTabs() {
   }).join('');
 }
 
+function renderActions(row, id, name) {
+  return getRowActions(row.status).map((action) => {
+    if (action === 'kembali') {
+      return `<button type="button" data-return="${escapeHtml(id)}" aria-label="Ajukan pengembalian ${escapeHtml(name)}" title="Ajukan pengembalian"
+        class="inline-flex h-8 w-8 items-center justify-center rounded-full text-emerald-600 transition hover:bg-emerald-50">
+        ${renderIcon('CircleCheck', 'h-[18px] w-[18px]')}
+      </button>`;
+    }
+    return `<button type="button" data-detail="${escapeHtml(id)}" aria-label="Lihat detail ${escapeHtml(name)}" title="Lihat detail"
+      class="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-blue-50 hover:text-blue-700">
+      ${renderIcon('Info', 'h-[17px] w-[17px]')}
+    </button>`;
+  }).join('');
+}
+
 function renderRows() {
   const filtered = getFilteredRows();
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -111,7 +148,7 @@ function renderRows() {
         <td class="min-w-[180px] px-4 py-3">
           <div class="max-w-[220px] truncate text-[11px] font-medium text-slate-500" title="${escapeHtml(name)}">${escapeHtml(name)}</div>
           <div class="mt-1.5 flex items-center gap-2 text-[11px] font-medium text-slate-700">
-            <span class="inline-flex h-3 w-3 items-center justify-center rounded-full bg-slate-100 text-[7px] font-bold text-slate-700">${escapeHtml(org.slice(0, 1).toUpperCase())}</span>
+            <span class="inline-block h-3 w-3 shrink-0 rounded-full ${orgDotClass(org)}" aria-hidden="true"></span>
             <span>${escapeHtml(org)}</span>
           </div>
         </td>
@@ -121,10 +158,7 @@ function renderRows() {
         <td class="px-4 py-4 text-center text-[11px] text-slate-600">${escapeHtml(qty)}</td>
         <td class="px-4 py-4 text-center"><span class="inline-flex whitespace-nowrap rounded-xl px-2.5 py-1.5 text-[10px] font-medium ${badgeClass(row.status)}">${escapeHtml(statusLabel(row.status))}</span></td>
         <td class="px-4 py-4 text-center">
-          <button type="button" data-detail="${escapeHtml(id)}" aria-label="Lihat detail ${escapeHtml(name)}" title="Lihat detail"
-            class="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-blue-50 hover:text-blue-700">
-            ${renderIcon('Info', 'h-[17px] w-[17px]')}
-          </button>
+          <div class="inline-flex items-center justify-center gap-1">${renderActions(row, id, name)}</div>
         </td>
       </tr>`;
   }).join('');
@@ -152,30 +186,116 @@ function renderTableContent() {
   if (tabs) tabs.innerHTML = renderTabs();
 }
 
+function readonlyBox(content) {
+  return `<div class="rounded-lg bg-zinc-50 px-3 py-2.5 text-xs text-slate-600">${content}</div>`;
+}
+
 function renderDetail(row) {
   const item = row.inventaris || row.barang || {};
   const name = item.namaBarang || 'Barang inventaris';
   const org = item.namaOrganisasi || row.namaOrganisasi || '—';
+  const ditolak = getTabForStatus(row.status) === 'ditolak';
+  const label = 'text-xs font-semibold text-slate-800';
   return `
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4" data-modal-overlay>
-      <section role="dialog" aria-modal="true" aria-labelledby="detail-title" class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+      <section role="dialog" aria-modal="true" aria-labelledby="detail-title" class="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
         <div class="flex items-start justify-between gap-4">
-          <div><p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Detail peminjaman</p><h2 id="detail-title" class="mt-1 text-lg font-semibold text-slate-900">${escapeHtml(name)}</h2></div>
-          <button type="button" data-close-detail aria-label="Tutup detail" class="rounded-lg p-2 text-slate-400 hover:bg-slate-100">${renderIcon('X', 'h-4 w-4')}</button>
+          <h2 id="detail-title" class="text-base font-semibold text-slate-900">Detail Peminjaman</h2>
+          <button type="button" data-close-detail aria-label="Tutup detail" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100">${renderIcon('X', 'h-4 w-4')}</button>
         </div>
-        <dl class="mt-5 grid grid-cols-2 gap-x-4 gap-y-4 text-sm">
-          <div><dt class="text-xs text-slate-400">Organisasi</dt><dd class="mt-1 font-medium text-slate-700">${escapeHtml(org)}</dd></div>
-          <div><dt class="text-xs text-slate-400">Status</dt><dd class="mt-1 font-medium text-slate-700">${escapeHtml(statusLabel(row.status))}</dd></div>
-          <div><dt class="text-xs text-slate-400">Tanggal diajukan</dt><dd class="mt-1 font-medium text-slate-700">${escapeHtml(dateOnly(row.tanggalPengajuan || row.createdAt))}</dd></div>
-          <div><dt class="text-xs text-slate-400">Jumlah unit</dt><dd class="mt-1 font-medium text-slate-700">${escapeHtml(row.jumlahPinjam ?? 1)} unit</dd></div>
-          <div><dt class="text-xs text-slate-400">Tanggal mulai</dt><dd class="mt-1 font-medium text-slate-700">${escapeHtml(dateOnly(row.startDate || row.mulai))}</dd></div>
-          <div><dt class="text-xs text-slate-400">Tanggal selesai</dt><dd class="mt-1 font-medium text-slate-700">${escapeHtml(dateOnly(row.endDate || row.selesai))}</dd></div>
-          <div class="col-span-2"><dt class="text-xs text-slate-400">Keperluan</dt><dd class="mt-1 font-medium text-slate-700">${escapeHtml(row.keperluan || '—')}</dd></div>
-          ${row.alasanPenolakan ? `<div class="col-span-2"><dt class="text-xs text-slate-400">Alasan penolakan</dt><dd class="mt-1 font-medium text-rose-700">${escapeHtml(row.alasanPenolakan)}</dd></div>` : ''}
-        </dl>
-        <div class="mt-6 flex justify-end"><button type="button" data-close-detail class="rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white hover:opacity-90">Tutup</button></div>
+        <div class="mt-5 space-y-4">
+          <div>
+            <p class="${label}">Nama Barang</p>
+            <div class="mt-1.5 flex items-center justify-between gap-3 rounded-lg bg-zinc-50 px-3 py-2.5 text-xs text-slate-600">
+              <span class="min-w-0 truncate">${escapeHtml(name)}</span>
+              <span class="inline-flex shrink-0 items-center gap-1.5 text-[11px] font-medium text-slate-700">
+                <span class="inline-block h-3 w-3 rounded-full ${orgDotClass(org)}" aria-hidden="true"></span>${escapeHtml(org)}
+              </span>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-zinc-200">
+            <div class="sm:pr-4"><p class="${label}">Tanggal Pengajuan</p><div class="mt-1.5">${readonlyBox(escapeHtml(dateOnly(row.tanggalPengajuan || row.createdAt)))}</div></div>
+            <div class="sm:px-4"><p class="${label}">Tanggal Mulai</p><div class="mt-1.5">${readonlyBox(escapeHtml(dateOnly(row.startDate || row.mulai || row.tanggalMulai)))}</div></div>
+            <div class="sm:pl-4"><p class="${label}">Tanggal Selesai</p><div class="mt-1.5">${readonlyBox(escapeHtml(dateOnly(row.endDate || row.selesai || row.tanggalSelesai)))}</div></div>
+          </div>
+          <div><p class="${label}">Jumlah</p><div class="mt-1.5">${readonlyBox(escapeHtml(row.jumlahPinjam ?? row.jumlahUnit ?? 1))}</div></div>
+          <div><p class="${label}">Keperluan Peminjaman Barang</p><div class="mt-1.5">${readonlyBox(escapeHtml(row.keperluan || '—'))}</div></div>
+          <div>
+            <p class="${label}">Status</p>
+            <div class="mt-1.5"><span class="inline-flex whitespace-nowrap rounded-xl px-2.5 py-1.5 text-[10px] font-medium ${badgeClass(row.status)}">${escapeHtml(statusLabel(row.status))}</span></div>
+          </div>
+          ${ditolak ? `<div><p class="${label}">Alasan Ditolak</p><div class="mt-1.5">${readonlyBox(escapeHtml(row.alasanPenolakan || '—'))}</div></div>` : ''}
+        </div>
+        <div class="mt-6 flex justify-end"><button type="button" data-close-detail data-autofocus class="rounded-lg bg-primary px-4 py-2 text-xs font-medium text-white hover:opacity-90">Tutup</button></div>
       </section>
     </div>`;
+}
+
+function renderConfirmReturn(state) {
+  return `
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4" data-modal-overlay>
+      <section role="dialog" aria-modal="true" aria-labelledby="return-title" aria-describedby="return-desc" class="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl">
+        <div class="mx-auto flex h-14 w-14 items-center justify-center text-primary">${renderIcon('Send', 'h-10 w-10')}</div>
+        <h2 id="return-title" class="mt-3 text-sm font-semibold text-slate-900">Ajukan Pengembalian?</h2>
+        <p id="return-desc" class="mt-1 text-[11px] text-slate-400">Periksa kembali data pengajuan yang akan anda kirim</p>
+        ${state.error ? `<p role="alert" class="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-[11px] text-rose-700">${escapeHtml(state.error)}</p>` : ''}
+        <div class="mt-5 grid grid-cols-2 gap-3">
+          <button type="button" data-cancel-return ${state.submitting ? 'disabled' : ''} class="rounded-lg px-4 py-2.5 text-xs font-medium text-slate-400 hover:bg-zinc-50 disabled:opacity-50">Kembali</button>
+          <button type="button" data-confirm-return data-autofocus ${state.submitting ? 'disabled' : ''} class="rounded-lg bg-primary px-4 py-2.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-60">${state.submitting ? 'Mengirim...' : 'Kirim'}</button>
+        </div>
+      </section>
+    </div>`;
+}
+
+function renderSuccessReturn() {
+  return `
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4" data-modal-overlay>
+      <section role="dialog" aria-modal="true" aria-labelledby="success-title" aria-describedby="success-desc" class="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl">
+        <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">${renderIcon('CircleCheck', 'h-8 w-8')}</div>
+        <h2 id="success-title" class="mt-3 text-sm font-semibold text-slate-900">Pengembalian Berhasil Dikirim!</h2>
+        <p id="success-desc" class="mt-1 text-[11px] text-slate-400">Anda telah berhasil mengirimkan pengajuan pengembalian</p>
+        <button type="button" data-close-success data-autofocus class="mt-5 w-full rounded-lg bg-primary px-4 py-2.5 text-xs font-medium text-white hover:opacity-90">Kembali</button>
+      </section>
+    </div>`;
+}
+
+function renderDialog() {
+  if (!dialog) return '';
+  if (dialog.type === 'detail') return renderDetail(dialog.row);
+  if (dialog.type === 'konfirmasi') return renderConfirmReturn(dialog);
+  if (dialog.type === 'sukses') return renderSuccessReturn();
+  return '';
+}
+
+function showDialog(next, trigger = null) {
+  if (trigger) lastTrigger = trigger;
+  dialog = next;
+  const holder = rootElement?.querySelector('[data-detail-modal]');
+  if (!holder) return;
+  holder.innerHTML = renderDialog();
+  holder.querySelector('[data-autofocus]')?.focus();
+}
+
+function closeDialog() {
+  const trigger = lastTrigger;
+  lastTrigger = null;
+  showDialog(null);
+  if (trigger && rootElement?.contains(trigger)) trigger.focus();
+}
+
+async function submitReturn() {
+  if (dialog?.type !== 'konfirmasi' || dialog.submitting) return;
+  const { row } = dialog;
+  showDialog({ ...dialog, submitting: true, error: '' });
+  try {
+    const updated = await ajukanPengembalian(row.id || row.idPeminjaman);
+    row.status = updated?.status ?? row.status;
+    lastTrigger = null;
+    renderTableContent();
+    showDialog({ type: 'sukses' });
+  } catch (error) {
+    showDialog({ type: 'konfirmasi', row, submitting: false, error: error?.message || 'Pengajuan pengembalian gagal dikirim.' });
+  }
 }
 
 export function render() {
@@ -229,6 +349,8 @@ export async function mount(root, ctx = {}) {
   activeTab = 'diajukan';
   searchTerm = '';
   currentPage = 1;
+  dialog = null;
+  lastTrigger = null;
   try {
     const all = await getPeminjaman();
     const user = ctx.user || null;
@@ -261,14 +383,28 @@ export async function mount(root, ctx = {}) {
       renderTableContent();
       return;
     }
+    const returnButton = event.target.closest('[data-return]');
+    if (returnButton) {
+      const row = pageRows.find((item) => String(item.id || item.idPeminjaman) === returnButton.dataset.return);
+      if (row) showDialog({ type: 'konfirmasi', row, submitting: false, error: '' }, returnButton);
+      return;
+    }
     const detailButton = event.target.closest('[data-detail]');
     if (detailButton) {
       const row = pageRows.find((item) => String(item.id || item.idPeminjaman) === detailButton.dataset.detail);
-      if (row) rootElement.querySelector('[data-detail-modal]').innerHTML = renderDetail(row);
+      if (row) showDialog({ type: 'detail', row }, detailButton);
       return;
     }
-    if (event.target.closest('[data-close-detail]') || event.target.matches('[data-modal-overlay]')) {
-      rootElement.querySelector('[data-detail-modal]').innerHTML = '';
+    if (event.target.closest('[data-confirm-return]')) {
+      submitReturn();
+      return;
+    }
+    if (event.target.closest('[data-cancel-return]') || event.target.closest('[data-close-detail]') || event.target.closest('[data-close-success]')) {
+      closeDialog();
+      return;
+    }
+    if (event.target.matches('[data-modal-overlay]') && !(dialog?.type === 'konfirmasi' && dialog.submitting)) {
+      closeDialog();
     }
   };
   onInputHandler = (event) => {
@@ -281,15 +417,25 @@ export async function mount(root, ctx = {}) {
     input?.focus();
     try { input?.setSelectionRange(position, position); } catch { /* input type search */ }
   };
+  onKeydownHandler = (event) => {
+    if (event.key !== 'Escape' || !dialog) return;
+    if (dialog.type === 'konfirmasi' && dialog.submitting) return;
+    closeDialog();
+  };
   root.addEventListener('click', onClickHandler);
   root.addEventListener('input', onInputHandler);
+  document.addEventListener('keydown', onKeydownHandler);
 }
 
 export function unmount() {
   if (rootElement && onClickHandler) rootElement.removeEventListener('click', onClickHandler);
   if (rootElement && onInputHandler) rootElement.removeEventListener('input', onInputHandler);
+  if (onKeydownHandler) document.removeEventListener('keydown', onKeydownHandler);
   rootElement = null;
   onClickHandler = null;
   onInputHandler = null;
+  onKeydownHandler = null;
+  dialog = null;
+  lastTrigger = null;
   pageRows = [];
 }

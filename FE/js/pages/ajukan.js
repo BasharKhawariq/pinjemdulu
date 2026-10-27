@@ -185,7 +185,7 @@ export function render({
       <!-- Kartu Utama Formulir Pengajuan Peminjaman -->
       <div class="rounded-3xl border border-border bg-card p-6 shadow-sm sm:p-10">
         <div class="mb-8">
-          <h1 class="text-xl font-bold text-foreground sm:text-2xl">
+          <h1 class="text-xl font-semibold text-foreground sm:text-2xl">
             Pengajuan Peminjaman
           </h1>
           <span class="sr-only">Ajukan Peminjaman</span>

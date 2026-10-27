@@ -17,6 +17,7 @@ import {
 import { renderIcon } from '../ui/icons.js';
 import { renderSearchInput } from '../ui/search-input.js';
 import { renderModal } from '../ui/modal.js';
+import { renderFilterButton, renderFilterModal as renderBaseFilterModal } from '../ui/filter.js';
 import {
   getInventarisKelola,
   createInventaris,
@@ -329,119 +330,85 @@ export function renderFilterModal({ filters = {}, kategoriList = [], countActive
     ),
   ];
 
-  return html`
-    <dialog id="dialog-filter-kelola" aria-labelledby="dialog-filter-title" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 z-50 w-full max-w-sm rounded-2xl border border-border bg-background p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm">
-      <div class="flex flex-col">
-        <!-- Header -->
-        <div class="flex items-center justify-between border-b border-border px-5 py-4">
-          <div class="flex items-center gap-2.5">
-            <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary shrink-0">
-              ${renderIcon('Funnel', 'h-4 w-4')}
-            </span>
-            <div class="flex items-center gap-2">
-              <h2 id="dialog-filter-title" class="text-base font-semibold leading-tight text-foreground">
-                Filter Barang Inventaris
-              </h2>
-              ${countActive > 0 ? html`<span class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-info px-1 text-[10px] font-semibold text-white">${countActive}</span>` : raw('')}
-            </div>
-          </div>
-          <button
-            type="button"
-            data-action="close-filter-dialog"
-            aria-label="Tutup filter"
-            class="inline-flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground"
-          >
-            ${renderIcon('X', 'h-4 w-4')}
-          </button>
-        </div>
-
-        <!-- Body Form Filter -->
-        <form id="form-filter-kelola" class="space-y-4 px-5 py-4">
-          <!-- Kategori -->
-          <div class="space-y-1.5">
-            <label for="filter-kategori-select" class="text-sm font-medium text-foreground">Kategori</label>
-            <select id="filter-kategori-select" name="kategori" class="${selectClass()}">
-              ${raw(katOptions.map((o) => o.toString()).join(''))}
-            </select>
-          </div>
-
-          <!-- Kondisi -->
-          <fieldset class="space-y-2">
-            <legend class="text-sm font-medium text-foreground">Kondisi</legend>
-            <div class="space-y-2">
-              <label class="flex items-center gap-2.5 rounded-xl border border-border bg-background px-3 py-2 text-sm cursor-pointer transition hover:bg-muted/40">
-                <input
-                  type="radio"
-                  name="kondisi"
-                  value="baik"
-                  ${curKondisi === 'baik' ? raw('checked') : ''}
-                  class="size-4 accent-primary"
-                />
-                <span>Baik</span>
-              </label>
-              <label class="flex items-center gap-2.5 rounded-xl border border-border bg-background px-3 py-2 text-sm cursor-pointer transition hover:bg-muted/40">
-                <input
-                  type="radio"
-                  name="kondisi"
-                  value="rusak"
-                  ${curKondisi === 'rusak' ? raw('checked') : ''}
-                  class="size-4 accent-primary"
-                />
-                <span>Rusak</span>
-              </label>
-            </div>
-          </fieldset>
-
-          <!-- Status -->
-          <fieldset class="space-y-2">
-            <legend class="text-sm font-medium text-foreground">Status</legend>
-            <div class="space-y-2">
-              <label class="flex items-center gap-2.5 rounded-xl border border-border bg-background px-3 py-2 text-sm cursor-pointer transition hover:bg-muted/40">
-                <input
-                  type="radio"
-                  name="status"
-                  value="tersedia"
-                  ${curStatus === 'tersedia' ? raw('checked') : ''}
-                  class="size-4 accent-primary"
-                />
-                <span>Tersedia</span>
-              </label>
-              <label class="flex items-center gap-2.5 rounded-xl border border-border bg-background px-3 py-2 text-sm cursor-pointer transition hover:bg-muted/40">
-                <input
-                  type="radio"
-                  name="status"
-                  value="dipinjam"
-                  ${curStatus === 'dipinjam' ? raw('checked') : ''}
-                  class="size-4 accent-primary"
-                />
-                <span>Dipinjam</span>
-              </label>
-            </div>
-          </fieldset>
-        </form>
-
-        <!-- Footer -->
-        <div class="flex items-center justify-between border-t border-border px-5 py-3">
-          <button
-            type="button"
-            data-action="reset-filter-dialog"
-            class="text-sm font-medium text-muted-foreground hover:text-foreground"
-          >
-            Reset
-          </button>
-          <div class="flex gap-2">
-            <button
-              type="button"
-              data-action="apply-filter-dialog"
-              class="${buttonClass({ variant: 'default', size: 'sm' })}"
-            >
-              Terapkan
-            </button>
-          </div>
-        </div>
+  const bodyContent = html`
+    <!-- Kategori -->
+    <div class="space-y-1.5">
+      <label for="filter-kategori-select" class="text-sm font-medium text-foreground">Kategori</label>
+      <div class="relative">
+        <select id="filter-kategori-select" name="kategori" class="${selectClass('appearance-none pr-10 cursor-pointer')}">
+          ${raw(katOptions.map((o) => o.toString()).join(''))}
+        </select>
+        <span class="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground flex items-center">
+          ${renderIcon('ChevronDown', 'h-4 w-4')}
+        </span>
       </div>
-    </dialog>
+    </div>
+
+    <!-- Kondisi -->
+    <fieldset class="space-y-2">
+      <legend class="text-sm font-medium text-foreground">Kondisi</legend>
+      <div class="space-y-2">
+        <label class="flex items-center gap-2.5 rounded-xl border border-border bg-background px-3 py-2 text-sm cursor-pointer transition hover:bg-muted/40">
+          <input
+            type="radio"
+            name="kondisi"
+            value="baik"
+            ${curKondisi === 'baik' ? raw('checked') : ''}
+            class="size-4 accent-primary"
+          />
+          <span>Baik</span>
+        </label>
+        <label class="flex items-center gap-2.5 rounded-xl border border-border bg-background px-3 py-2 text-sm cursor-pointer transition hover:bg-muted/40">
+          <input
+            type="radio"
+            name="kondisi"
+            value="rusak"
+            ${curKondisi === 'rusak' ? raw('checked') : ''}
+            class="size-4 accent-primary"
+          />
+          <span>Rusak</span>
+        </label>
+      </div>
+    </fieldset>
+
+    <!-- Status -->
+    <fieldset class="space-y-2">
+      <legend class="text-sm font-medium text-foreground">Status</legend>
+      <div class="space-y-2">
+        <label class="flex items-center gap-2.5 rounded-xl border border-border bg-background px-3 py-2 text-sm cursor-pointer transition hover:bg-muted/40">
+          <input
+            type="radio"
+            name="status"
+            value="tersedia"
+            ${curStatus === 'tersedia' ? raw('checked') : ''}
+            class="size-4 accent-primary"
+          />
+          <span>Tersedia</span>
+        </label>
+        <label class="flex items-center gap-2.5 rounded-xl border border-border bg-background px-3 py-2 text-sm cursor-pointer transition hover:bg-muted/40">
+          <input
+            type="radio"
+            name="status"
+            value="dipinjam"
+            ${curStatus === 'dipinjam' ? raw('checked') : ''}
+            class="size-4 accent-primary"
+          />
+          <span>Dipinjam</span>
+        </label>
+      </div>
+    </fieldset>
   `;
+
+  return renderBaseFilterModal({
+    id: 'dialog-filter-kelola',
+    title: 'Filter Barang Inventaris',
+    countActive,
+    closeAction: 'close-filter-dialog',
+    resetAction: 'reset-filter-dialog',
+    applyAction: 'apply-filter-dialog',
+    formId: 'form-filter-kelola',
+    bodyContent,
+  });
 }
 
 /**
@@ -729,19 +696,24 @@ export function renderFormModal({
               <label for="form-select-kategori" class="${labelClass()}">
                 Kategori <span class="text-rose-500">*</span>
               </label>
-              <select
-                id="form-select-kategori"
-                name="idKategori"
-                class="${selectClass({ error: Boolean(formErrors.idKategori) })}"
-                required
-              >
-                <option value="">Pilih kategori...</option>
-                ${raw(kategoriList.map((k) => `
-                  <option value="${escapeHtml(k.idKategori)}" ${formData.idKategori === k.idKategori ? 'selected' : ''}>
-                    ${escapeHtml(k.namaKategori)}
-                  </option>
-                `).join(''))}
-              </select>
+              <div class="relative">
+                <select
+                  id="form-select-kategori"
+                  name="idKategori"
+                  class="${selectClass({ error: Boolean(formErrors.idKategori), className: 'appearance-none pr-10 cursor-pointer' })}"
+                  required
+                >
+                  <option value="">Pilih kategori...</option>
+                  ${raw(kategoriList.map((k) => `
+                    <option value="${escapeHtml(k.idKategori)}" ${formData.idKategori === k.idKategori ? 'selected' : ''}>
+                      ${escapeHtml(k.namaKategori)}
+                    </option>
+                  `).join(''))}
+                </select>
+                <span class="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground flex items-center">
+                  ${renderIcon('ChevronDown', 'h-4 w-4')}
+                </span>
+              </div>
               ${formErrors.idKategori ? html`
                 <p class="mt-1 text-xs text-rose-500">${formErrors.idKategori}</p>
               ` : raw('')}
@@ -1080,7 +1052,7 @@ export function renderKelolaContent(state = {}) {
     <div class="space-y-6" id="kelola-inventaris-root">
       <!-- Header Halaman -->
       <div class="space-y-1">
-        <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Kelola Inventaris</h1>
+        <h1 class="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Kelola Inventaris</h1>
         <p class="text-sm text-muted-foreground">
           Kelola Inventaris OKI Anda.
         </p>
@@ -1111,22 +1083,13 @@ export function renderKelolaContent(state = {}) {
             }))}
 
             <!-- Tombol Filter -->
-            <button
-              type="button"
-              data-action="open-filter-dialog"
-              aria-label="Filter barang inventaris"
-              title="Filter barang inventaris"
-              class="relative inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:bg-slate-50"
-            >
-              ${renderIcon('Funnel', 'h-4 w-4')}
-              <span
-                id="kelola-filter-badge-counter"
-                class="absolute -top-1.5 -right-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground border border-background ${nAktif > 0 ? '' : 'hidden'}"
-                aria-hidden="true"
-              >
-                ${nAktif > 9 ? '9+' : nAktif}
-              </span>
-            </button>
+            ${renderFilterButton({
+              id: 'kelola-filter-button',
+              action: 'open-filter-dialog',
+              title: 'Filter barang inventaris',
+              ariaLabel: 'Filter barang inventaris',
+              countActive: nAktif,
+            })}
 
             <!-- Tombol Tambah Inventaris (Link Halaman Terpisah) -->
             <a
