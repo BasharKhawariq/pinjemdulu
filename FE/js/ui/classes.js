@@ -24,8 +24,8 @@ export function buttonClass(options = {}) {
   const variants = {
     default: 'bg-primary text-primary-foreground shadow-sm hover:bg-primary/90',
     destructive: 'bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90',
-    outline: 'border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground',
-    secondary: 'bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80',
+    outline: 'border border-input bg-background shadow-sm hover:bg-secondary-hover hover:text-secondary-hover-foreground hover:border-secondary-hover',
+    secondary: 'bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary-hover hover:text-secondary-hover-foreground',
     ghost: 'hover:bg-accent hover:text-accent-foreground',
     link: 'text-primary underline-offset-4 hover:underline',
   };
@@ -175,10 +175,18 @@ export function textareaClass(className = '') {
 /**
  * Helper kelas select formulir.
  */
-export function selectClass(className = '') {
+export function selectClass(options = '') {
+  let extra = '';
+  let error = false;
+  if (typeof options === 'string') {
+    extra = options;
+  } else if (options && typeof options === 'object') {
+    extra = options.className || '';
+    error = Boolean(options.error);
+  }
   const base =
-    'flex h-11 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60 aria-[invalid=true]:border-destructive';
-  return cn(base, className);
+    'flex h-11 w-full appearance-none rounded-xl border border-input bg-background px-4 py-2.5 pr-10 text-sm text-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60 aria-[invalid=true]:border-destructive cursor-pointer';
+  return cn(base, error && 'border-destructive focus-visible:ring-destructive', extra);
 }
 
 /**
