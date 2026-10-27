@@ -156,6 +156,8 @@ export function renderCardSkeleton() {
   `;
 }
 
+import { renderPagination as renderSharedPagination } from '../ui/pagination.js';
+
 /**
  * Render tombol-tombol paginasi.
  * @param {number} currentPage
@@ -163,70 +165,11 @@ export function renderCardSkeleton() {
  * @returns {import('../ui/html.js').SafeHtml}
  */
 export function renderPagination(currentPage, totalPages) {
-  if (totalPages <= 1) return raw('');
-
-  const pages = buildPageList(currentPage, totalPages);
-
-  const pageButtons = pages.map((p, idx) => {
-    if (p === '…') {
-      return html`
-        <span class="flex h-9 w-9 items-center justify-center text-zinc-400" aria-hidden="true">
-          ${renderIcon('MoreHorizontal', 'h-4 w-4')}
-        </span>
-      `;
-    }
-
-    const isActive = p === currentPage;
-    return html`
-      <button
-        type="button"
-        data-action="change-page"
-        data-page="${p}"
-        aria-current="${isActive ? 'page' : 'false'}"
-        aria-label="Halaman ${p}"
-        class="${buttonClass({
-          variant: isActive ? 'outline' : 'ghost',
-          size: 'icon',
-        })} h-9 w-9 rounded-xl ${
-          isActive
-            ? 'border-primary text-primary font-semibold bg-primary/5'
-            : 'text-zinc-600 hover:text-zinc-900'
-        }"
-      >
-        ${p}
-      </button>
-    `;
-  });
-
+  const current = Math.max(1, currentPage || 1);
+  const total = Math.max(1, totalPages || 1);
   return html`
     <nav role="navigation" aria-label="Pagination" class="mx-auto mt-8 flex w-full flex-col items-center gap-3">
-      <div class="flex flex-row flex-wrap items-center justify-center gap-1">
-        <button
-          type="button"
-          data-action="change-page"
-          data-page="${currentPage - 1}"
-          ${currentPage <= 1 ? raw('disabled') : ''}
-          class="${buttonClass({ variant: 'ghost', size: 'sm' })} gap-1 rounded-xl pl-2.5 pr-3 disabled:pointer-events-none disabled:opacity-40"
-          aria-label="Halaman sebelumnya"
-        >
-          ${renderIcon('ChevronLeft', 'h-4 w-4')}
-          <span>Sebelumnya</span>
-        </button>
-
-        ${pageButtons}
-
-        <button
-          type="button"
-          data-action="change-page"
-          data-page="${currentPage + 1}"
-          ${currentPage >= totalPages ? raw('disabled') : ''}
-          class="${buttonClass({ variant: 'ghost', size: 'sm' })} gap-1 rounded-xl pl-3 pr-2.5 disabled:pointer-events-none disabled:opacity-40"
-          aria-label="Halaman berikutnya"
-        >
-          <span>Berikutnya</span>
-          ${renderIcon('ChevronRight', 'h-4 w-4')}
-        </button>
-      </div>
+      ${raw(renderSharedPagination({ currentPage: current, totalPages: total, action: 'change-page' }))}
     </nav>
   `;
 }

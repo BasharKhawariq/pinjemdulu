@@ -238,6 +238,8 @@ export function renderTableRow(it, index, page = 1, perPage = 10) {
   `;
 }
 
+import { renderPagination as renderSharedPagination } from '../ui/pagination.js';
+
 /**
  * Render paginasi tabel kelola inventaris.
  * @param {number} page
@@ -245,69 +247,11 @@ export function renderTableRow(it, index, page = 1, perPage = 10) {
  * @returns {import('../ui/html.js').SafeHtml}
  */
 export function renderPagination(page, totalPages) {
-  if (totalPages <= 1) return raw('');
-
-  const pages = buildPageList(page, totalPages);
-  const isFirst = page <= 1;
-  const isLast = page >= totalPages;
-
-  const btnPrev = html`
-    <button
-      type="button"
-      data-action="change-page"
-      data-page="${page - 1}"
-      ${isFirst ? raw('disabled aria-disabled="true"') : ''}
-      class="inline-flex h-9 items-center justify-center gap-1 rounded-xl border border-input bg-background px-3 text-xs font-medium transition hover:bg-accent disabled:pointer-events-none disabled:opacity-50"
-      aria-label="Halaman sebelumnya"
-    >
-      ${renderIcon('ChevronLeft', 'h-4 w-4')}
-      <span>Sebelumnya</span>
-    </button>
-  `;
-
-  const btnNext = html`
-    <button
-      type="button"
-      data-action="change-page"
-      data-page="${page + 1}"
-      ${isLast ? raw('disabled aria-disabled="true"') : ''}
-      class="inline-flex h-9 items-center justify-center gap-1 rounded-xl border border-input bg-background px-3 text-xs font-medium transition hover:bg-accent disabled:pointer-events-none disabled:opacity-50"
-      aria-label="Halaman berikutnya"
-    >
-      <span>Berikutnya</span>
-      ${renderIcon('ChevronRight', 'h-4 w-4')}
-    </button>
-  `;
-
-  const pageButtons = pages.map((p) => {
-    if (p === '…') {
-      return html`<span class="inline-flex h-9 w-9 items-center justify-center text-xs text-muted-foreground">…</span>`;
-    }
-    const isActive = p === page;
-    return html`
-      <button
-        type="button"
-        data-action="change-page"
-        data-page="${p}"
-        aria-current="${isActive ? 'page' : 'false'}"
-        class="inline-flex h-9 w-9 items-center justify-center rounded-xl text-xs font-medium transition ${
-          isActive
-            ? 'bg-primary text-primary-foreground font-semibold shadow-sm'
-            : 'border border-input bg-background text-foreground hover:bg-accent'
-        }"
-      >
-        ${p}
-      </button>
-    `;
-  });
-
+  const current = Math.max(1, page || 1);
+  const total = Math.max(1, totalPages || 1);
   return html`
-    <nav class="mt-5 flex flex-wrap items-center justify-center gap-1.5 sm:justify-end" aria-label="Navigasi Halaman Inventaris">
-      ${btnPrev}
-      <div class="flex items-center gap-1">
-        ${raw(pageButtons.map((b) => b.toString()).join(''))}
-      </div>
-      ${btnNext}
+    <nav class="mt-5 flex flex-wrap items-center justify-center sm:justify-end" aria-label="Navigasi Halaman Inventaris">
+      ${raw(renderSharedPagination({ currentPage: current, totalPages: total, action: 'change-page' }))}
     </nav>
   `;
 }

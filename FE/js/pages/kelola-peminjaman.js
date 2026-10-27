@@ -10,6 +10,7 @@ import { escapeHtml } from '../ui/html.js';
 import { renderSearchInput } from '../ui/search-input.js';
 import { renderModal as renderModalComponent } from '../ui/modal.js';
 import { renderFilterButton, renderFilterModal } from '../ui/filter.js';
+import { renderStatusChip } from '../ui/status-chip.js';
 import { selectClass, inputClass } from '../ui/classes.js';
 
 const OKI_LIST = ['BEM', 'HMTI', 'HME', 'HIMANIA', 'RISPOL', 'HMS', 'THEATRISIC', 'PP'];
@@ -28,6 +29,7 @@ let toastMessage = '';
 let toastType = 'success';
 let modalRow = null;
 let feedbackModal = null;
+let confirmModal = null;
 
 function dateLabel(value) {
   if (!value) return '—';
@@ -147,7 +149,7 @@ function renderTableRows() {
       <td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400">${escapeHtml(dateLabel(row.startDate || row.mulai || row.tanggalMulai))}</td>
       <td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400">${escapeHtml(dateLabel(row.endDate || row.selesai || row.tanggalSelesai))}</td>
       <td class="px-4 py-4 text-center text-xs text-slate-400">${escapeHtml(row.jumlahPinjam ?? row.jumlahUnit ?? 1)}</td>
-      <td class="px-4 py-4 text-center"><span class="inline-flex whitespace-nowrap rounded-xl px-3 py-2 text-[11px] font-medium ${status.cls}">${escapeHtml(status.label)}</span></td>
+      <td class="px-4 py-4 text-center">${renderStatusChip({ status: row.status })}</td>
       <td class="whitespace-nowrap px-3 py-4"><div class="flex items-center justify-center gap-2">
         <button type="button" data-action="detail" data-id="${escapeHtml(id)}" title="Lihat detail" aria-label="Lihat detail" class="rounded-full p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700">${renderIcon('Info', 'h-5 w-5')}</button>
         ${pending ? `<button type="button" data-action="approve" data-id="${escapeHtml(id)}" title="Setujui pengajuan" aria-label="Setujui pengajuan" class="rounded-full p-1 text-green-600 transition hover:bg-green-50">${renderIcon('CircleCheck', 'h-5 w-5')}</button><button type="button" data-action="reject" data-id="${escapeHtml(id)}" title="Tolak pengajuan" aria-label="Tolak pengajuan" class="rounded-full p-1 text-red-600 transition hover:bg-red-50">${renderIcon('CircleX', 'h-5 w-5')}</button>` : ''}
@@ -156,12 +158,49 @@ function renderTableRows() {
   }).join('');
 }
 
+import { renderPagination as renderSharedPagination } from '../ui/pagination.js';
+
 function renderPagination() {
   const pages = Math.max(1, Math.ceil(visibleRows().length / PAGE_SIZE));
-  return `<div class="flex items-center justify-end gap-2"><button type="button" data-action="prev" aria-label="Halaman sebelumnya" ${currentPage <= 1 ? 'disabled' : ''} class="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-100 text-slate-400 hover:bg-slate-50 disabled:opacity-40">${renderIcon('ChevronLeft', 'h-4 w-4')}</button><span class="flex h-10 min-w-10 items-center justify-center rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground">${currentPage}</span><button type="button" data-action="next" aria-label="Halaman berikutnya" ${currentPage >= pages ? 'disabled' : ''} class="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-100 text-slate-400 hover:bg-slate-50 disabled:opacity-40">${renderIcon('ChevronRight', 'h-4 w-4')}</button></div>`;
+  return renderSharedPagination({
+    currentPage,
+    totalPages: pages,
+    prevAction: 'prev',
+    nextAction: 'next',
+    showNumbers: false,
+    className: 'justify-end',
+  });
 }
 
 function renderModal() {
+  if (confirmModal) {
+    const isApprove = confirmModal.type === 'approve';
+    return renderModalComponent({
+      variant: isApprove ? 'approve' : 'reject',
+      title: isApprove ? 'Setujui pengajuan peminjaman?' : 'Tolak pengajuan peminjaman?',
+      description: isApprove
+        ? 'Saya yakin ingin menyetujui peminjaman ini'
+        : 'Saya yakin ingin menolak peminjaman ini',
+      actions: [
+        {
+          label: 'Kembali',
+          action: 'close-confirm-modal',
+          variant: 'outline',
+          className: 'w-1/2 rounded-xl',
+        },
+        {
+          label: isApprove ? 'Setujui' : 'Tolak',
+          action: isApprove ? 'execute-approve' : 'execute-reject',
+          dataId: String(confirmModal.id),
+          variant: 'default',
+          className: isApprove
+            ? 'w-1/2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700'
+            : 'w-1/2 rounded-xl bg-rose-600 text-white hover:bg-rose-700',
+        },
+      ],
+    });
+  }
+
   if (feedbackModal) {
     return renderModalComponent({
       variant: feedbackModal.variant,
@@ -170,23 +209,107 @@ function renderModal() {
       primaryAction: {
         label: 'Tutup',
         action: 'close-feedback-modal',
+        className: 'w-full rounded-xl',
       },
     });
   }
+
   if (!modalRow) return '';
   const row = modalRow;
-  const status = statusInfo(row.status);
-  const details = [
-    ['Nama peminjam', personName(row)],
-    ['Organisasi', organizationName(row)],
-    ['Barang dipinjam', itemName(row)],
-    ['Tanggal mulai', dateLabel(row.startDate || row.mulai)],
-    ['Tanggal selesai', dateLabel(row.endDate || row.selesai)],
-    ['Jumlah unit', row.jumlahPinjam ?? 1],
-    ['Keperluan', row.keperluan || '—'],
-    ['Status', status.label],
-  ];
-  return `<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4" data-modal-backdrop><section role="dialog" aria-modal="true" aria-labelledby="detail-title" class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl"><div class="mb-5 flex items-start justify-between"><div><p class="text-xs font-medium uppercase tracking-wide text-slate-400">Detail transaksi</p><h2 id="detail-title" class="mt-1 text-xl font-semibold text-slate-900">Detail Peminjaman</h2></div><button type="button" data-action="close-modal" aria-label="Tutup detail" class="rounded-lg p-2 text-slate-400 hover:bg-slate-100">${renderIcon('X', 'h-5 w-5')}</button></div><dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">${details.map(([label, value]) => `<div><dt class="text-xs text-slate-400">${escapeHtml(label)}</dt><dd class="mt-1 text-sm font-medium text-slate-800">${escapeHtml(value)}</dd></div>`).join('')}</dl><div class="mt-6 flex justify-end"><button type="button" data-action="close-modal" class="rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground">Tutup</button></div></section></div>`;
+  const item = row.inventaris || row.barang || {};
+  const name = item.namaBarang || row.namaBarang || 'Barang inventaris';
+  const org = organizationName(row);
+  const isTerlambat = row.status === STATUS_PEMINJAMAN.TERLAMBAT || String(row.status).toLowerCase() === 'terlambat';
+  const isDitolak = row.status === STATUS_PEMINJAMAN.DITOLAK || String(row.status).toLowerCase() === 'ditolak';
+  const daysLate = row.waktuTerlambat || 3;
+  return `
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4" data-modal-backdrop>
+      <section role="dialog" aria-modal="true" aria-labelledby="detail-title" class="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+        <div class="flex items-start justify-between gap-4">
+          <h2 id="detail-title" class="text-xl font-bold text-slate-900">Detail Peminjaman</h2>
+          <button type="button" data-action="close-modal" aria-label="Tutup detail" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100">${renderIcon('X', 'h-5 w-5')}</button>
+        </div>
+        <div class="mt-6 space-y-5">
+          <div>
+            <p class="text-xs font-semibold text-slate-900">Nama Barang</p>
+            <div class="mt-2 flex items-center justify-between">
+              <span class="text-sm font-normal text-slate-800">${escapeHtml(name)}</span>
+              <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+                <span class="inline-block h-3 w-3 rounded-full bg-slate-400" aria-hidden="true"></span>
+                ${escapeHtml(org)}
+              </span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-zinc-200">
+            <div class="sm:pr-4">
+              <p class="text-xs font-semibold text-slate-900">Tanggal Pengajuan</p>
+              <p class="mt-2 text-xs sm:text-sm text-slate-700">${escapeHtml(dateLabel(row.tanggalPengajuan || row.createdAt))}</p>
+            </div>
+            <div class="sm:px-4">
+              <p class="text-xs font-semibold text-slate-900">Tanggal Mulai</p>
+              <p class="mt-2 text-xs sm:text-sm text-slate-700">${escapeHtml(dateLabel(row.startDate || row.mulai))}</p>
+            </div>
+            <div class="sm:pl-4">
+              <p class="text-xs font-semibold text-slate-900">Tanggal Selesai</p>
+              <p class="mt-2 text-xs sm:text-sm text-slate-700">${escapeHtml(dateLabel(row.endDate || row.selesai))}</p>
+            </div>
+          </div>
+
+          <div>
+            <p class="text-xs font-semibold text-slate-900">Jumlah</p>
+            <p class="mt-2 text-xs sm:text-sm text-slate-700">${escapeHtml(row.jumlahPinjam ?? row.jumlahUnit ?? 1)}</p>
+          </div>
+
+          <div>
+            <p class="text-xs font-semibold text-slate-900">Keperluan Peminjaman Barang</p>
+            <div class="mt-2 rounded-2xl border border-zinc-200/80 p-3.5 text-xs sm:text-sm text-slate-700 bg-white">
+              ${escapeHtml(row.keperluan || 'Seminar BEM')}
+            </div>
+          </div>
+
+          ${row.diprosesOleh ? `
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold text-slate-900">Diproses Oleh</span>
+              <span class="text-sm font-medium text-slate-800">${escapeHtml(row.diprosesOleh)}</span>
+            </div>
+          ` : ''}
+
+          <div>
+            <p class="text-xs font-semibold text-slate-900">Status</p>
+            <div class="mt-2 flex items-center">
+              ${renderStatusChip({ status: row.status })}
+              ${isTerlambat ? `
+                <div class="relative group ml-2 inline-flex items-center">
+                  <span class="inline-flex h-5 w-5 items-center justify-center text-rose-600 cursor-pointer" aria-label="Informasi keterlambatan">
+                    ${renderIcon('AlertCircle', 'h-5 w-5')}
+                  </span>
+                  <div class="pointer-events-none absolute bottom-full mb-2 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-30 whitespace-nowrap rounded-xl bg-white px-3 py-1.5 text-xs font-medium text-slate-800 shadow-xl border border-slate-200">
+                    Waktu Terlambat: ${daysLate} Hari
+                    <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-white"></div>
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+
+          ${isDitolak ? `
+            <div>
+              <p class="text-xs font-semibold text-slate-900">Alasan Ditolak</p>
+              <div class="mt-2 rounded-2xl border border-zinc-200/80 p-3.5 text-xs sm:text-sm text-slate-700 bg-white">
+                ${escapeHtml(row.alasanPenolakan || 'Peminjaman tidak dapat diproses karena alasan operasional')}
+              </div>
+            </div>
+          ` : ''}
+        </div>
+
+        <div class="mt-6 flex justify-end">
+          <button type="button" data-action="close-modal" class="rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:opacity-90">
+            Tutup
+          </button>
+        </div>
+      </section>
+    </div>`;
 }
 
 async function loadRows() {
@@ -358,17 +481,35 @@ export async function mount(root) {
       refresh();
       return;
     }
-    if (action === 'approve' || action === 'reject') {
-      const nextStatus = action === 'approve' ? STATUS_PEMINJAMAN.DISETUJUI : STATUS_PEMINJAMAN.DITOLAK;
+    if (action === 'approve') {
+      confirmModal = { type: 'approve', id };
+      refresh();
+      return;
+    }
+    if (action === 'reject') {
+      confirmModal = { type: 'reject', id };
+      refresh();
+      return;
+    }
+    if (action === 'close-confirm-modal') {
+      confirmModal = null;
+      refresh();
+      return;
+    }
+    if (action === 'execute-approve' || action === 'execute-reject') {
+      const isApprove = action === 'execute-approve';
+      const targetId = button.dataset.id || confirmModal?.id;
+      confirmModal = null;
+      const nextStatus = isApprove ? STATUS_PEMINJAMAN.DISETUJUI : STATUS_PEMINJAMAN.DITOLAK;
       try {
-        await updateMockPeminjamanStatus(id, nextStatus);
+        await updateMockPeminjamanStatus(targetId, nextStatus);
         rows = await loadRows();
         toastType = 'success';
-        toastMessage = action === 'approve' ? 'Pengajuan berhasil disetujui.' : 'Pengajuan berhasil ditolak.';
+        toastMessage = isApprove ? 'Pengajuan berhasil disetujui.' : 'Pengajuan berhasil ditolak.';
         feedbackModal = {
-          variant: action === 'approve' ? 'approve' : 'reject',
-          title: action === 'approve' ? 'Pengajuan Disetujui' : 'Pengajuan Ditolak',
-          description: action === 'approve'
+          variant: isApprove ? 'approve' : 'reject',
+          title: isApprove ? 'Pengajuan Disetujui' : 'Pengajuan Ditolak',
+          description: isApprove
             ? 'Pengajuan peminjaman barang berhasil disetujui dan status telah diperbarui.'
             : 'Pengajuan peminjaman barang telah ditolak.',
         };
@@ -377,6 +518,7 @@ export async function mount(root) {
         toastMessage = error?.message || 'Status pengajuan gagal diperbarui.';
       }
       refresh();
+      return;
     }
   };
 
@@ -407,6 +549,7 @@ export function unmount() {
   rows = [];
   modalRow = null;
   feedbackModal = null;
+  confirmModal = null;
   okiFilter = 'all';
   tanggalFilter = '';
   statusFilter = 'all';

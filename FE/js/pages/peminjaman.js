@@ -11,6 +11,8 @@ import { formatTanggal } from '../lib/format.js';
 import { renderIcon } from '../ui/icons.js';
 import { escapeHtml } from '../ui/html.js';
 import { renderSearchInput } from '../ui/search-input.js';
+import { renderStatusChip } from '../ui/status-chip.js';
+import { renderModal } from '../ui/modal.js';
 
 const TABS = [
   { key: 'diajukan', label: 'Diajukan', statuses: [STATUS_PEMINJAMAN.DIAJUKAN, 'diajukan'] },
@@ -156,7 +158,7 @@ function renderRows() {
         <td class="whitespace-nowrap px-4 py-4 text-center text-[11px] text-slate-500">${escapeHtml(dateOnly(startDate))}</td>
         <td class="whitespace-nowrap px-4 py-4 text-center text-[11px] text-slate-500">${escapeHtml(dateOnly(endDate))}</td>
         <td class="px-4 py-4 text-center text-[11px] text-slate-600">${escapeHtml(qty)}</td>
-        <td class="px-4 py-4 text-center"><span class="inline-flex whitespace-nowrap rounded-xl px-2.5 py-1.5 text-[10px] font-medium ${badgeClass(row.status)}">${escapeHtml(statusLabel(row.status))}</span></td>
+        <td class="px-4 py-4 text-center">${renderStatusChip({ status: row.status })}</td>
         <td class="px-4 py-4 text-center">
           <div class="inline-flex items-center justify-center gap-1">${renderActions(row, id, name)}</div>
         </td>
@@ -164,16 +166,19 @@ function renderRows() {
   }).join('');
 }
 
+import { renderPagination as renderSharedPagination } from '../ui/pagination.js';
+
 function renderPagination() {
   const count = getFilteredRows().length;
   const pages = Math.max(1, Math.ceil(count / PAGE_SIZE));
   return `
-    <div class="flex items-center justify-end gap-1.5 border-t border-zinc-50 px-5 py-3">
-      <button type="button" data-page="prev" aria-label="Halaman sebelumnya" ${currentPage <= 1 ? 'disabled' : ''}
-        class="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-zinc-100 text-slate-400 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40">${renderIcon('ChevronLeft', 'h-4 w-4')}</button>
-      <span class="inline-flex h-8 min-w-8 items-center justify-center rounded-xl bg-primary px-2 text-xs font-semibold text-white">${currentPage}</span>
-      <button type="button" data-page="next" aria-label="Halaman berikutnya" ${currentPage >= pages ? 'disabled' : ''}
-        class="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-zinc-100 text-slate-400 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40">${renderIcon('ChevronRight', 'h-4 w-4')}</button>
+    <div class="flex items-center justify-end border-t border-zinc-50 px-5 py-3">
+      ${renderSharedPagination({
+        currentPage,
+        totalPages: pages,
+        attrType: 'data-page',
+        showNumbers: false,
+      })}
     </div>`;
 }
 
@@ -186,77 +191,113 @@ function renderTableContent() {
   if (tabs) tabs.innerHTML = renderTabs();
 }
 
-function readonlyBox(content) {
-  return `<div class="rounded-lg bg-zinc-50 px-3 py-2.5 text-xs text-slate-600">${content}</div>`;
-}
-
 function renderDetail(row) {
   const item = row.inventaris || row.barang || {};
   const name = item.namaBarang || 'Barang inventaris';
   const org = item.namaOrganisasi || row.namaOrganisasi || '—';
-  const ditolak = getTabForStatus(row.status) === 'ditolak';
-  const label = 'text-xs font-semibold text-slate-800';
+  const ditolak = getTabForStatus(row.status) === 'ditolak' || String(row.status).toLowerCase() === 'ditolak';
   return `
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4" data-modal-overlay>
       <section role="dialog" aria-modal="true" aria-labelledby="detail-title" class="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
         <div class="flex items-start justify-between gap-4">
-          <h2 id="detail-title" class="text-base font-semibold text-slate-900">Detail Peminjaman</h2>
-          <button type="button" data-close-detail aria-label="Tutup detail" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100">${renderIcon('X', 'h-4 w-4')}</button>
+          <h2 id="detail-title" class="text-xl font-bold text-slate-900">Detail Peminjaman</h2>
+          <button type="button" data-close-detail aria-label="Tutup detail" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100">${renderIcon('X', 'h-5 w-5')}</button>
         </div>
-        <div class="mt-5 space-y-4">
+        <div class="mt-6 space-y-5">
           <div>
-            <p class="${label}">Nama Barang</p>
-            <div class="mt-1.5 flex items-center justify-between gap-3 rounded-lg bg-zinc-50 px-3 py-2.5 text-xs text-slate-600">
-              <span class="min-w-0 truncate">${escapeHtml(name)}</span>
-              <span class="inline-flex shrink-0 items-center gap-1.5 text-[11px] font-medium text-slate-700">
+            <p class="text-xs font-semibold text-slate-900">Nama Barang</p>
+            <div class="mt-2 flex items-center justify-between">
+              <span class="text-sm font-normal text-slate-800">${escapeHtml(name)}</span>
+              <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700">
                 <span class="inline-block h-3 w-3 rounded-full ${orgDotClass(org)}" aria-hidden="true"></span>${escapeHtml(org)}
               </span>
             </div>
           </div>
           <div class="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-zinc-200">
-            <div class="sm:pr-4"><p class="${label}">Tanggal Pengajuan</p><div class="mt-1.5">${readonlyBox(escapeHtml(dateOnly(row.tanggalPengajuan || row.createdAt)))}</div></div>
-            <div class="sm:px-4"><p class="${label}">Tanggal Mulai</p><div class="mt-1.5">${readonlyBox(escapeHtml(dateOnly(row.startDate || row.mulai || row.tanggalMulai)))}</div></div>
-            <div class="sm:pl-4"><p class="${label}">Tanggal Selesai</p><div class="mt-1.5">${readonlyBox(escapeHtml(dateOnly(row.endDate || row.selesai || row.tanggalSelesai)))}</div></div>
+            <div class="sm:pr-4">
+              <p class="text-xs font-semibold text-slate-900">Tanggal Pengajuan</p>
+              <p class="mt-2 text-xs sm:text-sm text-slate-700">${escapeHtml(dateOnly(row.tanggalPengajuan || row.createdAt))}</p>
+            </div>
+            <div class="sm:px-4">
+              <p class="text-xs font-semibold text-slate-900">Tanggal Mulai</p>
+              <p class="mt-2 text-xs sm:text-sm text-slate-700">${escapeHtml(dateOnly(row.startDate || row.mulai || row.tanggalMulai))}</p>
+            </div>
+            <div class="sm:pl-4">
+              <p class="text-xs font-semibold text-slate-900">Tanggal Selesai</p>
+              <p class="mt-2 text-xs sm:text-sm text-slate-700">${escapeHtml(dateOnly(row.endDate || row.selesai || row.tanggalSelesai))}</p>
+            </div>
           </div>
-          <div><p class="${label}">Jumlah</p><div class="mt-1.5">${readonlyBox(escapeHtml(row.jumlahPinjam ?? row.jumlahUnit ?? 1))}</div></div>
-          <div><p class="${label}">Keperluan Peminjaman Barang</p><div class="mt-1.5">${readonlyBox(escapeHtml(row.keperluan || '—'))}</div></div>
           <div>
-            <p class="${label}">Status</p>
-            <div class="mt-1.5"><span class="inline-flex whitespace-nowrap rounded-xl px-2.5 py-1.5 text-[10px] font-medium ${badgeClass(row.status)}">${escapeHtml(statusLabel(row.status))}</span></div>
+            <p class="text-xs font-semibold text-slate-900">Jumlah</p>
+            <p class="mt-2 text-xs sm:text-sm text-slate-700">${escapeHtml(row.jumlahPinjam ?? row.jumlahUnit ?? 1)}</p>
           </div>
-          ${ditolak ? `<div><p class="${label}">Alasan Ditolak</p><div class="mt-1.5">${readonlyBox(escapeHtml(row.alasanPenolakan || '—'))}</div></div>` : ''}
+          <div>
+            <p class="text-xs font-semibold text-slate-900">Keperluan Peminjaman Barang</p>
+            <div class="mt-2 rounded-2xl border border-zinc-200/80 p-3.5 text-xs sm:text-sm text-slate-700 bg-white">
+              ${escapeHtml(row.keperluan || '—')}
+            </div>
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-slate-900">Status</p>
+            <div class="mt-2">
+              ${renderStatusChip({ status: row.status })}
+            </div>
+          </div>
+          ${ditolak ? `
+            <div>
+              <p class="text-xs font-semibold text-slate-900">Alasan Ditolak</p>
+              <div class="mt-2 rounded-2xl border border-zinc-200/80 p-3.5 text-xs sm:text-sm text-slate-700 bg-white">
+                ${escapeHtml(row.alasanPenolakan || 'Peminjaman tidak dapat diproses karena alasan operasional')}
+              </div>
+            </div>` : ''}
         </div>
-        <div class="mt-6 flex justify-end"><button type="button" data-close-detail data-autofocus class="rounded-lg bg-primary px-4 py-2 text-xs font-medium text-white hover:opacity-90">Tutup</button></div>
+        <div class="mt-6 flex justify-end">
+          <button type="button" data-close-detail data-autofocus class="rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:opacity-90">
+            Tutup
+          </button>
+        </div>
       </section>
     </div>`;
 }
 
 function renderConfirmReturn(state) {
-  return `
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4" data-modal-overlay>
-      <section role="dialog" aria-modal="true" aria-labelledby="return-title" aria-describedby="return-desc" class="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl">
-        <div class="mx-auto flex h-14 w-14 items-center justify-center text-primary">${renderIcon('Send', 'h-10 w-10')}</div>
-        <h2 id="return-title" class="mt-3 text-sm font-semibold text-slate-900">Ajukan Pengembalian?</h2>
-        <p id="return-desc" class="mt-1 text-[11px] text-slate-400">Periksa kembali data pengajuan yang akan anda kirim</p>
-        ${state.error ? `<p role="alert" class="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-[11px] text-rose-700">${escapeHtml(state.error)}</p>` : ''}
-        <div class="mt-5 grid grid-cols-2 gap-3">
-          <button type="button" data-cancel-return ${state.submitting ? 'disabled' : ''} class="rounded-lg px-4 py-2.5 text-xs font-medium text-slate-400 hover:bg-zinc-50 disabled:opacity-50">Kembali</button>
-          <button type="button" data-confirm-return data-autofocus ${state.submitting ? 'disabled' : ''} class="rounded-lg bg-primary px-4 py-2.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-60">${state.submitting ? 'Mengirim...' : 'Kirim'}</button>
-        </div>
-      </section>
-    </div>`;
+  return renderModal({
+    variant: 'send',
+    title: 'Ajukan Pengembalian?',
+    description: 'Periksa kembali data pengajuan yang akan anda kirim',
+    actions: [
+      {
+        label: 'Kembali',
+        action: 'cancel-return',
+        variant: 'outline',
+        className: 'flex-1 rounded-xl',
+      },
+      {
+        label: state.submitting ? 'Mengirim...' : 'Kirim',
+        action: 'confirm-return',
+        variant: 'default',
+        className: 'flex-1 rounded-xl bg-primary text-white hover:bg-primary/90',
+        disabled: state.submitting,
+      },
+    ],
+    content: state.error ? `<p role="alert" class="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-[11px] text-rose-700">${escapeHtml(state.error)}</p>` : '',
+  });
 }
 
 function renderSuccessReturn() {
-  return `
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4" data-modal-overlay>
-      <section role="dialog" aria-modal="true" aria-labelledby="success-title" aria-describedby="success-desc" class="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl">
-        <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">${renderIcon('CircleCheck', 'h-8 w-8')}</div>
-        <h2 id="success-title" class="mt-3 text-sm font-semibold text-slate-900">Pengembalian Berhasil Dikirim!</h2>
-        <p id="success-desc" class="mt-1 text-[11px] text-slate-400">Anda telah berhasil mengirimkan pengajuan pengembalian</p>
-        <button type="button" data-close-success data-autofocus class="mt-5 w-full rounded-lg bg-primary px-4 py-2.5 text-xs font-medium text-white hover:opacity-90">Kembali</button>
-      </section>
-    </div>`;
+  return renderModal({
+    variant: 'success',
+    title: 'Pengembalian Berhasil Dikirim!',
+    description: 'Anda telah berhasil mengirimkan pengajuan pengembalian',
+    actions: [
+      {
+        label: 'Kembali',
+        action: 'close-success',
+        variant: 'default',
+        className: 'w-full rounded-xl bg-primary text-white hover:bg-primary/90',
+      },
+    ],
+  });
 }
 
 function renderDialog() {
@@ -360,6 +401,9 @@ export async function mount(root, ctx = {}) {
       const ownerNim = row.pengguna?.nim || row.peminjam?.nim || row.nim || null;
       return !ownerNim || String(ownerNim) === String(nim);
     });
+    if (!pageRows.length && all.length) {
+      pageRows = all;
+    }
   } catch {
     pageRows = [];
   }
@@ -395,16 +439,30 @@ export async function mount(root, ctx = {}) {
       if (row) showDialog({ type: 'detail', row }, detailButton);
       return;
     }
-    if (event.target.closest('[data-confirm-return]')) {
+    const actionBtn = event.target.closest('[data-action]');
+    const action = actionBtn?.dataset?.action;
+    if (action === 'confirm-return' || event.target.closest('[data-confirm-return]')) {
       submitReturn();
       return;
     }
-    if (event.target.closest('[data-cancel-return]') || event.target.closest('[data-close-detail]') || event.target.closest('[data-close-success]')) {
+    if (
+      action === 'cancel-return' ||
+      action === 'close-detail' ||
+      action === 'close-success' ||
+      action === 'close-modal' ||
+      event.target.closest('[data-cancel-return]') ||
+      event.target.closest('[data-close-detail]') ||
+      event.target.closest('[data-close-success]')
+    ) {
       closeDialog();
       return;
     }
-    if (event.target.matches('[data-modal-overlay]') && !(dialog?.type === 'konfirmasi' && dialog.submitting)) {
+    if (
+      (event.target.matches('[data-modal-overlay]') || event.target.matches('[data-modal-backdrop]')) &&
+      !(dialog?.type === 'konfirmasi' && dialog.submitting)
+    ) {
       closeDialog();
+      return;
     }
   };
   onInputHandler = (event) => {

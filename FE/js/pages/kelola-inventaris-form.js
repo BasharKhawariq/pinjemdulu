@@ -184,10 +184,12 @@ export function renderConfirmSubmitModal({ mode = 'tambah', formData = {}, isSub
       ? 'Kirim'
       : 'Simpan';
   const kondisiText = formData.kondisi === 'rusak' ? 'Rusak' : 'Baik';
+  const kategoriText = formData.namaKategori || formData.kategori || '-';
 
   const summaryContent = html`
     <div class="mt-4 w-full rounded-xl bg-slate-50 p-3.5 text-left text-xs space-y-1.5 border border-slate-100">
       <p><strong class="font-medium text-slate-800">Nama:</strong> ${formData.namaBarang || '-'}</p>
+      <p><strong class="font-medium text-slate-800">Kategori:</strong> ${kategoriText}</p>
       <p><strong class="font-medium text-slate-800">Jumlah:</strong> ${formData.totalBarang || 1} unit</p>
       <p><strong class="font-medium text-slate-800">Kondisi:</strong> ${kondisiText}</p>
     </div>
@@ -359,6 +361,7 @@ export function renderFormPageContent(state = {}) {
   return html`
     <div class="space-y-6 max-w-5xl mx-auto" id="kelola-form-root">
       <!-- Tombol Kembali Atas -->
+      ${!isEdit ? html`
       <div>
         <a
           href="#/kelola/inventaris"
@@ -371,6 +374,7 @@ export function renderFormPageContent(state = {}) {
           <span>Kembali ke Kelola Inventaris</span>
         </a>
       </div>
+      ` : raw('')}
 
       <!-- Header Halaman -->
       <div>
@@ -719,7 +723,14 @@ export function renderFormPageContent(state = {}) {
       </div>
 
       <!-- Dialog Konfirmasi Tambah / Simpan Perubahan -->
-      ${renderConfirmSubmitModal({ mode, formData, isSubmitting })}
+      ${renderConfirmSubmitModal({
+        mode,
+        formData: {
+          ...formData,
+          namaKategori: selectedKat?.namaKategori || formData.namaKategori || '-',
+        },
+        isSubmitting,
+      })}
 
       <!-- Dialog Konfirmasi Buang Perubahan -->
       ${renderConfirmCancelModal({ mode })}

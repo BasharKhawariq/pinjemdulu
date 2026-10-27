@@ -62,9 +62,18 @@ function renderTableRows() {
     </tr>`;
   }).join('');
 }
+import { renderPagination as renderSharedPagination } from '../ui/pagination.js';
+
 function renderPagination() {
   const pages = Math.max(1, Math.ceil(visibleRows().length / PAGE_SIZE));
-  return `<div class="flex items-center justify-end gap-2"><button type="button" data-action="prev" aria-label="Halaman sebelumnya" ${currentPage <= 1 ? 'disabled' : ''} class="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-100 text-slate-400 hover:bg-slate-50 disabled:opacity-40">${renderIcon('ChevronLeft', 'h-4 w-4')}</button><span class="flex h-8 min-w-8 items-center justify-center rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground">${currentPage}</span><button type="button" data-action="next" aria-label="Halaman berikutnya" ${currentPage >= pages ? 'disabled' : ''} class="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-100 text-slate-400 hover:bg-slate-50 disabled:opacity-40">${renderIcon('ChevronRight', 'h-4 w-4')}</button></div>`;
+  return renderSharedPagination({
+    currentPage,
+    totalPages: pages,
+    prevAction: 'prev',
+    nextAction: 'next',
+    showNumbers: false,
+    className: 'justify-end',
+  });
 }
 function renderModal() {
   if (feedbackModal) {

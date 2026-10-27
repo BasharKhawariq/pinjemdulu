@@ -14,6 +14,7 @@ import {
 } from '../ui/classes.js';
 import { renderIcon } from '../ui/icons.js';
 import { renderSearchInput } from '../ui/search-input.js';
+import { renderPagination as renderSharedPagination } from '../ui/pagination.js';
 import {
   getKategoriDenganJumlah,
   createKategori,
@@ -494,59 +495,13 @@ export function renderKategoriTableContent({
       </div>
 
       <!-- Footer Paginasi -->
-      ${totalPages > 1
-        ? html`
-            <nav class="mt-5 flex flex-wrap items-center justify-center gap-1.5 sm:justify-end" aria-label="Navigasi Halaman Kategori">
-              <button
-                type="button"
-                data-action="change-page"
-                data-page="${page - 1}"
-                ${page <= 1 ? raw('disabled aria-disabled="true"') : ''}
-                class="inline-flex h-9 items-center justify-center gap-1 rounded-xl border border-input bg-background px-3 text-xs font-medium transition hover:bg-accent disabled:pointer-events-none disabled:opacity-50"
-                aria-label="Halaman sebelumnya"
-              >
-                ${renderIcon('ChevronLeft', 'h-4 w-4')}
-                <span>Sebelumnya</span>
-              </button>
-
-              <div class="flex items-center gap-1">
-                ${pageList.map((p) => {
-                  if (p === '…' || p === '...') {
-                    return html`<span class="inline-flex h-9 w-9 items-center justify-center text-xs text-muted-foreground">…</span>`;
-                  }
-                  const isCurrent = p === page;
-                  return html`
-                    <button
-                      type="button"
-                      data-action="change-page"
-                      data-page="${p}"
-                      aria-current="${isCurrent ? 'page' : 'false'}"
-                      class="inline-flex h-9 w-9 items-center justify-center rounded-xl text-xs font-medium transition ${
-                        isCurrent
-                          ? 'bg-primary text-primary-foreground font-semibold shadow-sm'
-                          : 'border border-input bg-background text-foreground hover:bg-accent'
-                      }"
-                    >
-                      ${p}
-                    </button>
-                  `;
-                })}
-              </div>
-
-              <button
-                type="button"
-                data-action="change-page"
-                data-page="${page + 1}"
-                ${page >= totalPages ? raw('disabled aria-disabled="true"') : ''}
-                class="inline-flex h-9 items-center justify-center gap-1 rounded-xl border border-input bg-background px-3 text-xs font-medium transition hover:bg-accent disabled:pointer-events-none disabled:opacity-50"
-                aria-label="Halaman berikutnya"
-              >
-                <span>Berikutnya</span>
-                ${renderIcon('ChevronRight', 'h-4 w-4')}
-              </button>
-            </nav>
-          `
-        : ''}
+      <nav class="mt-5 flex flex-wrap items-center justify-center sm:justify-end" aria-label="Navigasi Halaman Kategori">
+        ${raw(renderSharedPagination({
+          currentPage: Math.max(1, page || 1),
+          totalPages: Math.max(1, totalPages || 1),
+          action: 'change-page',
+        }))}
+      </nav>
     </div>
   `;
 }

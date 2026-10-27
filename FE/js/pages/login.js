@@ -95,10 +95,12 @@ export function render(ctx = {}) {
         <section class="flex min-h-screen w-full flex-1 flex-col items-center justify-start px-5 py-10 sm:px-8 md:w-1/2 md:px-12 md:py-14 lg:w-[52%] lg:px-20 lg:py-20 xl:px-28">
           <div class="flex w-full max-w-xl flex-1 flex-col">
             <!-- Logo Brand -->
-            <a href="#/login" aria-label="PinjemDulu beranda" class="mb-10 inline-flex items-center gap-3 self-start">
-              <span class="inline-flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[14px] bg-brand-solid text-white shadow-sm sm:h-[44px] sm:w-[44px]">
-                ${renderIcon('Sparkles', 'h-6 w-6')}
-              </span>
+            <a href="#/login" aria-label="PinjemDulu beranda" class="mb-10 inline-flex items-center gap-3 self-start transition hover:opacity-90">
+              <img
+                src="assets/img/Logo-PinjemDulu.png"
+                alt="Logo PinjemDulu"
+                class="h-[42px] w-[42px] shrink-0 rounded-[14px] object-contain shadow-sm sm:h-[44px] sm:w-[44px]"
+              />
               <span class="flex items-baseline text-2xl font-extrabold tracking-tight">
                 <span class="text-zinc-900">Pinjem</span><span class="text-primary">Dulu</span>
               </span>
