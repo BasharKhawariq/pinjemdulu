@@ -140,12 +140,12 @@ export function renderRowSkeleton(cols = 7) {
   const cells = Array.from({ length: cols })
     .map(
       () => html`
-        <td class="px-3 py-3">
+        <td class="px-4 py-4">
           <div class="${skeletonClass('h-4 w-4/5 rounded')}"></div>
         </td>
       `
     );
-  return html`<tr>${raw(cells.join(''))}</tr>`;
+  return html`<tr class="border-b border-slate-100 last:border-0">${raw(cells.join(''))}</tr>`;
 }
 
 /**
@@ -173,35 +173,35 @@ export function renderTableRow(it, index, page = 1, perPage = 10) {
   const total = Number(it.totalBarang ?? 0);
 
   return html`
-    <tr class="transition hover:bg-muted/20" data-id="${it.idInventaris}">
-      <td class="px-3 py-3 text-muted-foreground align-top">${no}</td>
-      <td class="px-3 py-3 align-top min-w-[200px]">
+    <tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50/60" data-id="${it.idInventaris}">
+      <td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400 align-middle">${no}</td>
+      <td class="min-w-[200px] px-4 py-4 align-middle">
         <div class="flex flex-col gap-1.5">
-          <span class="font-medium text-foreground text-sm">${it.namaBarang}</span>
+          <span class="font-medium text-slate-800 text-xs">${it.namaBarang}</span>
           ${renderOrganisasiBadge(it.namaOrganisasi)}
         </div>
       </td>
-      <td class="px-3 py-3 align-top min-w-[120px]">
+      <td class="min-w-[120px] px-4 py-4 text-xs text-slate-400 align-middle">
         ${renderKategoriBadge(it.namaKategori)}
       </td>
-      <td class="px-3 py-3 text-right tabular-nums align-top min-w-[100px]">
-        <span class="font-medium">${total}</span>
-        <span class="ml-1 text-xs text-muted-foreground">(${sisa} sisa)</span>
+      <td class="whitespace-nowrap px-4 py-4 text-right tabular-nums text-xs align-middle min-w-[100px]">
+        <span class="font-medium text-slate-700">${total}</span>
+        <span class="ml-1 text-xs text-slate-400">(${sisa} sisa)</span>
       </td>
-      <td class="px-3 py-3 align-top min-w-[120px]">
+      <td class="whitespace-nowrap px-4 py-4 align-middle min-w-[120px]">
         ${renderKondisiBadge(it.kondisi)}
       </td>
-      <td class="px-3 py-3 align-top min-w-[100px]">
+      <td class="whitespace-nowrap px-4 py-4 align-middle min-w-[100px]">
         ${renderStatusBadge(it)}
       </td>
-      <td class="px-3 py-3 align-top min-w-[160px]">
+      <td class="whitespace-nowrap px-4 py-4 align-middle min-w-[160px]">
         <div class="flex items-center justify-center gap-1" role="group" aria-label="Aksi inventaris ${it.namaBarang}">
           <!-- Ubah (Link Halaman Terpisah) -->
           <a
             href="#/kelola/inventaris/${it.idInventaris}/ubah"
             aria-label="Ubah ${it.namaBarang}"
             title="Ubah ${it.namaBarang}"
-            class="inline-flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            class="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             ${renderIcon('Pencil', 'h-4 w-4')}
           </a>
@@ -213,7 +213,7 @@ export function renderTableRow(it, index, page = 1, perPage = 10) {
             data-id="${it.idInventaris}"
             aria-label="Lihat detail ${it.namaBarang}"
             title="Lihat detail ${it.namaBarang}"
-            class="inline-flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            class="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             ${renderIcon('Info', 'h-4 w-4')}
           </button>
@@ -225,7 +225,7 @@ export function renderTableRow(it, index, page = 1, perPage = 10) {
             data-id="${it.idInventaris}"
             aria-label="Hapus ${it.namaBarang}"
             title="Hapus ${it.namaBarang}"
-            class="inline-flex h-9 w-9 items-center justify-center rounded-xl text-destructive transition hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            class="inline-flex h-9 w-9 items-center justify-center rounded-xl text-red-600 transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             ${renderIcon('Trash2', 'h-4 w-4')}
           </button>
@@ -1007,67 +1007,65 @@ export function renderTableSection(state = {}) {
   return html`
     <div id="kelola-table-container" class="space-y-4">
       <!-- Tabel Pembungkus Overflow 360px safe -->
-      <div class="overflow-hidden rounded-xl border border-border bg-background/50">
-        <div class="overflow-x-auto">
-          <table class="min-w-full border-collapse text-left text-sm">
-            <thead>
-              <tr class="border-b border-border bg-muted/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                <th scope="col" class="px-3 py-3 w-12">No</th>
-                <th scope="col" class="px-3 py-3 min-w-[200px]">Nama Barang</th>
-                <th scope="col" class="px-3 py-3 min-w-[120px]">Kategori</th>
-                <th scope="col" class="px-3 py-3 min-w-[100px] text-right">Jumlah Unit</th>
-                <th scope="col" class="px-3 py-3 min-w-[120px]">Kondisi</th>
-                <th scope="col" class="px-3 py-3 min-w-[100px]">Status</th>
-                <th scope="col" class="px-3 py-3 min-w-[160px] text-center">Aksi</th>
+      <div class="w-full overflow-x-auto">
+        <table class="w-full min-w-full border-collapse text-left">
+          <thead>
+            <tr class="border-b border-slate-100 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              <th scope="col" class="px-4 py-4 w-12 text-center">No</th>
+              <th scope="col" class="px-4 py-4 min-w-[200px]">Nama Barang</th>
+              <th scope="col" class="px-4 py-4 min-w-[120px]">Kategori</th>
+              <th scope="col" class="px-4 py-4 min-w-[100px] text-right">Jumlah Unit</th>
+              <th scope="col" class="px-4 py-4 min-w-[120px]">Kondisi</th>
+              <th scope="col" class="px-4 py-4 min-w-[100px]">Status</th>
+              <th scope="col" class="px-4 py-4 min-w-[160px] text-center">Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${loading ? renderTableSkeleton() : error ? html`
+              <tr class="border-b border-slate-100 last:border-0">
+                <td colspan="7" class="px-4 py-12 text-center">
+                  <div class="flex flex-col items-center justify-center gap-2">
+                    <span class="text-destructive font-semibold">Gagal memuat inventaris</span>
+                    <p class="text-xs text-muted-foreground">${error}</p>
+                    <button
+                      type="button"
+                      data-action="retry-load"
+                      class="${buttonClass({ variant: 'outline', size: 'sm', className: 'mt-2' })}"
+                    >
+                      Coba Lagi
+                    </button>
+                  </div>
+                </td>
               </tr>
-            </thead>
-            <tbody class="divide-y divide-border text-sm">
-              ${loading ? renderTableSkeleton() : error ? html`
-                <tr>
-                  <td colspan="7" class="px-4 py-12 text-center">
-                    <div class="flex flex-col items-center justify-center gap-2">
-                      <span class="text-destructive font-semibold">Gagal memuat inventaris</span>
-                      <p class="text-xs text-muted-foreground">${error}</p>
+            ` : items.length === 0 ? html`
+              <tr class="border-b border-slate-100 last:border-0">
+                <td colspan="7" class="px-4 py-12 text-center">
+                  <div class="flex flex-col items-center justify-center gap-2">
+                    <span class="text-base font-semibold text-foreground">
+                      ${adaFilter ? 'Tidak ada hasil yang cocok' : 'Belum ada inventaris'}
+                    </span>
+                    <p class="text-xs text-muted-foreground max-w-sm">
+                      ${adaFilter
+                        ? 'Coba ubah kata kunci pencarian atau setel ulang filter.'
+                        : "Anda belum memiliki barang inventaris. Klik 'Tambah Inventaris' untuk mulai."}
+                    </p>
+                    ${adaFilter ? html`
                       <button
                         type="button"
-                        data-action="retry-load"
+                        data-action="reset-filter-direct"
                         class="${buttonClass({ variant: 'outline', size: 'sm', className: 'mt-2' })}"
                       >
-                        Coba Lagi
+                        Setel Ulang Filter
                       </button>
-                    </div>
-                  </td>
-                </tr>
-              ` : items.length === 0 ? html`
-                <tr>
-                  <td colspan="7" class="px-4 py-12 text-center">
-                    <div class="flex flex-col items-center justify-center gap-2">
-                      <span class="text-base font-semibold text-foreground">
-                        ${adaFilter ? 'Tidak ada hasil yang cocok' : 'Belum ada inventaris'}
-                      </span>
-                      <p class="text-xs text-muted-foreground max-w-sm">
-                        ${adaFilter
-                          ? 'Coba ubah kata kunci pencarian atau setel ulang filter.'
-                          : "Anda belum memiliki barang inventaris. Klik 'Tambah Inventaris' untuk mulai."}
-                      </p>
-                      ${adaFilter ? html`
-                        <button
-                          type="button"
-                          data-action="reset-filter-direct"
-                          class="${buttonClass({ variant: 'outline', size: 'sm', className: 'mt-2' })}"
-                        >
-                          Setel Ulang Filter
-                        </button>
-                      ` : raw('')}
-                    </div>
-                  </td>
-                </tr>
-              ` : raw(
-                items.map((it, idx) => renderTableRow(it, idx, meta.page, meta.perPage).toString()).join('')
-              )}
-            </tbody>
-          </table>
-        </div>
+                    ` : raw('')}
+                  </div>
+                </td>
+              </tr>
+            ` : raw(
+              items.map((it, idx) => renderTableRow(it, idx, meta.page, meta.perPage).toString()).join('')
+            )}
+          </tbody>
+        </table>
       </div>
 
       <!-- Paginasi -->
@@ -1117,7 +1115,7 @@ export function renderKelolaContent(state = {}) {
       ${renderKelolaTabs('inventaris')}
 
       <!-- Card List Barang Inventaris -->
-      <div class="rounded-2xl border border-border bg-card p-4 sm:p-6 shadow-sm">
+      <div class="rounded-xl bg-white p-4 sm:p-6 shadow-[0_1px_4px_rgba(15,23,42,0.025)]">
         <!-- Toolbar Atas: Judul Card + Cari + Filter + Tambah -->
         <div class="mb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>

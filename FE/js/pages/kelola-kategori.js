@@ -62,35 +62,33 @@ export const HANDLED_KATEGORI_ACTIONS = [
 export function renderKategoriSkeleton() {
   return html`
     <div class="space-y-4 animate-pulse">
-      <div class="overflow-hidden rounded-xl border border-border bg-background/50">
-        <div class="overflow-x-auto">
-          <table class="min-w-full border-collapse text-left text-sm">
-            <thead>
-              <tr class="border-b border-border bg-muted/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                <th scope="col" class="px-3 py-3 w-12 text-center">No</th>
-                <th scope="col" class="px-3 py-3 min-w-[200px]">Nama Kategori</th>
-                <th scope="col" class="px-3 py-3 min-w-[140px] text-center">Total Barang Per Kategori</th>
-                <th scope="col" class="px-3 py-3 min-w-[160px] text-center">Aksi</th>
+      <div class="w-full overflow-x-auto">
+        <table class="w-full min-w-full border-collapse text-left">
+          <thead>
+            <tr class="border-b border-slate-100 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              <th scope="col" class="px-4 py-4 w-12 text-center">No</th>
+              <th scope="col" class="px-4 py-4 min-w-[200px]">Nama Kategori</th>
+              <th scope="col" class="px-4 py-4 min-w-[140px] text-center">Total Barang Per Kategori</th>
+              <th scope="col" class="px-4 py-4 min-w-[160px] text-center">Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${raw(
+              Array.from({ length: 5 })
+                .map(
+                  () => `
+              <tr class="border-b border-slate-100 last:border-0">
+                <td class="px-4 py-4"><div class="h-4 w-6 rounded bg-muted animate-pulse mx-auto"></div></td>
+                <td class="px-4 py-4"><div class="h-4 w-3/4 rounded bg-muted animate-pulse"></div></td>
+                <td class="px-4 py-4"><div class="h-4 w-12 rounded bg-muted animate-pulse mx-auto"></div></td>
+                <td class="px-4 py-4"><div class="h-8 w-16 rounded-xl bg-muted animate-pulse mx-auto"></div></td>
               </tr>
-            </thead>
-            <tbody class="divide-y divide-border text-sm">
-              ${raw(
-                Array.from({ length: 5 })
-                  .map(
-                    () => `
-                <tr>
-                  <td class="px-3 py-3"><div class="h-4 w-6 rounded bg-muted animate-pulse mx-auto"></div></td>
-                  <td class="px-3 py-3"><div class="h-4 w-3/4 rounded bg-muted animate-pulse"></div></td>
-                  <td class="px-3 py-3"><div class="h-4 w-12 rounded bg-muted animate-pulse mx-auto"></div></td>
-                  <td class="px-3 py-3"><div class="h-8 w-16 rounded-xl bg-muted animate-pulse mx-auto"></div></td>
-                </tr>
-              `
-                  )
-                  .join('')
-              )}
-            </tbody>
-          </table>
-        </div>
+            `
+                )
+                .join('')
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   `;
@@ -416,82 +414,80 @@ export function renderKategoriTableContent({
   return html`
     <div class="space-y-4">
       <!-- Tabel Pembungkus Overflow 360px safe -->
-      <div class="overflow-hidden rounded-xl border border-border bg-background/50">
-        <div class="overflow-x-auto">
-          <table class="min-w-full border-collapse text-left text-sm">
-            <thead>
-              <tr class="border-b border-border bg-muted/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                <th scope="col" class="px-3 py-3 w-12 text-center">No</th>
-                <th scope="col" class="px-3 py-3 min-w-[200px]">Nama Kategori</th>
-                <th scope="col" class="px-3 py-3 min-w-[140px] text-center">Total Barang Per Kategori</th>
-                <th scope="col" class="px-3 py-3 min-w-[160px] text-center">Aksi</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-border text-sm">
-              ${items.map((kat, idx) => {
-                const no = startNo + idx + 1;
-                const totalBarang = Number(kat.totalBarang || 0);
-                const isDipakai = totalBarang > 0;
+      <div class="w-full overflow-x-auto">
+        <table class="w-full min-w-full border-collapse text-left">
+          <thead>
+            <tr class="border-b border-slate-100 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              <th scope="col" class="px-4 py-4 w-12 text-center">No</th>
+              <th scope="col" class="px-4 py-4 min-w-[200px]">Nama Kategori</th>
+              <th scope="col" class="px-4 py-4 min-w-[140px] text-center">Total Barang Per Kategori</th>
+              <th scope="col" class="px-4 py-4 min-w-[160px] text-center">Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${items.map((kat, idx) => {
+              const no = startNo + idx + 1;
+              const totalBarang = Number(kat.totalBarang || 0);
+              const isDipakai = totalBarang > 0;
 
-                return html`
-                  <tr class="transition hover:bg-muted/20">
-                    <td class="px-3 py-3 text-center text-muted-foreground align-middle">${no}</td>
-                    <td class="px-3 py-3 font-medium text-foreground align-middle">${kat.namaKategori}</td>
-                    <td class="px-3 py-3 text-center align-middle">
-                      <span class="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground">
-                        ${totalBarang}
-                      </span>
-                    </td>
-                    <td class="px-3 py-3 align-middle">
-                      <div class="flex items-center justify-center gap-1" role="group" aria-label="Aksi kategori ${kat.namaKategori}">
-                        <button
-                          type="button"
-                          data-action="open-edit-dialog"
-                          data-id="${kat.idKategori}"
-                          data-nama="${kat.namaKategori}"
-                          aria-label="Ubah kategori ${kat.namaKategori}"
-                          title="Ubah ${kat.namaKategori}"
-                          class="inline-flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                        >
-                          ${renderIcon('Pencil', 'h-4 w-4')}
-                        </button>
+              return html`
+                <tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50/60">
+                  <td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400 align-middle">${no}</td>
+                  <td class="min-w-[200px] px-4 py-4 font-medium text-slate-800 text-xs align-middle">${kat.namaKategori}</td>
+                  <td class="whitespace-nowrap px-4 py-4 text-center align-middle">
+                    <span class="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
+                      ${totalBarang}
+                    </span>
+                  </td>
+                  <td class="whitespace-nowrap px-4 py-4 align-middle">
+                    <div class="flex items-center justify-center gap-1" role="group" aria-label="Aksi kategori ${kat.namaKategori}">
+                      <button
+                        type="button"
+                        data-action="open-edit-dialog"
+                        data-id="${kat.idKategori}"
+                        data-nama="${kat.namaKategori}"
+                        aria-label="Ubah kategori ${kat.namaKategori}"
+                        title="Ubah ${kat.namaKategori}"
+                        class="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        ${renderIcon('Pencil', 'h-4 w-4')}
+                      </button>
 
-                        ${isDipakai
-                          ? html`
-                              <button
-                                type="button"
-                                disabled
-                                aria-disabled="true"
-                                aria-label="Hapus kategori ${kat.namaKategori} nonaktif karena masih digunakan"
-                                title="Kategori masih digunakan"
-                                class="inline-flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground/40 cursor-not-allowed opacity-50"
-                              >
-                                ${renderIcon('Trash2', 'h-4 w-4')}
-                              </button>
-                              <span class="text-xs text-muted-foreground ml-1 whitespace-nowrap">Dipakai ${totalBarang} barang</span>
-                            `
-                          : html`
-                              <button
-                                type="button"
-                                data-action="open-delete-dialog"
-                                data-id="${kat.idKategori}"
-                                data-nama="${kat.namaKategori}"
-                                data-count="${totalBarang}"
-                                aria-label="Hapus kategori ${kat.namaKategori}"
-                                title="Hapus ${kat.namaKategori}"
-                                class="inline-flex h-9 w-9 items-center justify-center rounded-xl text-destructive transition hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                              >
-                                ${renderIcon('Trash2', 'h-4 w-4')}
-                              </button>
-                            `}
-                      </div>
-                    </td>
-                  </tr>
-                `;
-              })}
-            </tbody>
-          </table>
-        </div>
+                      ${isDipakai
+                        ? html`
+                            <button
+                              type="button"
+                              disabled
+                              aria-disabled="true"
+                              aria-label="Hapus kategori ${kat.namaKategori} nonaktif karena masih digunakan"
+                              title="Kategori masih digunakan"
+                              class="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-300 cursor-not-allowed opacity-50"
+                            >
+                              ${renderIcon('Trash2', 'h-4 w-4')}
+                            </button>
+                            <span class="text-xs text-slate-400 ml-1 whitespace-nowrap">Dipakai ${totalBarang} barang</span>
+                          `
+                        : html`
+                            <button
+                              type="button"
+                              data-action="open-delete-dialog"
+                              data-id="${kat.idKategori}"
+                              data-nama="${kat.namaKategori}"
+                              data-count="${totalBarang}"
+                              aria-label="Hapus kategori ${kat.namaKategori}"
+                              title="Hapus ${kat.namaKategori}"
+                              class="inline-flex h-9 w-9 items-center justify-center rounded-xl text-red-600 transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            >
+                              ${renderIcon('Trash2', 'h-4 w-4')}
+                            </button>
+                          `}
+                    </div>
+                  </td>
+                </tr>
+              `;
+            })}
+          </tbody>
+        </table>
       </div>
 
       <!-- Footer Paginasi -->
@@ -590,7 +586,7 @@ export function renderKelolaKategoriContent(state = {}) {
       ${renderTabs('kategori')}
 
       <!-- Card Kontainer List Kategori -->
-      <div class="rounded-2xl border border-border bg-card p-4 sm:p-6 shadow-sm">
+      <div class="rounded-xl bg-white p-4 sm:p-6 shadow-[0_1px_4px_rgba(15,23,42,0.025)]">
         <!-- Toolbar Atas: Judul Card + Cari + Tambah -->
         <div class="mb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
