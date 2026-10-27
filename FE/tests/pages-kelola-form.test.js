@@ -117,6 +117,7 @@ test('renderFormPageContent: render mode edit terisi nilai barang dan preview fo
   assert.ok(html.includes('id="foto-preview-img"'));
   assert.ok(html.includes('data-action="remove-foto"'));
   assert.ok(html.includes('Simpan Perubahan'));
+  assert.equal(html.includes('Kembali ke Kelola Inventaris'), false);
 
   assertNoEscapedMarkup(html, 'renderFormPageContent (edit)');
 });
@@ -200,6 +201,7 @@ test('renderConfirmSubmitModal: render dialog konfirmasi kirim / simpan perubaha
   assert.ok(submitTambahHtml.includes('id="dialog-confirm-submit"'));
   assert.ok(submitTambahHtml.includes('Tambahkan Inventaris?'));
   assert.ok(submitTambahHtml.includes('LCD Monitor 24 Inch'));
+  assert.ok(submitTambahHtml.includes('Kategori:</strong>'));
   assert.ok(submitTambahHtml.includes('4 unit'));
   assert.ok(submitTambahHtml.includes('Baik'));
   assert.ok(submitTambahHtml.includes('data-action="close-submit-dialog"'));
@@ -212,6 +214,7 @@ test('renderConfirmSubmitModal: render dialog konfirmasi kirim / simpan perubaha
     mode: 'edit',
     formData: {
       namaBarang: 'Kabel VGA 5m',
+      namaKategori: 'Kabel & Konektor',
       totalBarang: 2,
       kondisi: 'rusak',
     },
@@ -220,6 +223,7 @@ test('renderConfirmSubmitModal: render dialog konfirmasi kirim / simpan perubaha
 
   assert.ok(submitEditHtml.includes('Simpan Perubahan?'));
   assert.ok(submitEditHtml.includes('Kabel VGA 5m'));
+  assert.ok(submitEditHtml.includes('Kategori:</strong> Kabel &amp; Konektor'));
   assert.ok(submitEditHtml.includes('2 unit'));
   assert.ok(submitEditHtml.includes('Rusak'));
   assert.ok(submitEditHtml.includes('Menyimpan...'));

@@ -49,9 +49,9 @@ test('pages-render: LoginPage merender struktur form dua kolom, captcha, dan mas
   assert.ok(!html.includes('undefined'));
   assert.ok(!html.includes('[object Object]'));
 
-  // Validasi pencegah escape ganda pada ikon dan tombol
   assertNoEscapedMarkup(html, 'LoginPage');
-  assert.ok(html.includes('<svg class="h-6 w-6"'));
+  assert.ok(html.includes('assets/img/Logo-PinjemDulu.png'));
+  assert.ok(html.includes('<svg'));
   assert.ok(html.includes('<button'));
   assert.ok(html.includes('data-action="quick-login"'));
 });
@@ -109,11 +109,14 @@ test('pages-render: renderSidebar merender untuk Peminjam dengan benar tanpa esc
   const user = { nama: 'Maitri Sakti', role: ROLES.PEMINJAM };
   const expandedHtml = renderSidebar({ user, currentHash: '#/dashboard-peminjam', collapsed: false });
   assert.ok(expandedHtml.includes('w-[280px]'));
+  assert.ok(expandedHtml.includes('assets/img/Logo-PinjemDulu.png'));
   assert.ok(expandedHtml.includes('Pinjem'));
   assert.ok(expandedHtml.includes('Dulu'));
   assert.ok(expandedHtml.includes('INVENTARIS OKI KAMPUS'));
   assert.ok(expandedHtml.includes('Dashboard'));
   assert.ok(expandedHtml.includes('Inventaris'));
+  assert.ok(expandedHtml.includes('id="sub-sidebar-nav-pengajuan-saya"'));
+  assert.ok(expandedHtml.includes('aria-controls="sub-sidebar-nav-pengajuan-saya"'));
   assert.ok(!expandedHtml.includes('Kelola Inventaris'));
   assert.ok(expandedHtml.includes('MS'));
   assert.ok(expandedHtml.includes('Maitri Sakti'));
@@ -124,6 +127,7 @@ test('pages-render: renderSidebar merender untuk Peminjam dengan benar tanpa esc
 
   const collapsedHtml = renderSidebar({ user, currentHash: '#/dashboard-peminjam', collapsed: true });
   assert.ok(collapsedHtml.includes('w-[84px]'));
+  assert.ok(collapsedHtml.includes('assets/img/Logo-PinjemDulu.png'));
   assert.ok(collapsedHtml.includes('MS'));
   assert.ok(!collapsedHtml.includes('undefined'));
   assertNoEscapedMarkup(collapsedHtml, 'Sidebar Peminjam (Collapsed)');
@@ -132,6 +136,7 @@ test('pages-render: renderSidebar merender untuk Peminjam dengan benar tanpa esc
 test('pages-render: renderSidebar merender untuk PJ dengan menu kelola tanpa escape ganda', () => {
   const user = { nama: 'Siti Rahma', role: ROLES.PENANGGUNG_JAWAB };
   const html = renderSidebar({ user, currentHash: '#/kelola/inventaris', collapsed: false });
+  assert.ok(html.includes('assets/img/Logo-PinjemDulu.png'));
   assert.ok(html.includes('Kelola Inventaris'));
   assert.ok(html.includes('Pengelolaan'));
   assert.ok(html.includes('Kelola Peminjaman'));
@@ -146,7 +151,10 @@ test('pages-render: renderMobileDrawer merender modal drawer dan tombol tutup ta
   const user = { nama: 'Budi Santoso', role: ROLES.PENANGGUNG_JAWAB };
   const html = renderMobileDrawer({ user, currentHash: '#/dashboard-peminjam', open: true });
   assert.ok(html.includes('mobile-drawer'));
+  assert.ok(html.includes('assets/img/Logo-PinjemDulu.png'));
   assert.ok(html.includes('translate-x-0'));
+  assert.ok(html.includes('id="sub-drawer-nav-pengajuan-saya"'));
+  assert.ok(html.includes('aria-controls="sub-drawer-nav-pengajuan-saya"'));
   assert.ok(html.includes('Budi Santoso'));
   assert.ok(html.includes('BS'));
   assert.ok(!html.includes('undefined'));
