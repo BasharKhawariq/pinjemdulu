@@ -4,73 +4,86 @@ import { mockUsers } from './users.js';
 
 const peminjam = mockUsers[0];
 
+/** Geser tanggal ISO (YYYY-MM-DD) sebanyak `hari` hari. */
+function geserTanggal(iso, hari) {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + hari);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Bangun satu data peminjaman mock. Nama barang dan organisasi pada `inventaris`
+ * adalah salinan (snapshot) yang tampil di halaman Pengajuan Saya; `indeksInventaris`
+ * hanya menunjuk barang asli di mockInventaris.
+ */
+function buatPeminjaman({
+  nomor,
+  indeksInventaris,
+  namaBarang,
+  namaOrganisasi,
+  pengajuan,
+  mulai,
+  selesai,
+  status,
+  keperluan,
+  alasanPenolakan = null,
+  kondisiSebelum = null,
+  deskripsiSebelum = null,
+}) {
+  const barang = mockInventaris[indeksInventaris];
+  return {
+    id: `pinjam-${nomor}`,
+    idPeminjaman: nomor,
+    pengguna: {
+      nim: peminjam.nim,
+      nama: peminjam.nama,
+    },
+    peminjam,
+    inventaris: {
+      idInventaris: barang.idInventaris,
+      namaBarang,
+      namaOrganisasi,
+      thumbnail: barang.thumbnail,
+    },
+    barang,
+    tanggalPengajuan: `${pengajuan}T08:00:00`,
+    startDate: mulai,
+    endDate: selesai,
+    mulai,
+    selesai,
+    bufferStartDate: geserTanggal(mulai, -1),
+    bufferEndDate: geserTanggal(selesai, 1),
+    tanggalPengembalian: null,
+    status,
+    alasanPenolakan,
+    keperluan,
+    jumlahPinjam: 1,
+    kondisiSebelum,
+    deskripsiSebelum,
+    kondisiSesudah: null,
+    deskripsiSesudah: null,
+    sanksi: null,
+  };
+}
+
+/*
+ * Data contoh Pengajuan Saya > Peminjaman, mengikuti desain Figma:
+ *   Diajukan  : pinjam-1, 4, 5, 6      Disetujui : pinjam-7, 8
+ *   Dipinjam  : pinjam-2, 9            Ditolak   : pinjam-10
+ * pinjam-3 (selesai) tidak tampil di halaman ini; urutannya (indeks 2) dipakai data/pengembalian.js.
+ */
 const INITIAL_MOCK_PEMINJAMAN = [
-  {
-    id: 'pinjam-1',
-    idPeminjaman: 1,
-    pengguna: {
-      nim: peminjam.nim,
-      nama: peminjam.nama,
-    },
-    peminjam,
-    inventaris: {
-      idInventaris: mockInventaris[0].idInventaris,
-      namaBarang: mockInventaris[0].namaBarang,
-      namaOrganisasi: mockInventaris[0].namaOrganisasi,
-      thumbnail: mockInventaris[0].thumbnail,
-    },
-    barang: mockInventaris[0],
-    tanggalPengajuan: '2026-10-01T08:00:00',
-    startDate: '2026-10-12',
-    endDate: '2026-10-14',
-    mulai: '2026-10-12',
-    selesai: '2026-10-14',
-    bufferStartDate: '2026-10-11',
-    bufferEndDate: '2026-10-15',
-    tanggalPengembalian: null,
-    status: STATUS_PEMINJAMAN.DIAJUKAN,
-    alasanPenolakan: null,
-    keperluan: 'Rapat kerja BEM FT',
-    jumlahPinjam: 1,
-    kondisiSebelum: null,
-    deskripsiSebelum: null,
-    kondisiSesudah: null,
-    deskripsiSesudah: null,
-    sanksi: null,
-  },
-  {
-    id: 'pinjam-2',
-    idPeminjaman: 2,
-    pengguna: {
-      nim: peminjam.nim,
-      nama: peminjam.nama,
-    },
-    peminjam,
-    inventaris: {
-      idInventaris: mockInventaris[3].idInventaris,
-      namaBarang: mockInventaris[3].namaBarang,
-      namaOrganisasi: mockInventaris[3].namaOrganisasi,
-      thumbnail: mockInventaris[3].thumbnail,
-    },
-    barang: mockInventaris[3],
-    tanggalPengajuan: '2026-10-02T09:00:00',
-    startDate: '2026-10-06',
-    endDate: '2026-10-09',
-    mulai: '2026-10-06',
-    selesai: '2026-10-09',
-    bufferStartDate: '2026-10-05',
-    bufferEndDate: '2026-10-10',
-    tanggalPengembalian: null,
-    status: STATUS_PEMINJAMAN.DIPINJAM,
-    alasanPenolakan: null,
-    keperluan: 'Dokumentasi acara kampus',
-    jumlahPinjam: 1,
-    kondisiSebelum: 'baik',
-    deskripsiSebelum: 'Lensa bersih, baterai terpasang',
-    kondisiSesudah: null,
-    deskripsiSesudah: null,
-    sanksi: null,
-  },
+  buatPeminjaman({
+    nomor: 1, indeksInventaris: 0, namaBarang: 'Proyektor Epson', namaOrganisasi: 'HMTI',
+    pengajuan: '2026-10-17', mulai: '2026-10-20', selesai: '2026-10-25',
+    status: STATUS_PEMINJAMAN.DIAJUKAN, keperluan: 'Seminar BEM',
+  }),
+  buatPeminjaman({
+    nomor: 2, indeksInventaris: 4, namaBarang: 'Camera Canon 700D', namaOrganisasi: 'HMS',
+    pengajuan: '2026-10-17', mulai: '2026-10-20', selesai: '2026-10-25',
+    status: STATUS_PEMINJAMAN.DIPINJAM, keperluan: 'Dokumentasi acara kampus',
+    kondisiSebelum: 'baik', deskripsiSebelum: 'Lensa bersih, baterai terpasang',
+  }),
   {
     id: 'pinjam-3',
     idPeminjaman: 3,
@@ -104,6 +117,43 @@ const INITIAL_MOCK_PEMINJAMAN = [
     deskripsiSesudah: 'Kembali lengkap',
     sanksi: null,
   },
+  buatPeminjaman({
+    nomor: 4, indeksInventaris: 2, namaBarang: 'Kabel HDMI', namaOrganisasi: 'HME',
+    pengajuan: '2026-08-12', mulai: '2026-08-15', selesai: '2026-08-20',
+    status: STATUS_PEMINJAMAN.DIAJUKAN, keperluan: 'Workshop HME',
+  }),
+  buatPeminjaman({
+    nomor: 5, indeksInventaris: 4, namaBarang: 'Camera Canon 700D', namaOrganisasi: 'HMS',
+    pengajuan: '2026-07-04', mulai: '2026-07-07', selesai: '2026-07-12',
+    status: STATUS_PEMINJAMAN.DIAJUKAN, keperluan: 'Dokumentasi kegiatan HMS',
+  }),
+  buatPeminjaman({
+    nomor: 6, indeksInventaris: 1, namaBarang: 'Speaker Portable', namaOrganisasi: 'HIMANIA',
+    pengajuan: '2026-04-23', mulai: '2026-04-26', selesai: '2026-04-30',
+    status: STATUS_PEMINJAMAN.DIAJUKAN, keperluan: 'Pentas seni HIMANIA',
+  }),
+  buatPeminjaman({
+    nomor: 7, indeksInventaris: 0, namaBarang: 'Proyektor Epson', namaOrganisasi: 'HMTI',
+    pengajuan: '2026-10-17', mulai: '2026-10-20', selesai: '2026-10-25',
+    status: STATUS_PEMINJAMAN.DISETUJUI, keperluan: 'Seminar BEM',
+  }),
+  buatPeminjaman({
+    nomor: 8, indeksInventaris: 2, namaBarang: 'Kabel HDMI', namaOrganisasi: 'HME',
+    pengajuan: '2026-08-12', mulai: '2026-08-15', selesai: '2026-08-20',
+    status: STATUS_PEMINJAMAN.DISETUJUI, keperluan: 'Workshop HME',
+  }),
+  buatPeminjaman({
+    nomor: 9, indeksInventaris: 1, namaBarang: 'Speaker Portable', namaOrganisasi: 'HIMANIA',
+    pengajuan: '2026-08-12', mulai: '2026-08-15', selesai: '2026-08-20',
+    status: STATUS_PEMINJAMAN.DIPINJAM, keperluan: 'Pentas seni HIMANIA',
+    kondisiSebelum: 'baik', deskripsiSebelum: 'Speaker berfungsi normal',
+  }),
+  buatPeminjaman({
+    nomor: 10, indeksInventaris: 0, namaBarang: 'Proyektor Epson', namaOrganisasi: 'HMTI',
+    pengajuan: '2026-10-17', mulai: '2026-10-20', selesai: '2026-10-25',
+    status: STATUS_PEMINJAMAN.DITOLAK, keperluan: 'Seminar BEM',
+    alasanPenolakan: 'Peminjaman tidak dapat diproses karena alasan operasional',
+  }),
 ];
 
 const _peminjamanStore = [];
