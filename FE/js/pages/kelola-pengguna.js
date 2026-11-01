@@ -125,11 +125,22 @@ function requestRowsFromUsers() {
     nim: user.nim,
     tanggalPengajuan: ['09 Oct 2026', '08 Oct 2026', '07 Oct 2026', '06 Oct 2026', '05 Oct 2026'][index] || '09 Oct 2026',
     status: index < 2 ? 'menunggu' : 'berhasil',
-    link: `https://example.com/reset-password?token=${encodeURIComponent(`pd-${user.id}-reset-token`)}`,
+    link: `#/reset-password?token=${encodeURIComponent(`pd-${user.id}-reset-token`)}`,
   }));
 }
 function requestMessage(request) {
   return `Halo ${request.nama}! 👋\n\nKami menerima permintaan ubah password untuk akun PinjemDulu Anda.\n\nUntuk melanjutkan proses ubah password, silakan klik tautan berikut:\n\n🔗 ${request.link}\n\nCatatan:\n- Tautan hanya dapat digunakan satu kali untuk menyelesaikan proses ubah password.\n- Setelah berhasil digunakan, tautan tidak dapat digunakan kembali.\n\nJika Anda tidak merasa mengajukan permintaan ini, silakan abaikan pesan ini.\n\nTerima kasih telah menggunakan PinjemDulu! 🙌`;
+}
+function requestMessageMarkup(request) {
+  const safeName = escapeHtml(request.nama);
+  const safeLink = escapeHtml(request.link);
+  return `<p>Halo <strong>${safeName}!</strong> 👋</p>
+    <p class="mt-4">Kami menerima permintaan ubah password untuk akun <strong>PinjemDulu</strong> Anda.</p>
+    <p class="mt-4">Untuk melanjutkan proses ubah password, silakan klik tautan berikut:</p>
+    <p class="mt-4">🔗 <a href="${safeLink}" class="break-all text-blue-500 underline">${safeLink}</a></p>
+    <p class="mt-4"><strong>Catatan:</strong><br>- Tautan hanya dapat digunakan satu kali untuk menyelesaikan proses ubah password.<br>- Setelah berhasil digunakan, tautan tidak dapat digunakan kembali.</p>
+    <p class="mt-4">Jika Anda tidak merasa mengajukan permintaan ini, silakan abaikan pesan ini.</p>
+    <p class="mt-4">Terima kasih telah menggunakan <strong>PinjemDulu!</strong> 🙌</p>`;
 }
 function renderRequestRows() {
   if (!requestRows.length) return `<tr><td colspan="6" class="px-5 py-16 text-center text-sm text-slate-400">Belum ada request password.</td></tr>`;
@@ -150,7 +161,7 @@ function requestDetailMarkup(request, includeActions = false) {
     <div><p class="text-sm font-bold text-slate-900">Nama</p><p class="mt-5 pl-4 text-sm text-slate-700">${escapeHtml(request.nama)}</p></div>
     ${!includeActions ? `<div><p class="text-sm font-bold text-slate-900">Tanggal Pengajuan</p><p class="mt-5 pl-4 text-sm text-slate-700">${escapeHtml(request.tanggalPengajuan)}</p></div>` : ''}
     <div><p class="text-sm font-bold text-slate-900">NIM</p><p class="mt-5 pl-4 text-sm text-slate-700">${escapeHtml(request.nim || '—')}</p></div>
-    <div><p class="text-sm font-bold text-slate-900">Pesan dan link URL</p><div class="mt-5 whitespace-pre-line pl-4 text-sm leading-7 text-slate-700">${escapeHtml(requestMessage(request))}</div></div>
+    <div><p class="text-sm font-bold text-slate-900">Pesan dan link URL</p><div class="mt-5 pl-4 text-sm leading-7 text-slate-700">${requestMessageMarkup(request)}</div></div>
   </div>`;
 }
 function renderModal() {

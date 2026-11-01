@@ -35,7 +35,7 @@ function initApp() {
   function renderShell() {
     const user = getUser();
     const currentHash = window.location.hash || '';
-    const isLoginView = currentHash === '#/login' || !user;
+    const isLoginView = currentHash === '#/login' || currentHash.startsWith('#/reset-password') || !user;
 
     if (isLoginView) {
       if (sidebarContainer) sidebarContainer.innerHTML = '';

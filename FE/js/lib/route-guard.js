@@ -14,6 +14,10 @@ export function resolveRoute({ hash = '', user = null } = {}) {
   const rawHash = String(hash || '').trim();
   const cleanHash = rawHash.split('?')[0].replace(/\/+$/, '') || '#/';
 
+  if (cleanHash === '#/reset-password') {
+    return { type: 'render', route: 'reset-password' };
+  }
+
   // 1. Belum login
   if (!user) {
     if (cleanHash === '#/login') {
