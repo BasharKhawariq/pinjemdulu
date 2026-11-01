@@ -203,6 +203,7 @@ export function getPageTitle(hash = '') {
   if (clean === '#/pengajuan-saya/pengembalian') return { title: 'Pengajuan Saya', icon: 'HandCoins' };
   if (clean === '#/pengajuan-pj') return { title: 'Pengajuan PJ', icon: 'UserRoundPlus' };
   if (clean === '#/tata-tertib') return { title: 'Tata Tertib', icon: 'FileText' };
+  if (clean === '#/profil') return { title: 'Profil Pengguna', icon: 'CircleUserRound' };
   if (clean === '#/login') return { title: 'Masuk', icon: null };
   return { title: 'PinjemDulu', icon: null };
 }

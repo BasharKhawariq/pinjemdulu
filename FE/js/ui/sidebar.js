@@ -251,12 +251,14 @@ function renderSidebarUserCard(user, collapsed) {
   if (collapsed) {
     return `
       <div class="mt-auto flex flex-col items-center gap-3 border-t border-zinc-100 px-2 pb-5 pt-4">
-        <div
+        <a
+          href="#/profil"
           title="${escapeHtml(nama)} · ${escapeHtml(roleText)}"
+          aria-label="Buka profil ${escapeHtml(nama)}"
           class="inline-flex h-11 w-11 items-center justify-center rounded-[18px] bg-avatar text-base font-bold text-white shadow-sm"
         >
           ${escapeHtml(initials)}
-        </div>
+        </a>
       </div>
     `;
   }
@@ -264,17 +266,21 @@ function renderSidebarUserCard(user, collapsed) {
   return `
     <div class="mt-auto border-t border-zinc-100 px-3 pb-5 pt-4">
       <div class="flex items-center gap-3 rounded-[20px] px-2 py-3">
-        <div class="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] bg-avatar text-base font-bold text-white shadow-sm">
+        <a
+          href="#/profil"
+          aria-label="Buka profil ${escapeHtml(nama)}"
+          class="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] bg-avatar text-base font-bold text-white shadow-sm"
+        >
           ${escapeHtml(initials)}
-        </div>
-        <div class="min-w-0 flex-1">
+        </a>
+        <a href="#/profil" class="min-w-0 flex-1" aria-label="Buka profil ${escapeHtml(nama)}">
           <p class="truncate text-[15px] font-semibold text-zinc-900">
             ${escapeHtml(nama)}
           </p>
           <p class="mt-0.5 truncate text-[13px] text-zinc-500">
             ${escapeHtml(roleText)}
           </p>
-        </div>
+        </a>
         <button
           type="button"
           data-action="logout"

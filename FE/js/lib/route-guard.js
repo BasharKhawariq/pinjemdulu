@@ -67,6 +67,10 @@ export function resolveRoute({ hash = '', user = null } = {}) {
     return { type: 'render', route: 'tata-tertib' };
   }
 
+  if (cleanHash === '#/profil') {
+    return { type: 'render', route: 'profil' };
+  }
+
   const ajukanMatch = cleanHash.match(/^#\/inventaris\/([^/]+)\/ajukan$/);
   if (ajukanMatch) {
     return { type: 'render', route: 'ajukan', params: { id: decodeURIComponent(ajukanMatch[1]) } };
