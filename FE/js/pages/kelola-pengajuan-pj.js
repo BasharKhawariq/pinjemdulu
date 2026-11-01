@@ -55,10 +55,10 @@ function renderTableRows() {
     const pending = row.status === STATUS_REQUEST_PJ.MENUNGGU;
     return `<tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50/60">
       <td class="whitespace-nowrap px-4 py-3.5 text-center text-xs text-slate-400">${start + index + 1}</td>
-      <td class="min-w-[220px] px-4 py-3"><div class="flex items-center gap-2.5"><span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-xs font-semibold text-white">${escapeHtml(initials(name))}</span><span class="block truncate text-sm font-medium text-slate-800">${escapeHtml(name)}</span></div></td>
-      <td class="whitespace-nowrap px-4 py-3.5 text-center text-sm text-slate-600">${escapeHtml(dateLabel(row.tanggalPengajuan || row.createdAt))}</td>
-      <td class="px-4 py-3.5 text-center"><span class="inline-flex whitespace-nowrap rounded-xl px-2.5 py-1 text-xs font-semibold ${status.cls}">${escapeHtml(status.label)}</span></td>
-      <td class="whitespace-nowrap px-4 py-3.5"><div class="flex items-center justify-center gap-1.5"><button type="button" data-action="detail" data-id="${escapeHtml(id)}" title="Lihat detail" aria-label="Lihat detail" class="rounded-full p-1.5 text-slate-400 hover:bg-slate-100">${renderIcon('Info', 'h-4 w-4')}</button>${pending ? `<button type="button" data-action="approve" data-id="${escapeHtml(id)}" title="Setujui pengajuan" aria-label="Setujui pengajuan" class="rounded-full p-1.5 text-green-600 hover:bg-green-50">${renderIcon('CircleCheck', 'h-4 w-4')}</button><button type="button" data-action="reject" data-id="${escapeHtml(id)}" title="Tolak pengajuan" aria-label="Tolak pengajuan" class="rounded-full p-1.5 text-red-600 hover:bg-red-50">${renderIcon('CircleX', 'h-4 w-4')}</button>` : ''}</div></td>
+      <td class="min-w-[220px] px-4 py-3"><div class="flex items-center gap-2.5"><span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-xs font-semibold text-white">${escapeHtml(initials(name))}</span><span class="block truncate text-xs font-medium text-slate-500">${escapeHtml(name)}</span></div></td>
+      <td class="w-[190px] whitespace-nowrap px-4 py-3.5 text-center text-xs text-slate-400">${escapeHtml(dateLabel(row.tanggalPengajuan || row.createdAt))}</td>
+      <td class="w-[140px] px-4 py-3.5 text-center"><span class="inline-flex whitespace-nowrap rounded-xl px-2.5 py-1 text-xs font-semibold ${status.cls}">${escapeHtml(status.label)}</span></td>
+      <td class="whitespace-nowrap px-4 py-3.5"><div class="flex items-center justify-center gap-0"><button type="button" data-action="detail" data-id="${escapeHtml(id)}" title="Lihat detail" aria-label="Lihat detail" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100">${renderIcon('Info', 'h-4 w-4')}</button>${pending ? `<button type="button" data-action="approve" data-id="${escapeHtml(id)}" title="Setujui pengajuan" aria-label="Setujui pengajuan" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-green-600 hover:bg-green-50">${renderIcon('CircleCheck', 'h-4 w-4')}</button><button type="button" data-action="reject" data-id="${escapeHtml(id)}" title="Tolak pengajuan" aria-label="Tolak pengajuan" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-red-600 hover:bg-red-50">${renderIcon('CircleX', 'h-4 w-4')}</button>` : ''}</div></td>
     </tr>`;
   }).join('');
 }
@@ -114,7 +114,20 @@ function renderContent() {
     <div class="rounded-xl bg-white p-3 shadow-[0_1px_4px_rgba(15,23,42,0.025)] sm:p-3">
       <div class="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><h2 class="text-base font-semibold text-slate-900">List ${activeTab === STATUS_REQUEST_PJ.MENUNGGU ? 'Menunggu' : activeTab === STATUS_REQUEST_PJ.DISETUJUI ? 'Disetujui' : 'Ditolak'}</h2><div class="flex items-center gap-3">${renderSearchInput({ id: 'search-pemohon-pj', value: searchTerm, placeholder: 'Cari nama pemohon', ariaLabel: 'Cari nama pemohon', className: 'w-full sm:w-64' })}<button type="button" data-action="filter" title="Filter nama pemohon" aria-label="Filter pengajuan" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-50 text-slate-400 hover:bg-slate-100">${renderIcon('ListFilter', 'h-4 w-4')}</button></div></div>
       ${toastMessage ? `<div role="status" class="mb-3 rounded-lg px-4 py-2 text-sm ${toastType === 'error' ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}">${escapeHtml(toastMessage)}</div>` : ''}
-      <div class="w-full overflow-x-auto"><table class="w-full min-w-[650px] border-collapse text-left"><thead><tr class="border-b border-slate-100 text-xs font-semibold uppercase tracking-wider text-slate-400"><th class="px-4 py-3.5 text-center">No</th><th class="px-4 py-3.5">Nama Pemohon</th><th class="px-4 py-3.5 text-center">Tanggal Pengajuan</th><th class="px-4 py-3.5 text-center">Status</th><th class="px-4 py-3.5 text-center">Aksi</th></tr></thead><tbody>${renderTableRows()}</tbody></table></div>
+      <div class="w-full overflow-x-auto"><table class="w-full min-w-[650px] border-collapse text-left">
+        <thead>
+          <tr class="border-b border-slate-100 text-sm leading-[140%] tracking-normal text-slate-400">
+            <th class="px-4 py-3.5 text-center font-semibold">No</th>
+            <th class="px-4 py-3.5 font-semibold">Nama Pemohon</th>
+            <th class="w-[190px] px-4 py-3.5 text-center font-semibold">Tanggal Pengajuan</th>
+            <th class="w-[140px] px-4 py-3.5 text-center font-semibold">Status</th>
+            <th class="px-4 py-3.5 text-center font-semibold">Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${renderTableRows()}
+        </tbody></table>
+      </div>
       <div class="mt-5 flex items-center justify-between gap-3"><p class="text-xs text-slate-500">Menampilkan ${count ? Math.min((currentPage - 1) * PAGE_SIZE + 1, count) : 0}–${Math.min(currentPage * PAGE_SIZE, count)} dari ${count} pengajuan</p>${renderPagination()}</div>
     </div>
   </section>${renderModal()}`;

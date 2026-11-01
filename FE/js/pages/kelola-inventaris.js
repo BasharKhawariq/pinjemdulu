@@ -172,39 +172,32 @@ export function renderTableSkeleton() {
  */
 export function renderTableRow(it, index, page = 1, perPage = 10) {
   const no = (page - 1) * perPage + index + 1;
-  const sisa = Number(it.sisaHariIni ?? it.totalBarang ?? 0);
   const total = Number(it.totalBarang ?? 0);
 
   return html`
     <tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50/60" data-id="${it.idInventaris}">
       <td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400 align-middle">${no}</td>
       <td class="min-w-[200px] px-4 py-4 align-middle">
-        <div class="flex flex-col gap-1.5">
-          <span class="font-medium text-slate-800 text-xs">${it.namaBarang}</span>
-          ${renderOrganisasiBadge(it.namaOrganisasi)}
-        </div>
+        <span class="text-xs font-medium text-slate-500">${it.namaBarang}</span>
       </td>
-      <td class="min-w-[120px] px-4 py-4 text-xs text-slate-400 align-middle">
+      <td class="min-w-[120px] px-4 py-4 text-center text-xs text-slate-400 align-middle">
         ${renderKategoriBadge(it.namaKategori)}
       </td>
-      <td class="whitespace-nowrap px-4 py-4 text-right tabular-nums text-xs align-middle min-w-[100px]">
-        <span class="font-medium text-slate-700">${total}</span>
-        <span class="ml-1 text-xs text-slate-400">(${sisa} sisa)</span>
-      </td>
-      <td class="whitespace-nowrap px-4 py-4 align-middle min-w-[120px]">
+      <td class="whitespace-nowrap px-4 py-4 text-center tabular-nums text-xs text-slate-400 align-middle min-w-[100px]">${total}</td>
+      <td class="whitespace-nowrap px-4 py-4 text-center align-middle min-w-[120px]">
         ${renderKondisiBadge(it.kondisi)}
       </td>
-      <td class="whitespace-nowrap px-4 py-4 align-middle min-w-[100px]">
+      <td class="whitespace-nowrap px-4 py-4 text-center align-middle min-w-[100px]">
         ${renderStatusBadge(it)}
       </td>
-      <td class="whitespace-nowrap px-4 py-4 align-middle min-w-[160px]">
-        <div class="flex items-center justify-center gap-1" role="group" aria-label="Aksi inventaris ${it.namaBarang}">
+      <td class="whitespace-nowrap px-1 py-4 align-middle min-w-[160px]">
+        <div class="flex items-center justify-center gap-0" role="group" aria-label="Aksi inventaris ${it.namaBarang}">
           <!-- Ubah (Link Halaman Terpisah) -->
           <a
             href="#/kelola/inventaris/${it.idInventaris}/ubah"
             aria-label="Ubah ${it.namaBarang}"
             title="Ubah ${it.namaBarang}"
-            class="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            class="inline-flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             ${renderIcon('Pencil', 'h-4 w-4')}
           </a>
@@ -216,7 +209,7 @@ export function renderTableRow(it, index, page = 1, perPage = 10) {
             data-id="${it.idInventaris}"
             aria-label="Lihat detail ${it.namaBarang}"
             title="Lihat detail ${it.namaBarang}"
-            class="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            class="inline-flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             ${renderIcon('Info', 'h-4 w-4')}
           </button>
@@ -228,7 +221,7 @@ export function renderTableRow(it, index, page = 1, perPage = 10) {
             data-id="${it.idInventaris}"
             aria-label="Hapus ${it.namaBarang}"
             title="Hapus ${it.namaBarang}"
-            class="inline-flex h-9 w-9 items-center justify-center rounded-xl text-red-600 transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            class="inline-flex h-8 w-8 items-center justify-center rounded-xl text-red-600 transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             ${renderIcon('Trash2', 'h-4 w-4')}
           </button>
@@ -901,14 +894,14 @@ export function renderTableSection(state = {}) {
       <div class="w-full overflow-x-auto">
         <table class="w-full min-w-full border-collapse text-left">
           <thead>
-            <tr class="border-b border-slate-100 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-              <th scope="col" class="px-4 py-4 w-12 text-center">No</th>
-              <th scope="col" class="px-4 py-4 min-w-[200px]">Nama Barang</th>
-              <th scope="col" class="px-4 py-4 min-w-[120px]">Kategori</th>
-              <th scope="col" class="px-4 py-4 min-w-[100px] text-right">Jumlah Unit</th>
-              <th scope="col" class="px-4 py-4 min-w-[120px]">Kondisi</th>
-              <th scope="col" class="px-4 py-4 min-w-[100px]">Status</th>
-              <th scope="col" class="px-4 py-4 min-w-[160px] text-center">Aksi</th>
+            <tr class="border-b border-slate-100 text-sm leading-[140%] tracking-normal text-slate-400">
+              <th scope="col" class="px-4 py-4 w-12 text-center font-semibold">No</th>
+              <th scope="col" class="px-4 py-4 min-w-[200px] font-semibold">Nama Barang</th>
+              <th scope="col" class="px-4 py-4 min-w-[120px] text-center font-semibold">Kategori</th>
+              <th scope="col" class="px-4 py-4 min-w-[100px] text-center font-semibold">Jumlah Unit</th>
+              <th scope="col" class="px-4 py-4 min-w-[120px] text-center font-semibold">Kondisi</th>
+              <th scope="col" class="px-4 py-4 min-w-[100px] text-center font-semibold">Status</th>
+              <th scope="col" class="px-4 py-4 min-w-[160px] text-center font-semibold">Aksi</th>
             </tr>
           </thead>
           <tbody>
@@ -993,7 +986,7 @@ export function renderKelolaContent(state = {}) {
   const adaFilter = nAktif > 0 || cari.trim().length > 0;
 
   return html`
-    <div class="space-y-6" id="kelola-inventaris-root">
+    <div class="w-full space-y-6 px-5 pb-8 pt-8 sm:px-6 lg:px-7" id="kelola-inventaris-root">
       <!-- Header Halaman -->
       <div class="space-y-1">
         <h1 class="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Kelola Inventaris</h1>

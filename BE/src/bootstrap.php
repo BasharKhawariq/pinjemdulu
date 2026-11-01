@@ -13,12 +13,15 @@ if (is_file($envPath)) {
 }
 
 require __DIR__ . '/helpers.php';
+require __DIR__ . '/auth.php';
+require __DIR__ . '/peminjaman_sql.php';
 
 // 2. CORS (diperlukan selama FE dan BE beda alamat/port)
 $origin = $_ENV['CORS_ORIGIN'] ?? 'http://127.0.0.1:5500';
 header("Access-Control-Allow-Origin: $origin");
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Dev-Nim');
+header('Vary: Origin');
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') {
     http_response_code(204);
     exit;

@@ -15,13 +15,12 @@ export function renderKelolaTabs(activeTab = "inventaris") {
   const isKategori = activeTab === "kategori";
 
   const tabBase =
-    "inline-flex items-center justify-center px-4 py-2 rounded-xl text-sm font-medium transition-colors cursor-pointer select-none";
-  const activeClass = "bg-primary/10 text-primary font-semibold shadow-sm";
-  const inactiveClass =
-    "text-muted-foreground hover:bg-muted/50 hover:text-foreground";
+    "rounded-lg px-4 py-2 text-[11px] font-medium transition cursor-pointer select-none";
+  const activeClass = "bg-blue-100 text-slate-900";
+  const inactiveClass = "text-slate-600 hover:bg-slate-50";
 
   return html`
-    <nav class="flex items-center gap-2" aria-label="Pilihan Kelola">
+    <nav class="mb-3 inline-flex items-center gap-1 rounded-xl bg-white p-1.5" aria-label="Pilihan Kelola">
       <a
         href="#/kelola/inventaris"
         class="${tabBase} ${isInventaris ? activeClass : inactiveClass}"

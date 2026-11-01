@@ -59,6 +59,14 @@ export function resolveRoute({ hash = '', user = null } = {}) {
     return { type: 'render', route: 'pengembalian' };
   }
 
+  if (cleanHash === '#/pengajuan-pj') {
+    return { type: 'render', route: 'pengajuan-pj' };
+  }
+
+  if (cleanHash === '#/tata-tertib') {
+    return { type: 'render', route: 'tata-tertib' };
+  }
+
   const ajukanMatch = cleanHash.match(/^#\/inventaris\/([^/]+)\/ajukan$/);
   if (ajukanMatch) {
     return { type: 'render', route: 'ajukan', params: { id: decodeURIComponent(ajukanMatch[1]) } };

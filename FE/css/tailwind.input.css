@@ -61,4 +61,5 @@
     color: var(--primary-foreground);
   }
 }
-
+/* Tombol Batal pada form inventaris: hover merah, mengalahkan style outline/primary. */
+.cancel-form-button:hover:not(:disabled) { background-color: #e11d48 !important; color: #ffffff !important; border-color: #e11d48 !important; }

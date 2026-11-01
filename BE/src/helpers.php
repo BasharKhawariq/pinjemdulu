@@ -143,3 +143,89 @@ function url_gambar(string $path, int $id, bool $ada): ?string
 {
     return $ada ? base_url() . $path . '?id=' . $id : null;
 }
+
+/** Ambil ?id= sebagai bilangan bulat positif. null bila tidak ada; 400 bila tidak valid. */
+function query_id(): ?int
+{
+    if (!isset($_GET['id']) || $_GET['id'] === '') {
+        return null;
+    }
+    $id = filter_var($_GET['id'], FILTER_VALIDATE_INT);
+    if ($id === false || $id < 1) {
+        json_error('Parameter id tidak valid.', 'VALIDASI_GAGAL', 400);
+    }
+    return $id;
+}
+
+/**
+ * Baca filter berbentuk daftar nilai dipisah koma, mis. ?status=Diajukan,Dipinjam.
+ * Nilai di luar $diizinkan ditolak (422). Bila parameter kosong, pakai $default.
+ */
+function filter_enum(string $nama, array $diizinkan, array $default): array
+{
+    $mentah = trim((string)($_GET[$nama] ?? ''));
+    if ($mentah === '') {
+        return $default;
+    }
+    $nilai = array_values(array_unique(array_filter(array_map('trim', explode(',', $mentah)), 'strlen')));
+    foreach ($nilai as $n) {
+        if (!in_array($n, $diizinkan, true)) {
+            json_error("Nilai $nama tidak valid.", 'VALIDASI_GAGAL', 422, [
+                $nama => 'Pilihan: ' . implode(', ', $diizinkan),
+            ]);
+        }
+    }
+    return $nilai ?: $default;
+}
+
+/**
+ * Buat daftar placeholder untuk IN (...). Mengisi $params dan mengembalikan
+ * string seperti ":st0, :st1". Daftar kosong menghasilkan "NULL" (tidak cocok apa pun).
+ */
+function in_params(string $prefix, array $nilai, array &$params): string
+{
+    if (!$nilai) {
+        return 'NULL';
+    }
+    $ph = [];
+    foreach (array_values($nilai) as $i => $v) {
+        $kunci = $prefix . $i;
+        $params[$kunci] = $v;
+        $ph[] = ':' . $kunci;
+    }
+    return implode(', ', $ph);
+}
+
+/** Escape karakter khusus LIKE (% _ \) agar pencarian dianggap teks biasa. */
+function like_escape(string $s): string
+{
+    return addcslashes($s, '%_\\');
+}
+
+/** Paginasi dari ?page= dan ?limit= (default 20, maksimal 100). Mengembalikan [page, limit, offset]. */
+function paging(): array
+{
+    $page  = filter_var($_GET['page'] ?? 1, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+    $limit = filter_var($_GET['limit'] ?? 20, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 100]]);
+    if ($page === false || $limit === false) {
+        json_error('Parameter page/limit tidak valid (page >= 1, limit 1-100).', 'VALIDASI_GAGAL', 422, [
+            'page'  => 'Bilangan bulat >= 1',
+            'limit' => 'Bilangan bulat 1-100',
+        ]);
+    }
+    return [$page, $limit, ($page - 1) * $limit];
+}
+
+/** Kirim daftar berhalaman: { data: [...], meta: { total, page, limit, totalHalaman } }. */
+function json_list(array $rows, int $total, int $page, int $limit): never
+{
+    json_out([
+        'data' => array_map('camel_keys', $rows),
+        'meta' => [
+            'total'        => $total,
+            'page'         => $page,
+            'limit'        => $limit,
+            'totalHalaman' => (int)ceil($total / $limit),
+        ],
+    ]);
+}

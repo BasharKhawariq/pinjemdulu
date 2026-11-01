@@ -9,6 +9,16 @@ $routes = [
     '/api/organisasi' => __DIR__ . '/../src/handlers/organisasi.php',
     '/api/inventaris/thumbnail' => __DIR__ . '/../src/handlers/gambar.php',
     '/api/organisasi/icon'      => __DIR__ . '/../src/handlers/gambar.php',
+
+    '/api/me' => __DIR__ . '/../src/handlers/me.php',
+
+    // Area PJ (Pengelola). Wajib login;
+    '/api/dashboard-pj'                 => __DIR__ . '/../src/handlers/dashboard_pj.php',
+    '/api/kelola-peminjaman'            => __DIR__ . '/../src/handlers/kelola_peminjaman.php',
+    '/api/kelola-pengembalian'          => __DIR__ . '/../src/handlers/kelola_pengembalian.php',
+    '/api/kelola-pengajuan-pj'          => __DIR__ . '/../src/handlers/kelola_pengajuan_pj.php',
+    '/api/kelola-pengajuan-pj/lampiran' => __DIR__ . '/../src/handlers/kelola_pengajuan_pj_lampiran.php',
+    '/api/kelola-pengguna'              => __DIR__ . '/../src/handlers/kelola_pengguna.php',
     // endpoint baru nanti ditambah di sini
 ];
 

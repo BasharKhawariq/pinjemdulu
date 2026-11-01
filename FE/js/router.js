@@ -17,6 +17,8 @@ import * as KelolaKategoriPage from './pages/kelola-kategori.js';
 import * as AjukanPage from './pages/ajukan.js';
 import * as PeminjamanPage from './pages/peminjaman.js';
 import * as PengembalianPage from './pages/pengembalian.js';
+import * as PengajuanPjPage from './pages/pengajuan-pj.js';
+import * as TataTertibPage from './pages/tata-tertib.js';
 import * as PlaceholderPage from './pages/placeholder.js';
 import * as NotFoundPage from './pages/notfound.js';
 
@@ -29,6 +31,8 @@ const MODULES = {
   ajukan: AjukanPage,
   peminjaman: PeminjamanPage,
   pengembalian: PengembalianPage,
+  'pengajuan-pj': PengajuanPjPage,
+  'tata-tertib': TataTertibPage,
   'kelola-inventaris': KelolaInventarisPage,
   'kelola-peminjaman': KelolaPeminjamanPage,
   'kelola-pengembalian': KelolaPengembalianPage,

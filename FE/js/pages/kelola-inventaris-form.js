@@ -400,9 +400,6 @@ export function renderFormPageContent(state = {}) {
                   <label for="form-input-nama" class="${labelClass()}">
                     Nama Barang <span class="text-rose-500">*</span>
                   </label>
-                  <span class="text-xs text-muted-foreground" id="nama-char-count">
-                    ${(formData.namaBarang || '').length}/100
-                  </span>
                 </div>
                 <input
                   id="form-input-nama"
@@ -413,7 +410,7 @@ export function renderFormPageContent(state = {}) {
                   value="${formData.namaBarang || ''}"
                   class="${inputClass({ error: Boolean(formErrors.namaBarang) })}"
                   aria-invalid="${Boolean(formErrors.namaBarang)}"
-                  aria-describedby="${formErrors.namaBarang ? 'error-nama-barang' : 'nama-char-count'}"
+                  aria-describedby="${formErrors.namaBarang ? 'error-nama-barang' : ''}"
                   required
                 />
                 ${formErrors.namaBarang ? html`
@@ -559,25 +556,27 @@ export function renderFormPageContent(state = {}) {
                 ` : raw('')}
               </div>
 
-              <!-- Field 4: Pemilik Inventaris (Terkunci OKI PJ) -->
-              <div class="space-y-2">
-                <label class="${labelClass()}">Pemilik Inventaris</label>
-                <div
-                  class="flex h-11 w-full items-center justify-between rounded-xl border border-input bg-muted/40 px-3.5 py-2.5 text-sm text-foreground/80 cursor-not-allowed select-none"
-                  title="Pemilik inventaris otomatis ditetapkan sebagai OKI Anda"
-                >
-                  <div class="flex items-center gap-2">
-                    <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                      ${initials}
-                    </span>
-                    <span class="font-medium">${namaOrganisasi}</span>
+              <!-- Pemilik Inventaris hanya ditampilkan saat menambah barang -->
+              ${!isEdit ? html`
+                <div class="space-y-2">
+                  <label class="${labelClass()}">Pemilik Inventaris</label>
+                  <div
+                    class="flex h-11 w-full items-center justify-between rounded-xl border border-input bg-muted/40 px-3.5 py-2.5 text-sm text-foreground/80 cursor-not-allowed select-none"
+                    title="Pemilik inventaris otomatis ditetapkan sebagai OKI Anda"
+                  >
+                    <div class="flex items-center gap-2">
+                      <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                        ${initials}
+                      </span>
+                      <span class="font-medium">${namaOrganisasi}</span>
+                    </div>
+                    ${renderIcon('Lock', 'h-4 w-4 text-muted-foreground opacity-60')}
                   </div>
-                  ${renderIcon('Lock', 'h-4 w-4 text-muted-foreground opacity-60')}
+                  <p class="text-xs text-muted-foreground">
+                    Otomatis ditetapkan sesuai organisasi kepengurusan Anda (hanya dapat mengelola barang OKI sendiri).
+                  </p>
                 </div>
-                <p class="text-xs text-muted-foreground">
-                  Otomatis ditetapkan sesuai organisasi kepengurusan Anda (hanya dapat mengelola barang OKI sendiri).
-                </p>
-              </div>
+              ` : raw('')}
 
               <!-- Field 5: Kondisi Barang (Radio Horizontal) -->
               <div class="space-y-2.5">
@@ -705,7 +704,7 @@ export function renderFormPageContent(state = {}) {
             <button
               type="button"
               data-action="cancel-form"
-              class="${buttonClass({ variant: 'outline', size: 'default' })}"
+              class="cancel-form-button ${buttonClass({ variant: 'outline', size: 'default' })}"
               ${isSubmitting ? 'disabled' : ''}
             >
               Batal
@@ -1061,11 +1060,6 @@ function handleDocumentKeyDown(e) {
 }
 
 function handleDocumentInput(e) {
-  if (e.target && e.target.id === 'form-input-nama') {
-    const len = e.target.value.length;
-    const counter = document.getElementById('nama-char-count');
-    if (counter) counter.textContent = `${len}/100`;
-  }
   if (e.target && e.target.id === 'kategori-search-input') {
     pageState.kategoriQuery = e.target.value;
     updateUI();

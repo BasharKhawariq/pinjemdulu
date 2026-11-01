@@ -92,11 +92,11 @@ function renderRows() {
     const roleClass = user.role === ROLES.PENANGGUNG_JAWAB ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-700';
     return `<tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50/50">
       <td class="whitespace-nowrap px-4 py-3.5 text-center text-xs text-slate-500">${start + index + 1}</td>
-      <td class="min-w-[190px] px-4 py-3"><div class="flex items-center gap-2.5"><span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-500 text-xs font-semibold text-white">${escapeHtml(initials(nameOf(user)))}</span><div class="min-w-0"><div class="truncate text-sm font-medium text-slate-800">${escapeHtml(nameOf(user))}</div><div class="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500">${renderOrgLogo(user)}<span class="truncate">${escapeHtml(organizationOf(user))}</span></div></div></div></td>
-      <td class="whitespace-nowrap px-4 py-3.5 text-sm text-slate-600">${escapeHtml(user.nim || '—')}</td>
+      <td class="min-w-[190px] px-4 py-3"><div class="flex items-center gap-2.5"><span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-500 text-xs font-semibold text-white">${escapeHtml(initials(nameOf(user)))}</span><div class="min-w-0"><div class="truncate text-xs font-medium text-slate-500">${escapeHtml(nameOf(user))}</div><div class="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500">${renderOrgLogo(user)}<span class="truncate">${escapeHtml(organizationOf(user))}</span></div></div></div></td>
+      <td class="whitespace-nowrap px-4 py-3.5 text-center text-xs text-slate-400">${escapeHtml(user.nim || '—')}</td>
       <td class="px-4 py-3.5 text-center"><button type="button" data-action="toggle" data-id="${escapeHtml(user.id)}" aria-label="${active ? 'Nonaktifkan' : 'Aktifkan'} akun ${escapeHtml(nameOf(user))}" aria-pressed="${active}" class="relative inline-flex h-5 w-9 items-center rounded-full transition ${active ? 'bg-primary' : 'bg-slate-200'}"><span class="inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition ${active ? 'translate-x-[18px]' : 'translate-x-[2px]'}"></span></button></td>
-      <td class="px-4 py-3.5"><span class="inline-flex whitespace-nowrap rounded-lg px-2.5 py-1 text-xs font-medium ${roleClass}">${escapeHtml(roleLabel(user.role))}</span></td>
-      <td class="whitespace-nowrap px-4 py-3.5"><div class="flex items-center justify-center gap-1.5"><button type="button" data-action="edit" data-id="${escapeHtml(user.id)}" title="Edit pengguna" aria-label="Edit pengguna" class="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700">${renderIcon('Pencil', 'h-4 w-4')}</button><button type="button" data-action="detail" data-id="${escapeHtml(user.id)}" title="Detail pengguna" aria-label="Detail pengguna" class="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700">${renderIcon('Info', 'h-4 w-4')}</button></div></td>
+      <td class="px-4 py-3.5 text-center"><span class="inline-flex whitespace-nowrap rounded-lg px-2.5 py-1 text-xs font-medium ${roleClass}">${escapeHtml(roleLabel(user.role))}</span></td>
+      <td class="whitespace-nowrap px-4 py-3.5"><div class="flex items-center justify-center gap-0"><button type="button" data-action="edit" data-id="${escapeHtml(user.id)}" title="Edit pengguna" aria-label="Edit pengguna" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700">${renderIcon('Pencil', 'h-4 w-4')}</button><button type="button" data-action="detail" data-id="${escapeHtml(user.id)}" title="Detail pengguna" aria-label="Detail pengguna" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700">${renderIcon('Info', 'h-4 w-4')}</button></div></td>
     </tr>`;
   }).join('');
 }
@@ -162,7 +162,23 @@ function renderContent() {
         </div>
       </div>
       ${toastMessage ? `<div role="status" class="mb-3 rounded-lg px-4 py-2 text-sm ${toastType === 'error' ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}">${escapeHtml(toastMessage)}</div>` : ''}
-      <div class="w-full overflow-x-auto"><table class="w-full min-w-[680px] border-collapse text-left"><thead><tr class="border-b border-slate-100 text-xs font-semibold uppercase tracking-wider text-slate-400"><th class="px-4 py-3.5 text-center">No</th><th class="px-4 py-3.5">Nama</th><th class="px-4 py-3.5">NIM</th><th class="px-4 py-3.5 text-center">Status</th><th class="px-4 py-3.5">Role</th><th class="px-4 py-3.5 text-center">Aksi</th></tr></thead><tbody>${renderRows()}</tbody></table></div>
+        <div class="w-full overflow-x-auto">
+          <table class="w-full min-w-[680px] border-collapse text-left">
+          <thead>
+            <tr class="border-b border-slate-100 text-sm font-medium leading-[140%] tracking-normal text-slate-400">
+              <th class="px-4 py-3.5 text-center font-semibold">No</th>
+              <th class="px-4 py-3.5 font-semibold">Nama</th>
+              <th class="px-4 py-3.5 text-center font-semibold">NIM</th>
+              <th class="px-4 py-3.5 text-center font-semibold">Status</th>
+              <th class="px-4 py-3.5 text-center font-semibold">Role</th>
+              <th class="px-4 py-3.5 text-center font-semibold">Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${renderRows()}
+            </tbody>
+            </table>
+        </div>
       <div class="mt-4 flex items-center justify-between gap-3"><p class="text-xs text-slate-500">Menampilkan ${filtered.length ? Math.min((currentPage - 1) * PAGE_SIZE + 1, filtered.length) : 0}–${Math.min(currentPage * PAGE_SIZE, filtered.length)} dari ${filtered.length} pengguna</p>${renderPagination()}</div>
     </div>
   </section>

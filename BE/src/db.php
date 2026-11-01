@@ -1,9 +1,10 @@
 <?php
 $dsn = sprintf(
-    'pgsql:host=%s;port=%s;dbname=%s;sslmode=require',
+    'pgsql:host=%s;port=%s;dbname=%s;sslmode=%s',
     $_ENV['DB_HOST'] ?? '',
     $_ENV['DB_PORT'] ?? '5432',
-    $_ENV['DB_NAME'] ?? ''
+    $_ENV['DB_NAME'] ?? '',
+    $_ENV['DB_SSLMODE'] ?? 'require'
 );
 
 try {

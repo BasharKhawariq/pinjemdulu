@@ -167,13 +167,13 @@ function renderTableRows() {
 
     return `<tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50/60">
       <td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400">${start + index + 1}</td>
-      <td class="min-w-[190px] px-4 py-3"><div class="flex items-center gap-2.5"><span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-xs font-semibold text-white">${escapeHtml(initials(name))}</span><span class="min-w-0"><span class="block truncate text-sm font-medium text-slate-800">${escapeHtml(name)}</span><span class="mt-0.5 flex items-center gap-1 text-xs text-slate-500"><span class="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-100 text-[8px] font-bold text-amber-800">${escapeHtml(org.slice(0,1).toUpperCase())}</span>${escapeHtml(org)}</span></span></div></td>
-      <td class="min-w-[140px] px-4 py-4 text-sm text-slate-600">${escapeHtml(itemName(row))}</td>
-      <td class="whitespace-nowrap px-4 py-4 text-center text-sm text-slate-600">${escapeHtml(dateLabel(row.startDate || row.mulai || row.tanggalMulai))}</td>
-      <td class="whitespace-nowrap px-4 py-4 text-center text-sm text-slate-600">${escapeHtml(dateLabel(row.endDate || row.selesai || row.tanggalSelesai))}</td>
-      <td class="whitespace-nowrap px-4 py-4 text-center text-sm text-slate-600">${escapeHtml(dateLabel(row.tanggalPengembalian))}</td>
+      <td class="min-w-[190px] px-4 py-3"><div class="flex items-center gap-2.5"><span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-xs font-semibold text-white">${escapeHtml(initials(name))}</span><span class="min-w-0"><span class="block truncate text-xs font-medium text-slate-500">${escapeHtml(name)}</span><span class="mt-0.5 flex items-center gap-1 text-xs text-slate-500"><span class="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-100 text-[8px] font-bold text-amber-800">${escapeHtml(org.slice(0,1).toUpperCase())}</span>${escapeHtml(org)}</span></span></div></td>
+      <td class="min-w-[140px] px-4 py-4 text-xs text-slate-400">${escapeHtml(itemName(row))}</td>
+      <td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400">${escapeHtml(dateLabel(row.startDate || row.mulai || row.tanggalMulai))}</td>
+      <td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400">${escapeHtml(dateLabel(row.endDate || row.selesai || row.tanggalSelesai))}</td>
+      <td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400">${escapeHtml(dateLabel(row.tanggalPengembalian))}</td>
       <td class="px-4 py-4 text-center">${renderStatusChip(row.status)}</td>
-      <td class="whitespace-nowrap px-4 py-4"><div class="flex items-center justify-center gap-1.5"><button type="button" data-action="detail" data-id="${escapeHtml(id)}" title="Lihat detail" aria-label="Lihat detail" class="rounded-full p-1.5 text-slate-400 hover:bg-slate-100">${renderIcon('Info', 'h-4 w-4')}</button>${pending ? `<button type="button" data-action="confirm" data-id="${escapeHtml(id)}" title="Setujui pengembalian" aria-label="Setujui pengembalian" class="rounded-full p-1.5 text-green-600 hover:bg-green-50">${renderIcon('CircleCheck', 'h-4 w-4')}</button><button type="button" data-action="late" data-id="${escapeHtml(id)}" title="Tolak pengembalian" aria-label="Tolak pengembalian" class="rounded-full p-1.5 text-red-600 hover:bg-red-50">${renderIcon('CircleX', 'h-4 w-4')}</button>` : ''}</div></td>
+      <td class="whitespace-nowrap px-4 py-4"><div class="flex items-center justify-center gap-0"><button type="button" data-action="detail" data-id="${escapeHtml(id)}" title="Lihat detail" aria-label="Lihat detail" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100">${renderIcon('Info', 'h-4 w-4')}</button>${pending ? `<button type="button" data-action="confirm" data-id="${escapeHtml(id)}" title="Setujui pengembalian" aria-label="Setujui pengembalian" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-green-600 hover:bg-green-50">${renderIcon('CircleCheck', 'h-4 w-4')}</button><button type="button" data-action="late" data-id="${escapeHtml(id)}" title="Tolak pengembalian" aria-label="Tolak pengembalian" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-red-600 hover:bg-red-50">${renderIcon('CircleX', 'h-4 w-4')}</button>` : ''}</div></td>
     </tr>`;
   }).join('');
 }
@@ -583,7 +583,25 @@ function renderContent() {
         </div>
       </div>
       ${toastMessage ? `<div role="status" class="mb-3 rounded-lg px-4 py-2 text-sm ${toastType === 'error' ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}">${escapeHtml(toastMessage)}</div>` : ''}
-      <div class="w-full overflow-x-auto"><table class="w-full min-w-[790px] border-collapse text-left"><thead><tr class="border-b border-slate-100 text-xs font-semibold uppercase tracking-wider text-slate-400"><th class="px-4 py-3.5 text-center">No</th><th class="px-4 py-3.5">Nama Peminjam</th><th class="px-4 py-3.5">Barang Dipinjam</th><th class="px-4 py-3.5 text-center">Tanggal Mulai</th><th class="px-4 py-3.5 text-center">Tanggal Selesai</th><th class="px-4 py-3.5 text-center">Tanggal Kembali</th><th class="px-4 py-3.5 text-center">Status</th><th class="px-4 py-3.5 text-center">Aksi</th></tr></thead><tbody>${renderTableRows()}</tbody></table></div>
+      <div class="w-full overflow-x-auto">
+      <table class="w-full min-w-[790px] border-collapse text-left">
+      <thead>
+        <tr class="border-b border-slate-100 text-sm leading-[140%] tracking-normal text-slate-400">
+          <th class="px-4 py-3.5 text-center font-semibold">No</th>
+          <th class="px-4 py-3.5 font-semibold">Nama Peminjam</th>
+          <th class="px-4 py-3.5 font-semibold">Barang Dipinjam</th>
+          <th class="px-4 py-3.5 text-center font-semibold">Tanggal Mulai</th>
+          <th class="px-4 py-3.5 text-center font-semibold">Tanggal Selesai</th>
+          <th class="px-4 py-3.5 text-center font-semibold">Tanggal Kembali</th>
+          <th class="px-4 py-3.5 text-center font-semibold">Status</th>
+          <th class="px-4 py-3.5 text-center font-semibold">Aksi</th>
+        </tr>
+      </thead>
+        <tbody>
+          ${renderTableRows()}
+        </tbody>
+        </table>
+        </div>
       <div class="mt-5 flex items-center justify-between gap-3"><p class="text-xs text-slate-500">Menampilkan ${count ? Math.min((currentPage - 1) * PAGE_SIZE + 1, count) : 0}–${Math.min(currentPage * PAGE_SIZE, count)} dari ${count} pengajuan</p>${renderPagination()}</div>
     </div>
   </section>

@@ -15,6 +15,15 @@ const SQL_INVENTARIS = 'SELECT i.id_inventaris, i.nama_barang, i.total_barang, i
     JOIN v_inv_ringkas r ON r.id_inventaris = i.id_inventaris';
 
 /** Validasi untuk POST dan PUT; mengembalikan data bersih. */
+function milik_organisasi(PDO $pdo, int $id, int $org): void
+{
+    $c = $pdo->prepare('SELECT 1 FROM inventaris WHERE id_inventaris = :id AND id_organisasi = :o');
+    $c->execute(['id' => $id, 'o' => $org]);
+    if (!$c->fetchColumn()) {
+        json_error('Inventaris tidak ditemukan.', 'NOT_FOUND', 404);
+    }
+}
+
 function validasi_inventaris(array $d): array
 {
     $err = [];
@@ -27,11 +36,6 @@ function validasi_inventaris(array $d): array
     $kat = filter_var($d['idKategori'] ?? null, FILTER_VALIDATE_INT);
     if ($kat === false || $kat < 1) {
         $err['idKategori'] = 'Kategori tidak valid.';
-    }
-
-    $org = filter_var($d['idOrganisasi'] ?? null, FILTER_VALIDATE_INT);
-    if ($org === false || $org < 1) {
-        $err['idOrganisasi'] = 'Organisasi tidak valid.';
     }
 
     $total = filter_var($d['totalBarang'] ?? null, FILTER_VALIDATE_INT);
@@ -56,7 +60,6 @@ function validasi_inventaris(array $d): array
     return [
         'nama'  => $nama,
         'kat'   => $kat,
-        'org'   => $org,
         'total' => $total,
         'kond'  => $kondisi,
         'desk'  => ($desk === '' ? null : $desk),
@@ -98,7 +101,9 @@ try {
             json_out(array_map('format_inventaris', $rows));
 
         case 'POST':
+            $pj    = wajib_pj($pdo);
             $v     = validasi_inventaris(input());
+            $v['org'] = $pj['idOrganisasi']; // organisasi selalu milik PJ yang login
             $thumb = ambil_unggahan_gambar('thumbnail', true); // foto wajib
             $fp    = fopen($thumb, 'rb');
             $stmt  = $pdo->prepare(
@@ -117,8 +122,11 @@ try {
             if (!$id) {
                 json_error('Parameter id wajib.', 'ID_WAJIB', 400);
             }
+            $pj      = wajib_pj($pdo);
+            milik_organisasi($pdo, $id, $pj['idOrganisasi']);
             $v       = validasi_inventaris(input());
             $v['id'] = $id;
+            $v['org'] = $pj['idOrganisasi'];
             $thumb   = ambil_unggahan_gambar('thumbnail');
 
             if ($thumb === null) {
@@ -156,6 +164,8 @@ try {
             if (!$id) {
                 json_error('Parameter id wajib.', 'ID_WAJIB', 400);
             }
+            $pj = wajib_pj($pdo);
+            milik_organisasi($pdo, $id, $pj['idOrganisasi']);
             $stmt = $pdo->prepare('DELETE FROM inventaris WHERE id_inventaris = :id');
             $stmt->execute(['id' => $id]);
             if (!$stmt->rowCount()) {

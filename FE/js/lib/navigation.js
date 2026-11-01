@@ -192,7 +192,7 @@ export function getPageTitle(hash = '') {
   if (/^#\/inventaris\/[^/]+\/ajukan$/.test(clean)) return { title: 'Ajukan Peminjaman', icon: 'HandCoins' };
   if (/^#\/inventaris\/[^/]+$/.test(clean)) return { title: 'Inventaris', icon: 'Archive' };
   if (clean === '#/kelola/inventaris/tambah') return { title: 'Tambah Barang', icon: 'Sliders' };
-  if (/^#\/kelola\/inventaris\/[^/]+\/ubah$/.test(clean)) return { title: 'Ubah Barang', icon: 'Sliders' };
+  if (/^#\/kelola\/inventaris\/[^/]+\/ubah$/.test(clean)) return { title: 'Kelola Inventaris', icon: 'Sliders' };
   if (clean === '#/kelola/inventaris') return { title: 'Kelola Inventaris', icon: 'Sliders' };
   if (clean === '#/kelola/kategori') return { title: 'Kelola Kategori', icon: 'FolderTree' };
   if (clean === '#/kelola/peminjaman') return { title: 'Kelola Peminjaman', icon: 'Sliders' };
