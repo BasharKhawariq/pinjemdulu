@@ -10,9 +10,75 @@ import { getCaptcha, login } from '../services/auth.js';
 import { mockUsers } from '../data/users.js';
 import { login as setSession } from '../state/session.js';
 import { navigate } from '../router.js';
+import { renderModal as renderModalComponent } from '../ui/modal.js';
 
 let currentCaptchaId = '';
 let currentCaptchaText = '';
+let authView = 'login';
+let forgotModal = null;
+let forgotError = '';
+
+function renderForgotPasswordPage() {
+  let modal = '';
+  if (forgotModal === 'confirm') {
+    modal = renderModalComponent({
+      id: 'modal-forgot-password-confirm',
+      title: 'Kirim Data Ubah Password?',
+      description: 'Pastikan No. WhatsApp Anda aktif dan dapat dihubungi.',
+      variant: 'send',
+      actions: [
+        { label: 'Kembali', action: 'forgot-back-form', variant: 'outline' },
+        { label: 'Kirim', action: 'forgot-submit-confirm' },
+      ],
+    }).toString();
+  } else if (forgotModal === 'success') {
+    modal = renderModalComponent({
+      id: 'modal-forgot-password-success',
+      title: 'Data Ubah Password Berhasil Dikirim!',
+      description: 'Permintaan ubah password Anda berhasil dikirim. Silakan periksa WhatsApp Anda secara berkala untuk mendapatkan informasi dan melanjutkan ke tahap berikutnya.',
+      variant: 'success',
+      actions: [{ label: 'Mengerti', action: 'forgot-close-success' }],
+    }).toString();
+  }
+
+  return html`
+    <main class="min-h-screen w-full overflow-x-hidden bg-white text-zinc-900">
+      <div class="flex min-h-screen w-full">
+        <aside aria-hidden="true" class="hidden w-1/2 shrink-0 md:flex md:items-stretch lg:w-[48%]">
+          <div class="flex h-full w-full flex-col bg-primary"></div>
+        </aside>
+        <section class="flex min-h-screen w-full flex-1 flex-col items-center justify-start px-5 py-10 sm:px-8 md:w-1/2 md:px-12 md:py-14 lg:w-[52%] lg:px-20 lg:py-20 xl:px-28">
+          <div class="flex w-full max-w-xl flex-1 flex-col">
+            <a href="#/login" data-action="forgot-back-login" aria-label="PinjemDulu beranda" class="mb-10 inline-flex items-center gap-3 transition hover:opacity-90">
+              <img src="assets/img/Logo-PinjemDulu.png" alt="Logo PinjemDulu" class="h-[42px] w-[42px] shrink-0 rounded-[14px] object-contain shadow-sm sm:h-[44px] sm:w-[44px]" />
+              <span class="flex items-baseline text-2xl font-extrabold tracking-tight"><span class="text-zinc-900">Pinjem</span><span class="text-primary">Dulu</span></span>
+            </a>
+            <div class="mb-8">
+              <p class="mb-2 text-sm font-medium text-zinc-500">Selamat Datang Kembali!</p>
+              <h1 class="mb-2 text-3xl font-semibold leading-[1.4] tracking-[0] text-zinc-900 sm:text-[32px]">Atur Ulang Password</h1>
+              <p class="text-sm leading-6 text-zinc-500">Masukkan NIM dan nomor WhatsApp yang terdaftar untuk memverifikasi akun Anda.</p>
+            </div>
+            <form id="forgot-password-form" novalidate class="space-y-5">
+              <div>
+                <label for="forgot-nim" class="${labelClass('mb-2 block text-zinc-600')}">NIM<span class="ml-0.5 text-rose-500">*</span></label>
+                <input id="forgot-nim" name="nim" type="text" inputmode="numeric" placeholder="Masukkan NIM anda" class="${inputClass('h-12 rounded-2xl px-4 py-3')}" required />
+                <p id="forgot-nim-error" class="mt-1 text-xs text-rose-600 ${forgotError ? '' : 'hidden'}">${escapeHtml(forgotError)}</p>
+              </div>
+              <div>
+                <label for="forgot-whatsapp" class="${labelClass('mb-2 block text-zinc-600')}">No. Whatsapp<span class="ml-0.5 text-rose-500">*</span></label>
+                <input id="forgot-whatsapp" name="whatsapp" type="tel" inputmode="tel" placeholder="Masukkan nomor whatsapp yang bisa dihubungi" class="${inputClass('h-12 rounded-2xl px-4 py-3')}" required />
+                <p id="forgot-whatsapp-error" class="mt-1 text-xs text-rose-600 hidden"></p>
+              </div>
+              <button type="submit" class="${buttonClass({ variant: 'default', size: 'lg' })} h-12 w-full rounded-2xl">Kirim</button>
+            </form>
+            <footer class="mt-auto py-4 text-center text-xs text-zinc-400">&copy; 2026. PinjemDulu - All Rights Reserved.</footer>
+          </div>
+        </section>
+      </div>
+      ${raw(modal)}
+    </main>
+  `.toString();
+}
 
 function getInitials(name = '') {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -30,6 +96,10 @@ export function render(ctx = {}) {
   const cap = getCaptcha();
   currentCaptchaId = cap.captchaId;
   currentCaptchaText = cap.text;
+
+  if (authView === 'forgot') {
+    return renderForgotPasswordPage();
+  }
 
   const quickUsers = mockUsers.map((u) => {
     const isNonaktif = (u.statusAkun || u.status_akun) !== 'aktif';
@@ -211,6 +281,10 @@ export function render(ctx = {}) {
                 </div>
               </div>
 
+              <button type="button" data-action="forgot-password" class="mt-2 text-left text-xs font-medium text-primary hover:underline">
+                Lupa Password?
+              </button>
+
               <!-- Tombol Submit Masuk -->
               <button
                 id="btn-login-submit"
@@ -301,6 +375,95 @@ export function render(ctx = {}) {
  */
 export function mount(root) {
   if (!root) return;
+
+  if (!root.dataset.authViewHandlers) {
+    root.addEventListener('click', (event) => {
+      const action = event.target.closest('[data-action]')?.getAttribute('data-action');
+      if (!action) return;
+
+      if (action === 'forgot-password') {
+        authView = 'forgot';
+        forgotModal = null;
+        forgotError = '';
+        root.innerHTML = render();
+      } else if (action === 'forgot-back-login' || action === 'forgot-close-success') {
+        authView = 'login';
+        forgotModal = null;
+        forgotError = '';
+        root.innerHTML = render();
+      } else if (action === 'forgot-back-form') {
+        forgotModal = null;
+        root.innerHTML = render();
+      } else if (action === 'forgot-submit-confirm') {
+        forgotModal = 'success';
+        root.innerHTML = render();
+      }
+    });
+    root.addEventListener('submit', (event) => {
+      if (event.target.id !== 'forgot-password-form') return;
+      event.preventDefault();
+
+      const formData = new FormData(event.target);
+      const nim = String(formData.get('nim') || '').trim();
+      const whatsapp = String(formData.get('whatsapp') || '').trim();
+      const nimError = root.querySelector('#forgot-nim-error');
+      const whatsappError = root.querySelector('#forgot-whatsapp-error');
+      const nimInput = root.querySelector('#forgot-nim');
+      const whatsappInput = root.querySelector('#forgot-whatsapp');
+      let hasError = false;
+
+      if (nimError) {
+        nimError.textContent = '';
+        nimError.classList.add('hidden');
+      }
+      if (whatsappError) {
+        whatsappError.textContent = '';
+        whatsappError.classList.add('hidden');
+      }
+      nimInput?.removeAttribute('aria-invalid');
+      whatsappInput?.removeAttribute('aria-invalid');
+
+      if (!nim) {
+        if (nimError) {
+          nimError.textContent = 'NIM wajib diisi.';
+          nimError.classList.remove('hidden');
+        }
+        nimInput?.setAttribute('aria-invalid', 'true');
+        hasError = true;
+      } else if (!/^[0-9]+$/.test(nim)) {
+        if (nimError) {
+          nimError.textContent = 'Format NIM tidak valid.';
+          nimError.classList.remove('hidden');
+        }
+        nimInput?.setAttribute('aria-invalid', 'true');
+        hasError = true;
+      } else if (!mockUsers.some((user) => String(user.nim) === nim)) {
+        if (nimError) {
+          nimError.textContent = 'NIM tidak terdaftar';
+          nimError.classList.remove('hidden');
+        }
+        nimInput?.setAttribute('aria-invalid', 'true');
+        hasError = true;
+      }
+
+      if (!whatsapp) {
+        if (whatsappError) {
+          whatsappError.textContent = 'Nomor WhatsApp wajib diisi.';
+          whatsappError.classList.remove('hidden');
+        }
+        whatsappInput?.setAttribute('aria-invalid', 'true');
+        hasError = true;
+      }
+
+      if (hasError) return;
+      forgotError = '';
+      forgotModal = 'confirm';
+      root.innerHTML = render();
+    });
+    root.dataset.authViewHandlers = 'true';
+  }
+
+  if (authView === 'forgot') return;
 
   const form = root.querySelector('#login-form');
   const nimInput = root.querySelector('#login-nim') || root.querySelector('#login-email') || root.querySelector('input[name="nim"]');
@@ -546,4 +709,10 @@ export function mount(root) {
       captchaAnswer: captchaAnsVal,
     });
   });
+}
+
+export function unmount() {
+  authView = 'login';
+  forgotModal = null;
+  forgotError = '';
 }
