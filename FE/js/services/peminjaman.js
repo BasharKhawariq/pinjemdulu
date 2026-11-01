@@ -385,6 +385,7 @@ export async function updateMockPeminjamanStatus(id, status, extra = {}) {
   if (!(row.status === STATUS_PEMINJAMAN.DIAJUKAN || String(row.status).toLowerCase() === 'diajukan')) {
     throw new Error('Hanya pengajuan berstatus Diajukan yang dapat diproses.');
   }
+
   row.status = status;
   if (status === STATUS_PEMINJAMAN.DITOLAK && extra.alasanPenolakan) {
     row.alasanPenolakan = extra.alasanPenolakan;
@@ -393,6 +394,25 @@ export async function updateMockPeminjamanStatus(id, status, extra = {}) {
     store.save(PEMINJAMAN_STORE_KEY, mockPeminjaman);
   } catch (error) {
     // Penyimpanan lokal bersifat tambahan untuk demo; perubahan store memory tetap berlaku.
+    if (!store.isQuotaExceededError(error)) throw error;
+  }
+  return row;
+}
+
+export async function updateMockPeminjamanPickup(id, { tanggalPengambilan, fotoPengambilan } = {}) {
+  await delay(80);
+  if (!tanggalPengambilan) throw new Error('Tanggal pengambilan wajib diisi.');
+  const row = mockPeminjaman.find((item) => String(item.id) === String(id) || String(item.idPeminjaman) === String(id));
+  if (!row) throw new Error('Data peminjaman tidak ditemukan.');
+  if (row.status !== STATUS_PEMINJAMAN.DISETUJUI && String(row.status).toLowerCase() !== 'disetujui') {
+    throw new Error('Hanya peminjaman berstatus Disetujui yang dapat dikonfirmasi pengambilannya.');
+  }
+  row.tanggalPengambilan = String(tanggalPengambilan).slice(0, 10);
+  row.fotoPengambilan = fotoPengambilan || null;
+  row.status = STATUS_PEMINJAMAN.DIPINJAM;
+  try {
+    store.save(PEMINJAMAN_STORE_KEY, mockPeminjaman);
+  } catch (error) {
     if (!store.isQuotaExceededError(error)) throw error;
   }
   return row;

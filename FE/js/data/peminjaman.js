@@ -35,6 +35,8 @@ function buatPeminjaman({
   sanksi = null,
   waktuTerlambat = null,
   diprosesOleh = null,
+  tanggalPengambilan = null,
+  fotoPengambilan = null,
   peminjamCustom = null,
 }) {
   const barang = mockInventaris[indeksInventaris];
@@ -73,6 +75,8 @@ function buatPeminjaman({
     sanksi,
     waktuTerlambat,
     diprosesOleh,
+    tanggalPengambilan,
+    fotoPengambilan,
   };
 }
 

@@ -5,6 +5,7 @@
 import {
   getPeminjaman,
   updateMockPeminjamanStatus,
+  updateMockPeminjamanPickup,
 } from "../services/peminjaman.js";
 import { STATUS_PEMINJAMAN } from "../lib/constants.js";
 import { formatTanggal } from "../lib/format.js";
@@ -15,6 +16,8 @@ import { renderModal as renderModalComponent } from "../ui/modal.js";
 import { renderFilterButton, renderFilterModal } from "../ui/filter.js";
 import { renderStatusChip } from "../ui/status-chip.js";
 import { selectClass, inputClass } from "../ui/classes.js";
+import { validateFotoFile } from "../lib/inventaris-form.js";
+import { compressImageToDataUrl } from "./kelola-inventaris-form.js";
 
 const OKI_LIST = [
   "BEM",
@@ -44,6 +47,9 @@ let feedbackModal = null;
 let confirmModal = null;
 let rejectReason = "";
 let rejectReasonError = "";
+let pickupModal = null;
+let pickupData = { tanggalPengambilan: "", fotoPengambilan: "", error: "" };
+let changeHandler = null;
 
 function dateLabel(value) {
   if (!value) return "—";
@@ -218,7 +224,7 @@ function renderTableRows() {
   const start = (currentPage - 1) * PAGE_SIZE;
   const pageRows = filtered.slice(start, start + PAGE_SIZE);
   if (!pageRows.length)
-    return `<tr><td colspan="8" class="px-6 py-16 text-center text-sm text-slate-400">${renderIcon("Search", "mr-2 inline h-4 w-4")}Tidak ada pengajuan peminjaman yang cocok.</td></tr>`;
+    return `<tr><td colspan="9" class="px-6 py-16 text-center text-sm text-slate-400">${renderIcon("Search", "mr-2 inline h-4 w-4")}Tidak ada pengajuan peminjaman yang cocok.</td></tr>`;
   return pageRows
     .map((row, index) => {
       const id = String(row.id || row.idPeminjaman);
@@ -229,6 +235,8 @@ function renderTableRows() {
         row.status === STATUS_PEMINJAMAN.DIAJUKAN ||
         String(row.status).toLowerCase() === "diajukan" ||
         String(row.status).toLowerCase() === "menunggu_persetujuan";
+      const approved = row.status === STATUS_PEMINJAMAN.DISETUJUI || String(row.status).toLowerCase() === "disetujui";
+      const borrowed = row.status === STATUS_PEMINJAMAN.DIPINJAM || String(row.status).toLowerCase() === "dipinjam";
       return `<tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50/60">
       <td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400">${start + index + 1}</td>
       <td class="min-w-[210px] px-4 py-3">
@@ -239,6 +247,7 @@ function renderTableRows() {
       </td>
       <td class="min-w-[150px] px-4 py-4 text-xs text-slate-400">${escapeHtml(itemName(row))}</td>
       <td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400">${escapeHtml(dateLabel(row.startDate || row.mulai || row.tanggalMulai))}</td>
+      <td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400">${escapeHtml(borrowed ? dateLabel(row.tanggalPengambilan) : "—")}</td>
       <td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400">${escapeHtml(dateLabel(row.endDate || row.selesai || row.tanggalSelesai))}</td>
       <td class="px-4 py-4 text-center text-xs text-slate-400">${escapeHtml(row.jumlahPinjam ?? row.jumlahUnit ?? 1)}</td>
       <td class="px-4 py-4 text-center">${renderStatusChip({ status: row.status })}</td>
@@ -273,7 +282,9 @@ function renderTableRows() {
         class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-red-600 transition hover:bg-red-50"
       >${renderIcon("CircleX", "h-4 w-4")}</button>
     `
-        : ""
+        : approved
+          ? `<button type="button" data-action="pickup" data-id="${escapeHtml(id)}" title="Konfirmasi pengambilan" aria-label="Konfirmasi pengambilan" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-primary transition hover:bg-blue-50">${renderIcon("HandCoins", "h-4 w-4")}</button>`
+          : ""
     }
   </div>
 </td>
@@ -298,6 +309,18 @@ function renderPagination() {
 }
 
 function renderModal() {
+  if (pickupModal) {
+    return `<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4" data-modal-backdrop>
+      <section role="dialog" aria-modal="true" aria-labelledby="pickup-title" class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+        <h2 id="pickup-title" class="text-xl font-bold text-slate-900">Pengambilan Barang</h2>
+        <div class="mt-5 space-y-4">
+          <div><label for="tanggal-pengambilan" class="mb-2 block text-xs font-semibold text-slate-700">Tanggal Pengambilan</label><input id="tanggal-pengambilan" type="date" value="${escapeHtml(pickupData.tanggalPengambilan)}" class="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm text-slate-700 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"></div>
+          <div><p class="mb-2 text-xs font-semibold text-slate-700">Foto Barang</p><button type="button" data-action="choose-pickup-photo" class="flex min-h-[150px] w-full flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-center hover:bg-slate-100">${pickupData.fotoPengambilan ? `<img src="${escapeHtml(pickupData.fotoPengambilan)}" alt="Foto barang" class="max-h-32 rounded-lg object-contain">` : `<img src="assets/img/Image-Dropbox.png" alt="" class="mb-2 h-10 w-10 object-contain"><span class="text-xs font-semibold text-slate-700">Seret foto ke sini, atau Pilih File</span><span class="mt-1 text-[10px] text-slate-400">File harus berformat JPG atau PNG dengan ukuran maksimal 2 MB.</span>`}</button><input id="pickup-photo" type="file" accept="image/jpeg,image/png,image/jpg" class="sr-only">${pickupData.error ? `<p class="mt-1 text-xs text-rose-600">${escapeHtml(pickupData.error)}</p>` : ""}</div>
+        </div>
+        <div class="mt-6 flex justify-end gap-3"><button type="button" data-action="close-pickup" class="rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Batal</button><button type="button" data-action="submit-pickup" class="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white">Kirim</button></div>
+      </section>
+    </div>`;
+  }
   if (confirmModal) {
     if (confirmModal.type === "reject-reason") {
       return `<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4" data-modal-backdrop>
@@ -400,11 +423,16 @@ function renderModal() {
               <p class="text-xs font-semibold text-slate-900">Tanggal Mulai</p>
               <p class="mt-2 text-xs sm:text-sm text-slate-700">${escapeHtml(dateLabel(row.startDate || row.mulai))}</p>
             </div>
-            <div class="sm:pl-4">
+            ${row.status === STATUS_PEMINJAMAN.DIPINJAM || String(row.status).toLowerCase() === "dipinjam" ? `<div class="sm:px-4">
+              <p class="text-xs font-semibold text-slate-900">Tanggal Pengambilan</p>
+              <p class="mt-2 text-xs sm:text-sm text-slate-700">${escapeHtml(dateLabel(row.tanggalPengambilan))}</p>
+            </div>` : ""}
+            <div class="sm:px-4">
               <p class="text-xs font-semibold text-slate-900">Tanggal Selesai</p>
               <p class="mt-2 text-xs sm:text-sm text-slate-700">${escapeHtml(dateLabel(row.endDate || row.selesai))}</p>
             </div>
           </div>
+          ${row.status === STATUS_PEMINJAMAN.DIPINJAM || String(row.status).toLowerCase() === "dipinjam" ? (row.fotoPengambilan ? `<div><p class="text-xs font-semibold text-slate-900">Foto Barang Saat Diambil</p><img src="${escapeHtml(row.fotoPengambilan)}" alt="Foto barang saat diambil" class="mt-2 max-h-48 rounded-xl object-contain"></div>` : "") : ""}
 
           <div>
             <p class="text-xs font-semibold text-slate-900">Jumlah</p>
@@ -540,6 +568,7 @@ function renderContent() {
             <th class="px-4 py-4 font-semibold">Nama Peminjam</th>
             <th class="px-4 py-4 font-semibold">Barang Dipinjam</th>
             <th class="px-4 py-4 text-center font-semibold">Tanggal Mulai</th>
+            <th class="px-4 py-4 text-center font-semibold">Tanggal Pengambilan</th>
             <th class="px-4 py-4 text-center font-semibold">Tanggal Selesai</th>
             <th class="px-4 py-4 text-center font-semibold">Jumlah Unit</th>
             <th class="px-4 py-4 text-center font-semibold">Status</th>
@@ -665,6 +694,7 @@ export async function mount(root) {
         event.target === event.target.closest("[data-modal-backdrop]")
       ) {
         modalRow = null;
+        pickupModal = null;
         refresh();
       }
       return;
@@ -673,6 +703,7 @@ export async function mount(root) {
     const id = button.dataset.id;
     if (action === "close-modal") {
       modalRow = null;
+      pickupModal = null;
       refresh();
       return;
     }
@@ -685,6 +716,39 @@ export async function mount(root) {
       modalRow =
         rows.find((row) => String(row.id || row.idPeminjaman) === String(id)) ||
         null;
+      refresh();
+      return;
+    }
+    if (action === "pickup") {
+      pickupModal = { id };
+      pickupData = { tanggalPengambilan: "", fotoPengambilan: "", error: "" };
+      refresh();
+      return;
+    }
+    if (action === "close-pickup") {
+      pickupModal = null;
+      refresh();
+      return;
+    }
+    if (action === "choose-pickup-photo") {
+      rootElement.querySelector("#pickup-photo")?.click();
+      return;
+    }
+    if (action === "submit-pickup") {
+      if (!pickupData.tanggalPengambilan) {
+        pickupData.error = "Tanggal pengambilan wajib diisi.";
+        refresh();
+        return;
+      }
+      try {
+        await updateMockPeminjamanPickup(pickupModal.id, pickupData);
+        rows = await loadRows();
+        pickupModal = null;
+        pickupData = { tanggalPengambilan: "", fotoPengambilan: "", error: "" };
+        feedbackModal = { variant: "approve", title: "Pengambilan Berhasil", description: "Data pengambilan barang berhasil disimpan dan status menjadi Dipinjam." };
+      } catch (error) {
+        pickupData.error = error?.message || "Data pengambilan gagal disimpan.";
+      }
       refresh();
       return;
     }
@@ -816,8 +880,33 @@ export async function mount(root) {
     }
   };
 
+  changeHandler = async (event) => {
+    if (event.target.id === "tanggal-pengambilan") {
+      pickupData.tanggalPengambilan = event.target.value;
+      return;
+    }
+    if (event.target.id !== "pickup-photo") return;
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const error = validateFotoFile(file);
+    if (error) {
+      pickupData.error = error;
+      refresh();
+      return;
+    }
+    try {
+      pickupData.fotoPengambilan = await compressImageToDataUrl(file);
+      pickupData.error = "";
+      refresh();
+    } catch {
+      pickupData.error = "Gagal memproses foto barang.";
+      refresh();
+    }
+  };
+
   rootElement.addEventListener("click", clickHandler);
   rootElement.addEventListener("input", inputHandler);
+  rootElement.addEventListener("change", changeHandler);
 }
 
 export function unmount() {
@@ -825,9 +914,12 @@ export function unmount() {
     rootElement.removeEventListener("click", clickHandler);
   if (rootElement && inputHandler)
     rootElement.removeEventListener("input", inputHandler);
+  if (rootElement && changeHandler)
+    rootElement.removeEventListener("change", changeHandler);
   rootElement = null;
   clickHandler = null;
   inputHandler = null;
+  changeHandler = null;
   rows = [];
   modalRow = null;
   feedbackModal = null;

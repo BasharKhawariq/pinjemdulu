@@ -354,16 +354,20 @@ function renderModal() {
           </div>
         </div>
 
-        <div class="my-5 grid grid-cols-3 divide-x divide-slate-200 rounded-xl bg-slate-50/50 p-3 text-center border border-slate-100">
-          <div class="px-1 sm:px-2">
+        <div class="my-5 grid grid-cols-2 divide-x divide-slate-200 rounded-xl bg-slate-50/50 p-3 text-center border border-slate-100 sm:grid-cols-4">
+          <div class="px-3 sm:px-4">
             <p class="text-xs font-medium text-slate-900">Tanggal Mulai</p>
             <p class="mt-1.5 text-xs sm:text-sm font-medium text-slate-700">${escapeHtml(dateLabel(row.startDate || row.mulai || row.tanggalMulai))}</p>
           </div>
-          <div class="px-1 sm:px-2">
+          <div class="px-3 sm:px-4">
+            <p class="text-xs font-medium text-slate-900">Tanggal Pengambilan</p>
+            <p class="mt-1.5 text-xs sm:text-sm font-medium text-slate-700">${row.tanggalPengambilan ? escapeHtml(dateLabel(row.tanggalPengambilan)) : '–'}</p>
+          </div>
+          <div class="px-3 sm:px-4">
             <p class="text-xs font-medium text-slate-900">Tanggal Selesai</p>
             <p class="mt-1.5 text-xs sm:text-sm font-medium text-slate-700">${escapeHtml(dateLabel(row.endDate || row.selesai || row.tanggalSelesai))}</p>
           </div>
-          <div class="px-1 sm:px-2">
+          <div class="px-3 sm:px-4">
             <p class="text-xs font-medium text-slate-900">Tanggal Pengembalian</p>
             <p class="mt-1.5 text-xs sm:text-sm font-medium text-slate-700">${row.tanggalPengembalian ? escapeHtml(dateLabel(row.tanggalPengembalian)) : '–'}</p>
           </div>

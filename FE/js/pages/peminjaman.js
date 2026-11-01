@@ -129,7 +129,7 @@ function renderRows() {
   const visible = filtered.slice(start, start + PAGE_SIZE);
 
   if (!visible.length) {
-    return `<tr><td colspan="8" class="px-5 py-14 text-center text-sm text-zinc-500">
+    return `<tr><td colspan="${activeTab === 'dipinjam' ? 9 : 8}" class="px-5 py-14 text-center text-sm text-zinc-500">
       <div class="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 text-zinc-400">${renderIcon('Search', 'h-5 w-5')}</div>
       Tidak ada data peminjaman pada kategori ini.
     </td></tr>`;
@@ -156,6 +156,7 @@ function renderRows() {
         </td>
         <td class="whitespace-nowrap px-4 py-4 text-center text-[11px] text-slate-500">${escapeHtml(dateOnly(submitted))}</td>
         <td class="whitespace-nowrap px-4 py-4 text-center text-[11px] text-slate-500">${escapeHtml(dateOnly(startDate))}</td>
+        ${activeTab === 'dipinjam' && (String(row.status).toLowerCase() === 'dipinjam' || row.status === STATUS_PEMINJAMAN.DIPINJAM) ? `<td class="whitespace-nowrap px-4 py-4 text-center text-[11px] text-slate-500">${row.tanggalPengambilan ? escapeHtml(dateOnly(row.tanggalPengambilan)) : '–'}</td>` : ''}
         <td class="whitespace-nowrap px-4 py-4 text-center text-[11px] text-slate-500">${escapeHtml(dateOnly(endDate))}</td>
         <td class="px-4 py-4 text-center text-[11px] text-slate-600">${escapeHtml(qty)}</td>
         <td class="px-4 py-4 text-center">${renderStatusChip({ status: row.status })}</td>
@@ -213,7 +214,7 @@ function renderDetail(row) {
               </span>
             </div>
           </div>
-          <div class="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-zinc-200">
+          <div class="grid grid-cols-1 gap-3 sm:grid-cols-4 sm:gap-0 sm:divide-x sm:divide-zinc-200">
             <div class="sm:pr-4">
               <p class="text-xs font-semibold text-slate-900">Tanggal Pengajuan</p>
               <p class="mt-2 text-xs sm:text-sm text-slate-700">${escapeHtml(dateOnly(row.tanggalPengajuan || row.createdAt))}</p>
@@ -222,7 +223,11 @@ function renderDetail(row) {
               <p class="text-xs font-semibold text-slate-900">Tanggal Mulai</p>
               <p class="mt-2 text-xs sm:text-sm text-slate-700">${escapeHtml(dateOnly(row.startDate || row.mulai || row.tanggalMulai))}</p>
             </div>
-            <div class="sm:pl-4">
+            ${activeTab === 'dipinjam' && (String(row.status).toLowerCase() === 'dipinjam' || row.status === STATUS_PEMINJAMAN.DIPINJAM) ? `<div class="sm:px-4">
+              <p class="text-xs font-semibold text-slate-900">Tanggal Pengambilan</p>
+              <p class="mt-2 text-xs sm:text-sm text-slate-700">${row.tanggalPengambilan ? escapeHtml(dateOnly(row.tanggalPengambilan)) : '–'}</p>
+            </div>` : ''}
+            <div class="sm:px-4">
               <p class="text-xs font-semibold text-slate-900">Tanggal Selesai</p>
               <p class="mt-2 text-xs sm:text-sm text-slate-700">${escapeHtml(dateOnly(row.endDate || row.selesai || row.tanggalSelesai))}</p>
             </div>
@@ -370,6 +375,7 @@ export function render() {
                 <th class="px-4 py-3 font-semibold">Nama Barang</th>
                 <th class="px-4 py-3 text-center font-semibold">Tanggal Diajukan</th>
                 <th class="px-4 py-3 text-center font-semibold">Tanggal Mulai</th>
+                ${activeTab === 'dipinjam' ? '<th class="px-4 py-3 text-center font-semibold">Tanggal Pengambilan</th>' : ''}
                 <th class="px-4 py-3 text-center font-semibold">Tanggal Selesai</th>
                 <th class="px-4 py-3 text-center font-semibold">Jumlah Unit</th>
                 <th class="px-4 py-3 text-center font-semibold">Status</th>

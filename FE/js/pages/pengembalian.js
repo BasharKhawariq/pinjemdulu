@@ -113,16 +113,20 @@ function renderDetail(row) {
           </div>
         </div>
 
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-zinc-200">
-          <div class="sm:pr-4">
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-4 sm:gap-0 sm:divide-x sm:divide-zinc-200">
+          <div class="sm:px-4">
             <p class="text-xs font-semibold text-slate-900">Tanggal Mulai</p>
             <p class="mt-2 text-xs sm:text-sm text-slate-700">${escapeHtml(dateLabel(row.tanggalMulai))}</p>
+          </div>
+          <div class="sm:px-4">
+            <p class="text-xs font-semibold text-slate-900">Tanggal Pengambilan</p>
+            <p class="mt-2 text-xs sm:text-sm text-slate-700">${row.tanggalPengambilan ? escapeHtml(dateLabel(row.tanggalPengambilan)) : '–'}</p>
           </div>
           <div class="sm:px-4">
             <p class="text-xs font-semibold text-slate-900">Tanggal Selesai</p>
             <p class="mt-2 text-xs sm:text-sm text-slate-700">${escapeHtml(dateLabel(row.tanggalSelesai))}</p>
           </div>
-          <div class="sm:pl-4">
+          <div class="sm:px-4">
             <p class="text-xs font-semibold text-slate-900">Tanggal Pengembalian</p>
             <p class="mt-2 text-xs sm:text-sm text-slate-700">${row.tanggalDikembalikan ? escapeHtml(dateLabel(row.tanggalDikembalikan)) : '–'}</p>
           </div>
@@ -229,6 +233,7 @@ export async function mount(root, ctx = {}) {
         tanggalMulai: p.startDate || p.mulai || p.tanggalMulai,
         tanggalSelesai: p.endDate || p.selesai || p.tanggalSelesai,
         tanggalDikembalikan: p.tanggalPengembalian,
+        tanggalPengambilan: p.tanggalPengambilan,
         jumlahUnit: p.jumlahPinjam ?? p.jumlahUnit ?? 1,
         status: tabKey,
         keperluan: p.keperluan,
