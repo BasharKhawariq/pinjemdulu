@@ -42,6 +42,8 @@ let toastType = "success";
 let modalRow = null;
 let feedbackModal = null;
 let confirmModal = null;
+let rejectReason = "";
+let rejectReasonError = "";
 
 function dateLabel(value) {
   if (!value) return "—";
@@ -297,6 +299,25 @@ function renderPagination() {
 
 function renderModal() {
   if (confirmModal) {
+    if (confirmModal.type === "reject-reason") {
+      return `<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4" data-modal-backdrop>
+        <section role="dialog" aria-modal="true" aria-labelledby="reject-loan-title" class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+          <div class="flex items-start justify-between gap-4">
+            <h2 id="reject-loan-title" class="text-xl font-bold text-slate-900">Peminjaman Ditolak</h2>
+            <button type="button" data-action="close-confirm-modal" aria-label="Tutup" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100">${renderIcon("X", "h-5 w-5")}</button>
+          </div>
+          <div class="mt-5 space-y-2">
+            <label for="form-alasan-penolakan-peminjaman" class="text-sm font-semibold text-slate-900">Alasan Penolakan</label>
+            <textarea id="form-alasan-penolakan-peminjaman" rows="5" placeholder="Masukkan alasan penolakan peminjaman" class="w-full resize-none rounded-xl border ${rejectReasonError ? 'border-rose-500' : 'border-slate-200'} px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20">${escapeHtml(rejectReason)}</textarea>
+            ${rejectReasonError ? `<p class="text-xs text-rose-600" role="alert">${escapeHtml(rejectReasonError)}</p>` : ""}
+          </div>
+          <div class="mt-6 flex justify-end gap-3">
+            <button type="button" data-action="close-confirm-modal" class="rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Batal</button>
+            <button type="button" data-action="execute-reject" data-id="${escapeHtml(String(confirmModal.id))}" class="rounded-xl bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-rose-700">Tolak</button>
+          </div>
+        </section>
+      </div>`;
+    }
     const isApprove = confirmModal.type === "approve";
     return renderModalComponent({
       variant: isApprove ? "approve" : "reject",
@@ -315,7 +336,7 @@ function renderModal() {
         },
         {
           label: isApprove ? "Setujui" : "Tolak",
-          action: isApprove ? "execute-approve" : "execute-reject",
+          action: isApprove ? "execute-approve" : "open-reject-reason",
           dataId: String(confirmModal.id),
           variant: "default",
           className: isApprove
@@ -626,6 +647,8 @@ export async function mount(root) {
   searchTerm = "";
   currentPage = 1;
   toastMessage = "";
+  rejectReason = "";
+  rejectReasonError = "";
   modalRow = null;
   feedbackModal = null;
   okiFilter = "all";
@@ -717,20 +740,39 @@ export async function mount(root) {
       refresh();
       return;
     }
+    if (action === "open-reject-reason") {
+      rejectReason = "";
+      rejectReasonError = "";
+      confirmModal = { type: "reject-reason", id: confirmModal?.id || id };
+      refresh();
+      return;
+    }
     if (action === "close-confirm-modal") {
       confirmModal = null;
+      rejectReason = "";
+      rejectReasonError = "";
       refresh();
       return;
     }
     if (action === "execute-approve" || action === "execute-reject") {
       const isApprove = action === "execute-approve";
       const targetId = button.dataset.id || confirmModal?.id;
+      if (!isApprove) {
+        rejectReason = rootElement.querySelector("#form-alasan-penolakan-peminjaman")?.value.trim() || "";
+        if (!rejectReason) {
+          rejectReasonError = "Alasan penolakan wajib diisi.";
+          refresh();
+          return;
+        }
+      }
       confirmModal = null;
       const nextStatus = isApprove
         ? STATUS_PEMINJAMAN.DISETUJUI
         : STATUS_PEMINJAMAN.DITOLAK;
       try {
-        await updateMockPeminjamanStatus(targetId, nextStatus);
+        await updateMockPeminjamanStatus(targetId, nextStatus, isApprove ? {} : {
+          alasanPenolakan: rejectReason,
+        });
         rows = await loadRows();
         toastType = "success";
         toastMessage = isApprove

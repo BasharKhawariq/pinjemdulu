@@ -376,7 +376,7 @@ export async function createPeminjaman({
  * @param {string|number} id
  * @param {string} status
  */
-export async function updateMockPeminjamanStatus(id, status) {
+export async function updateMockPeminjamanStatus(id, status, extra = {}) {
   await delay(80);
   const allowed = [STATUS_PEMINJAMAN.DISETUJUI, STATUS_PEMINJAMAN.DITOLAK];
   if (!allowed.includes(status)) throw new Error('Status tujuan tidak didukung.');
@@ -386,6 +386,9 @@ export async function updateMockPeminjamanStatus(id, status) {
     throw new Error('Hanya pengajuan berstatus Diajukan yang dapat diproses.');
   }
   row.status = status;
+  if (status === STATUS_PEMINJAMAN.DITOLAK && extra.alasanPenolakan) {
+    row.alasanPenolakan = extra.alasanPenolakan;
+  }
   try {
     store.save(PEMINJAMAN_STORE_KEY, mockPeminjaman);
   } catch (error) {

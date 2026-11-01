@@ -64,6 +64,8 @@ export async function updateMockPengembalianStatus(id, status, extra = {}) {
   if (status === STATUS_PEMINJAMAN.DIKEMBALIKAN || status === 'dikembalikan' || status === 'selesai') {
     row.tanggalPengembalian = extra.tanggalPengembalian || new Date().toISOString().slice(0, 10);
     if (extra.sanksi) row.sanksi = extra.sanksi;
+    if (extra.kondisiPengembalian) row.kondisiPengembalian = extra.kondisiPengembalian;
+    if (extra.fotoKondisi) row.fotoKondisi = extra.fotoKondisi;
   }
   if (status === STATUS_PEMINJAMAN.DITOLAK || status === 'ditolak') {
     if (extra.alasanPenolakan) row.alasanPenolakan = extra.alasanPenolakan;
