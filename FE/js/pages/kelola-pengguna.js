@@ -16,8 +16,12 @@ let searchTerm = '';
 let roleFilter = 'all';
 let statusFilter = 'all';
 let currentPage = 1;
+let activeTab = 'users';
 let modalMode = null;
 let selectedUser = null;
+let pendingUserData = null;
+let requestRows = [];
+let selectedRequest = null;
 let toastMessage = '';
 let toastType = 'success';
 let rootElement = null;
@@ -113,6 +117,42 @@ function renderPagination() {
     className: 'justify-end',
   });
 }
+function requestRowsFromUsers() {
+  return users.slice(0, 5).map((user, index) => ({
+    id: `password-request-${user.id}`,
+    userId: user.id,
+    nama: user.nama,
+    nim: user.nim,
+    tanggalPengajuan: ['09 Oct 2026', '08 Oct 2026', '07 Oct 2026', '06 Oct 2026', '05 Oct 2026'][index] || '09 Oct 2026',
+    status: index < 2 ? 'menunggu' : 'berhasil',
+    link: `https://example.com/reset-password?token=${encodeURIComponent(`pd-${user.id}-reset-token`)}`,
+  }));
+}
+function requestMessage(request) {
+  return `Halo ${request.nama}! 👋\n\nKami menerima permintaan ubah password untuk akun PinjemDulu Anda.\n\nUntuk melanjutkan proses ubah password, silakan klik tautan berikut:\n\n🔗 ${request.link}\n\nCatatan:\n- Tautan hanya dapat digunakan satu kali untuk menyelesaikan proses ubah password.\n- Setelah berhasil digunakan, tautan tidak dapat digunakan kembali.\n\nJika Anda tidak merasa mengajukan permintaan ini, silakan abaikan pesan ini.\n\nTerima kasih telah menggunakan PinjemDulu! 🙌`;
+}
+function renderRequestRows() {
+  if (!requestRows.length) return `<tr><td colspan="6" class="px-5 py-16 text-center text-sm text-slate-400">Belum ada request password.</td></tr>`;
+  return requestRows.map((request, index) => {
+    const pending = request.status === 'menunggu';
+    return `<tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50/50">
+      <td class="whitespace-nowrap px-4 py-3.5 text-center text-xs text-slate-500">${index + 1}</td>
+      <td class="min-w-[190px] px-4 py-3"><div class="flex items-center gap-2.5"><span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-500 text-xs font-semibold text-white">${escapeHtml(initials(request.nama))}</span><div><div class="text-xs font-medium text-slate-700">${escapeHtml(request.nama)}</div><div class="text-xs text-slate-400">${escapeHtml(request.nim || '—')}</div></div></div></td>
+      <td class="whitespace-nowrap px-4 py-3.5 text-center text-xs text-slate-400">${escapeHtml(request.tanggalPengajuan)}</td>
+      <td class="px-4 py-3.5 text-center"><span class="inline-flex rounded-lg px-2.5 py-1 text-xs font-medium ${pending ? 'bg-amber-50 text-amber-600' : 'bg-green-50 text-green-700'}">${pending ? 'Menunggu' : 'Berhasil'}</span></td>
+      <td class="px-4 py-3.5 text-center"><span class="inline-flex h-2.5 w-2.5 rounded-full ${pending ? 'bg-amber-400' : 'bg-green-500'}"></span></td>
+      <td class="px-4 py-3.5"><div class="flex items-center justify-center gap-1"><button type="button" data-action="request-detail" data-id="${escapeHtml(request.id)}" title="Detail request" aria-label="Detail request" class="inline-flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700">${renderIcon('Info', 'h-4 w-4')}</button><button type="button" data-action="request-send" data-id="${escapeHtml(request.id)}" title="Kirim tautan ubah password" aria-label="Kirim tautan ubah password" class="inline-flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700">${renderIcon('Send', 'h-4 w-4')}</button></div></td>
+    </tr>`;
+  }).join('');
+}
+function requestDetailMarkup(request, includeActions = false) {
+  return `<div class="space-y-7 text-left">
+    <div><p class="text-sm font-bold text-slate-900">Nama</p><p class="mt-5 pl-4 text-sm text-slate-700">${escapeHtml(request.nama)}</p></div>
+    ${!includeActions ? `<div><p class="text-sm font-bold text-slate-900">Tanggal Pengajuan</p><p class="mt-5 pl-4 text-sm text-slate-700">${escapeHtml(request.tanggalPengajuan)}</p></div>` : ''}
+    <div><p class="text-sm font-bold text-slate-900">NIM</p><p class="mt-5 pl-4 text-sm text-slate-700">${escapeHtml(request.nim || '—')}</p></div>
+    <div><p class="text-sm font-bold text-slate-900">Pesan dan link URL</p><div class="mt-5 whitespace-pre-line pl-4 text-sm leading-7 text-slate-700">${escapeHtml(requestMessage(request))}</div></div>
+  </div>`;
+}
 function renderModal() {
   if (!modalMode) return '';
   if (modalMode === 'success-edit') {
@@ -125,6 +165,24 @@ function renderModal() {
         { label: 'Tutup', action: 'close-modal', variant: 'default' }
       ]
     });
+  }
+  if (modalMode === 'success-add') {
+    return renderModalComponent({ id: 'modal-success-add-user', title: 'Tambah Berhasil', description: 'Data pengguna baru berhasil ditambahkan.', variant: 'success', actions: [{ label: 'Kembali', action: 'close-modal' }] });
+  }
+  if (modalMode === 'confirm-user-save') {
+    const editing = pendingUserData?.mode === 'edit';
+    return renderModalComponent({ id: 'modal-confirm-user-save', title: editing ? 'Edit Data Pengguna?' : 'Tambah Data Pengguna?', description: editing ? 'Apakah anda yakin ingin mengubah data pengguna?' : 'Apakah anda yakin ingin menambahkan pengguna baru?', variant: 'send', actions: [{ label: 'Kembali', action: 'back-user-form', variant: 'outline' }, { label: editing ? 'Edit' : 'Tambah', action: 'confirm-user-save' }] });
+  }
+  if (modalMode === 'request-detail' || modalMode === 'request-send') {
+    if (!selectedRequest) return '';
+    const send = modalMode === 'request-send';
+    return `<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 p-4 sm:p-6"><section role="dialog" aria-modal="true" class="w-full max-w-3xl max-h-[92vh] overflow-y-auto rounded-2xl bg-white px-6 py-7 shadow-2xl sm:px-8 sm:py-8"><h2 class="text-2xl font-bold tracking-tight text-slate-900">${send ? 'Tautan Ubah Password' : 'Detail Ubah Password'}</h2><div class="mt-7">${requestDetailMarkup(selectedRequest, send)}</div><div class="mt-10 flex items-center justify-end gap-3"><button type="button" data-action="close-modal" class="h-11 rounded-xl border border-slate-100 px-5 text-sm font-semibold text-slate-400 hover:bg-slate-50">Tutup</button>${send ? '<button type="button" data-action="copy-request" class="h-11 rounded-xl border border-slate-100 px-5 text-sm font-semibold text-slate-400 hover:bg-slate-50">Salin Pesan</button><button type="button" data-action="confirm-send-request" class="h-11 rounded-xl bg-primary px-5 text-sm font-semibold text-white hover:bg-primary/90">Konfirmasi Pengiriman</button>' : ''}</div></section></div>`;
+  }
+  if (modalMode === 'confirm-send-request') {
+    return renderModalComponent({ id: 'modal-confirm-send-request', title: 'Konfirmasi Pengiriman?', description: 'Pastikan anda benar-benar telah mengirimkan pesan URL kepada peminjam.', variant: 'approve', actions: [{ label: 'Kembali', action: 'back-request-detail', variant: 'outline' }, { label: 'Konfirmasi', action: 'send-request', className: 'flex-1 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700' }] });
+  }
+  if (modalMode === 'success-send-request') {
+    return renderModalComponent({ id: 'modal-success-send-request', title: 'Konfirmasi Berhasil', description: 'Status request password berhasil diperbarui.', variant: 'success', actions: [{ label: 'Kembali', action: 'close-modal' }] });
   }
   if (!selectedUser) return '';
   const u = selectedUser;
@@ -139,6 +197,7 @@ function renderModal() {
   return `<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-[2px] p-4 sm:p-6" data-modal-backdrop><section role="dialog" aria-modal="true" aria-labelledby="user-form-title" class="w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white p-6 sm:p-8 shadow-2xl transition-all"><h2 id="user-form-title" class="text-xl font-semibold tracking-tight text-slate-900">${editing ? 'Edit Pengguna' : 'Tambah Pengguna'}</h2><form id="user-form" class="mt-6 space-y-4"><div><label class="mb-2 block text-sm font-medium text-slate-900">Nama Peminjam</label><input name="nama" type="text" value="${escapeHtml(editing ? (u.nama || '') : '')}" placeholder="Nama Peminjam" required class="w-full rounded-2xl border border-slate-100 bg-white px-4 py-3.5 text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.03)]" /></div><div><label class="mb-2 block text-sm font-medium text-slate-900">NIM</label><input name="nim" type="text" value="${escapeHtml(editing ? (u.nim || '') : '')}" placeholder="NIM" required class="w-full rounded-2xl border border-slate-100 bg-white px-4 py-3.5 text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.03)]" /></div><div><label class="mb-2 block text-sm font-medium text-slate-900">Organisasi</label><div class="relative"><select name="displayOrganization" class="${selectClass('appearance-none pr-10 cursor-pointer')}">${ORGANISASI_LIST.map((org) => `<option value="${escapeHtml(org)}" ${(editing ? organizationOf(u) : 'HIMANIA') === org ? 'selected' : ''}>${escapeHtml(org)}</option>`).join('')}</select><span class="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 flex items-center">${renderIcon('ChevronDown', 'h-4 w-4 stroke-[2.2]')}</span></div></div><div><span class="mb-3 block text-sm font-medium text-slate-900">Role</span><div class="space-y-3" id="role-radio-group"><label class="flex cursor-pointer items-center gap-3" data-role-label><input type="radio" name="role" value="${ROLES.PEMINJAM}" ${isPeminjam ? 'checked' : ''} class="sr-only" /><span data-role-indicator class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${isPeminjam ? 'border-primary bg-primary text-white' : 'border-slate-300 bg-white text-transparent'}"><svg data-role-check class="h-3 w-3 stroke-[3] ${isPeminjam ? 'block' : 'hidden'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span class="text-sm font-medium text-slate-800">Peminjam</span></label><label class="flex cursor-pointer items-center gap-3" data-role-label><input type="radio" name="role" value="${ROLES.PENANGGUNG_JAWAB}" ${isPj ? 'checked' : ''} class="sr-only" /><span data-role-indicator class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${isPj ? 'border-primary bg-primary text-white' : 'border-slate-300 bg-white text-transparent'}"><svg data-role-check class="h-3 w-3 stroke-[3] ${isPj ? 'block' : 'hidden'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span class="text-sm font-medium text-slate-800">Penanggung Jawab</span></label></div></div><div id="user-form-error" class="hidden rounded-xl bg-red-50 px-4 py-2 text-sm text-red-700"></div><div class="mt-8 flex items-center justify-end gap-5"><button type="button" data-action="close-modal" class="text-sm font-semibold text-slate-600 transition hover:text-slate-900">Batal</button><button type="submit" class="rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90">${editing ? 'Edit' : 'Tambah'}</button></div></form></section></div>`;
 }
 function renderContent() {
+  if (activeTab === 'requests') return renderRequestContent();
   const filtered = visibleUsers();
   const nAktif = countActiveFilters();
   return `<section class="w-full px-5 pb-8 pt-6 sm:px-6 lg:px-7">
@@ -147,6 +206,10 @@ function renderContent() {
       <p class="mt-1 text-sm text-slate-400">Pantau dan kelola akun pengguna, hak akses, dan perannya dalam sistem.</p>
     </div>
     <div class="rounded-xl bg-white p-4 shadow-[0_1px_4px_rgba(15,23,42,0.025)] sm:p-5">
+      <div class="mb-5 flex items-center gap-6 border-b border-slate-100">
+        <button type="button" data-action="tab-users" class="border-b-2 border-primary pb-3 text-xs font-semibold text-primary">List Pengguna</button>
+        <button type="button" data-action="tab-requests" class="pb-3 text-xs font-medium text-slate-400 hover:text-slate-700">List Request Password</button>
+      </div>
       <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 class="text-base font-semibold text-slate-900">List Pengguna</h2>
         <div class="flex items-center justify-end gap-2.5">
@@ -224,12 +287,24 @@ function renderContent() {
     `,
   })}`;
 }
+function renderRequestContent() {
+  return `<section class="w-full px-5 pb-8 pt-6 sm:px-6 lg:px-7">
+    <div class="mb-6"><h1 class="text-3xl font-semibold tracking-tight text-slate-900">Kelola Pengguna</h1><p class="mt-1 text-sm text-slate-400">Pantau dan kelola akun pengguna, hak akses, dan perannya dalam sistem.</p></div>
+    <div class="rounded-xl bg-white p-4 shadow-[0_1px_4px_rgba(15,23,42,0.025)] sm:p-5">
+      <div class="mb-5 flex items-center gap-6 border-b border-slate-100"><button type="button" data-action="tab-users" class="pb-3 text-xs font-medium text-slate-400 hover:text-slate-700">List Pengguna</button><button type="button" data-action="tab-requests" class="border-b-2 border-primary pb-3 text-xs font-semibold text-primary">List Request Password</button></div>
+      <div class="mb-4 flex items-center justify-between"><h2 class="text-base font-semibold text-slate-900">List Request Password</h2><span class="text-xs text-slate-400">${requestRows.length} request</span></div>
+      <div class="w-full overflow-x-auto"><table class="w-full min-w-[680px] border-collapse text-left"><thead><tr class="border-b border-slate-100 text-sm font-medium text-slate-400"><th class="px-4 py-3.5 text-center">No</th><th class="px-4 py-3.5">Nama</th><th class="px-4 py-3.5 text-center">Tanggal Pengajuan</th><th class="px-4 py-3.5 text-center">Status</th><th class="px-4 py-3.5 text-center">Progress</th><th class="px-4 py-3.5 text-center">Aksi</th></tr></thead><tbody>${renderRequestRows()}</tbody></table></div>
+    </div>
+    ${renderModal()}
+  </section>`;
+}
 function refresh() { if (rootElement) rootElement.innerHTML = renderContent(); }
 export function render() { return renderContent(); }
 export async function mount(root) {
   rootElement = root;
-  searchTerm = ''; roleFilter = 'all'; statusFilter = 'all'; currentPage = 1; modalMode = null; selectedUser = null; toastMessage = '';
+  searchTerm = ''; roleFilter = 'all'; statusFilter = 'all'; currentPage = 1; activeTab = 'users'; modalMode = null; selectedUser = null; selectedRequest = null; pendingUserData = null; toastMessage = '';
   users = await getUsers();
+  requestRows = requestRowsFromUsers();
   rootElement.innerHTML = renderContent();
   clickHandler = async (event) => {
     const button = event.target.closest('[data-action]');
@@ -241,6 +316,48 @@ export async function mount(root) {
     const action = button.dataset.action;
     const id = button.dataset.id;
     if (action === 'close-modal') { modalMode = null; selectedUser = null; refresh(); return; }
+    if (action === 'tab-users') { activeTab = 'users'; modalMode = null; refresh(); return; }
+    if (action === 'tab-requests') { activeTab = 'requests'; modalMode = null; refresh(); return; }
+    if (action === 'back-user-form') { modalMode = pendingUserData?.mode || 'add'; refresh(); return; }
+    if (action === 'confirm-user-save') {
+      if (!pendingUserData) return;
+      try {
+        if (pendingUserData.mode === 'edit') await updateMockUser(selectedUser.id, pendingUserData.data);
+        else await addMockUser(pendingUserData.data);
+        users = await getUsers();
+        requestRows = requestRowsFromUsers();
+        modalMode = pendingUserData.mode === 'edit' ? 'success-edit' : 'success-add';
+        pendingUserData = null;
+        refresh();
+      } catch (error) {
+        toastMessage = error.message || 'Data pengguna gagal disimpan.';
+        toastType = 'error';
+        modalMode = null;
+        refresh();
+      }
+      return;
+    }
+    if (action === 'request-detail' || action === 'request-send') {
+      selectedRequest = requestRows.find((request) => request.id === id) || null;
+      modalMode = action === 'request-send' ? 'request-send' : 'request-detail';
+      refresh();
+      return;
+    }
+    if (action === 'copy-request') {
+      if (selectedRequest && typeof navigator !== 'undefined' && navigator.clipboard) navigator.clipboard.writeText(requestMessage(selectedRequest));
+      return;
+    }
+    if (action === 'confirm-send-request') { modalMode = 'confirm-send-request'; refresh(); return; }
+    if (action === 'back-request-detail') { modalMode = 'request-send'; refresh(); return; }
+    if (action === 'send-request') {
+      if (selectedRequest) {
+        selectedRequest.status = 'berhasil';
+        requestRows = requestRows.map((request) => request.id === selectedRequest.id ? { ...request, status: 'berhasil' } : request);
+      }
+      modalMode = 'success-send-request';
+      refresh();
+      return;
+    }
     if (action === 'add') { modalMode = 'add'; selectedUser = {}; refresh(); return; }
     if (action === 'edit' || action === 'detail') { selectedUser = users.find((user) => String(user.id) === String(id)) || null; modalMode = action; refresh(); return; }
     if (action === 'open-filter-dialog') {
@@ -298,19 +415,8 @@ export async function mount(root) {
     const errorBox = rootElement.querySelector('#user-form-error');
     try {
       const wasEditing = modalMode === 'edit';
-      if (wasEditing) await updateMockUser(selectedUser.id, data);
-      else await addMockUser(data);
-      users = await getUsers();
-      if (wasEditing) {
-        modalMode = 'success-edit';
-        toastType = 'success';
-        toastMessage = '';
-      } else {
-        modalMode = null;
-        selectedUser = null;
-        toastType = 'success';
-        toastMessage = 'Pengguna berhasil ditambahkan.';
-      }
+      pendingUserData = { mode: wasEditing ? 'edit' : 'add', data };
+      modalMode = 'confirm-user-save';
       refresh();
     } catch (error) {
       if (errorBox) { errorBox.textContent = error.message || 'Data pengguna gagal disimpan.'; errorBox.classList.remove('hidden'); }
