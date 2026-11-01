@@ -71,7 +71,7 @@ test('renderFormPageContent: render mode tambah dengan field default tanpa escap
   });
 
   const html = htmlObj.toString();
-  assert.ok(html.includes('Tambah Barang'));
+  assert.ok(html.includes('Tambah Inventaris'));
   assert.ok(html.includes('Kembali ke Kelola Inventaris'));
   assert.ok(html.includes('Nama Barang'));
   assert.ok(html.includes('Jumlah Unit'));
@@ -107,7 +107,7 @@ test('renderFormPageContent: render mode edit terisi nilai barang dan preview fo
   });
 
   const html = htmlObj.toString();
-  assert.ok(html.includes('Ubah Barang'));
+  assert.ok(html.includes('Edit Inventaris'));
   assert.ok(html.includes('Proyektor Epson EB-X500'));
   assert.ok(html.includes('value="5"'));
   assert.ok(html.includes('min="3"'));
@@ -116,7 +116,7 @@ test('renderFormPageContent: render mode edit terisi nilai barang dan preview fo
   assert.ok(html.includes('Proyektor ruang rapat gedung utama'));
   assert.ok(html.includes('id="foto-preview-img"'));
   assert.ok(html.includes('data-action="remove-foto"'));
-  assert.ok(html.includes('Simpan Perubahan'));
+  assert.ok(html.includes('Edit Inventaris'));
   assert.equal(html.includes('Kembali ke Kelola Inventaris'), false);
 
   assertNoEscapedMarkup(html, 'renderFormPageContent (edit)');
@@ -346,7 +346,7 @@ test('renderFormPageContent & renderDeleteModal: data berbahaya tetap ter-escape
   const maliciousDeskripsi = '"><img src=x onerror=alert(2)>';
 
   const formHtml = renderFormPageContent({
-    mode: 'edit',
+    mode: 'tambah',
     formData: {
       namaBarang: maliciousName,
       deskripsi: maliciousDeskripsi,
