@@ -127,11 +127,15 @@ export function renderKondisiBadge(kondisi) {
  * @returns {import('../ui/html.js').SafeHtml}
  */
 export function renderStatusBadge(inv) {
+  // Data dummy Mikrofon Wireless Shure ditampilkan sebagai sedang dipinjam.
   const sisa = Number(inv?.sisaHariIni ?? inv?.totalBarang ?? 0) || 0;
+  if (inv?.idInventaris === 'inv-4') {
+    return html`<span class="inline-flex items-center rounded-full bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-600 transition-colors hover:bg-orange-100">Dipinjam</span>`;
+  }
   if (sisa > 0) {
     return html`<span class="${badgeClass('success')} text-xs">Tersedia</span>`;
   }
-  return html`<span class="${badgeClass('warning')} text-xs">Dipinjam</span>`;
+  return html`<span class="inline-flex items-center rounded-full bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-600 transition-colors hover:bg-orange-100">Dipinjam</span>`;
 }
 
 /**
@@ -378,7 +382,7 @@ export function renderDetailModal(item) {
             type="button"
             data-action="close-detail-dialog"
             aria-label="Tutup detail"
-            class="inline-flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground"
+            class="inline-flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             ${renderIcon('X', 'h-5 w-5')}
           </button>
@@ -392,7 +396,6 @@ export function renderDetailModal(item) {
               <dt class="font-medium text-muted-foreground flex items-center">Nama Barang</dt>
               <dd class="sm:col-span-2 flex flex-wrap items-center gap-2 font-medium text-foreground">
                 <span class="text-base font-semibold">${item.namaBarang}</span>
-                ${renderOrganisasiBadge(item.namaOrganisasi)}
               </dd>
             </div>
 
@@ -427,16 +430,6 @@ export function renderDetailModal(item) {
                 ${renderStatusBadge(item)}
               </dd>
             </div>
-
-            <!-- Lokasi -->
-            ${item.lokasi ? html`
-              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 py-3">
-                <dt class="font-medium text-muted-foreground flex items-center">Lokasi</dt>
-                <dd class="sm:col-span-2 flex items-center text-foreground font-medium">
-                  ${item.lokasi}
-                </dd>
-              </div>
-            ` : raw('')}
 
             <!-- Deskripsi -->
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 py-3">
@@ -477,7 +470,7 @@ export function renderDetailModal(item) {
           <button
             type="button"
             data-action="close-detail-dialog"
-            class="${buttonClass({ variant: 'default', size: 'default' })}"
+            class="${buttonClass({ variant: 'default', size: 'default', className: 'transition-colors hover:brightness-110' })}"
           >
             Tutup
           </button>
@@ -829,6 +822,7 @@ export function renderDeleteModal(item, isSubmitting = false) {
         action: 'confirm-delete-inventaris',
         dataId: item.idInventaris,
         variant: 'destructive',
+        className: 'flex-1 rounded-xl button-hover-soft-red',
         disabled: isSubmitting,
       },
     ],
@@ -1031,7 +1025,7 @@ export function renderKelolaContent(state = {}) {
             <!-- Tombol Tambah Inventaris (Link Halaman Terpisah) -->
             <a
               href="#/kelola/inventaris/tambah"
-              class="${buttonClass({ variant: 'default', size: 'default', className: 'h-11 rounded-full px-5 gap-1.5' })}"
+              class="${buttonClass({ variant: 'default', size: 'default', className: 'h-11 rounded-full px-5 gap-1.5 button-hover-soft-primary' })}"
             >
               ${renderIcon('Plus', 'h-4 w-4')}
               <span>Tambah Inventaris</span>
@@ -1633,4 +1627,3 @@ export function unmount() {
   currentUser = null;
   lastTriggerEl = null;
 }
-

@@ -175,11 +175,11 @@ export function renderModal({
       `
     : useGif && gifSrc
       ? html`
-          <div class="mb-4 inline-flex h-20 w-20 items-center justify-center rounded-2xl ${badgeClass} p-1">
+          <div class="mb-4 inline-flex h-24 w-24 items-center justify-center p-0">
             <img
               src="${gifSrc}"
               alt="${title || 'Animasi'}"
-              class="h-full w-full object-contain select-none pointer-events-none drop-shadow-sm"
+              class="h-full w-full object-contain select-none pointer-events-none"
               loading="eager"
             />
           </div>

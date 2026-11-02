@@ -37,7 +37,7 @@ let formData = {
   alasanPenolakan: '',
   kondisiPengembalian: 'baik',
   fotoKondisi: '',
-  fotoKondisiError: '',
+  fotoError: '',
 };
 
 function dateLabel(value) {
@@ -203,7 +203,7 @@ function renderFormPengembalianPage() {
   const nim = personNim(row);
   const org = organizationName(row);
 
-  return `<section class="w-full px-5 pb-8 pt-6 sm:px-6 lg:px-7">
+  return `<section class="w-full px-5 pb-8 pt-8 sm:px-6 lg:px-7">
     <div class="w-full space-y-6">
       <div>
         <h1 class="text-3xl font-semibold tracking-tight text-slate-900">Form Pengembalian</h1>
@@ -256,37 +256,18 @@ function renderFormPengembalianPage() {
             <label for="form-sanksi" class="text-xs font-semibold text-slate-700">Sanksi</label>
             <input type="text" id="form-sanksi" value="${escapeHtml(formData.sanksi)}" placeholder="Catatan sanksi atau kondisi jika ada" class="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs sm:text-sm text-slate-800 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
           </div>
-
           <div class="space-y-2">
-            <p class="text-xs font-semibold text-slate-700">Kondisi Barang Saat Dikembalikan</p>
-            <div class="flex items-center gap-6 text-sm text-slate-700">
-              <label class="flex cursor-pointer items-center gap-2">
-                <input type="radio" name="kondisi-pengembalian" value="baik" ${formData.kondisiPengembalian !== 'rusak' ? 'checked' : ''} class="h-4 w-4 accent-primary">
-                <span>Baik</span>
-              </label>
-              <label class="flex cursor-pointer items-center gap-2">
-                <input type="radio" name="kondisi-pengembalian" value="rusak" ${formData.kondisiPengembalian === 'rusak' ? 'checked' : ''} class="h-4 w-4 accent-primary">
-                <span>Rusak</span>
-              </label>
+            <p class="text-xs font-semibold text-slate-700">Kondisi Barang</p>
+            <div class="flex gap-5 text-xs text-slate-700">
+              <label class="inline-flex items-center gap-2"><input type="radio" name="kondisi-pengembalian" value="baik" ${formData.kondisiPengembalian === 'baik' ? 'checked' : ''}>Baik</label>
+              <label class="inline-flex items-center gap-2"><input type="radio" name="kondisi-pengembalian" value="rusak" ${formData.kondisiPengembalian === 'rusak' ? 'checked' : ''}>Rusak</label>
             </div>
           </div>
-
-          <div class="space-y-2">
-            <label class="text-xs font-semibold text-slate-700">Foto Kondisi Barang Saat Dikembalikan</label>
-            <input id="form-foto-kondisi" type="file" accept="image/jpeg,image/png,image/jpg" class="sr-only">
-            ${formData.fotoKondisi ? `
-              <div class="relative overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-2">
-                <img src="${escapeHtml(formData.fotoKondisi)}" alt="Pratinjau kondisi barang" class="h-40 w-full rounded-lg object-contain">
-                <button type="button" data-action="remove-foto-kondisi" class="absolute right-4 top-4 inline-flex h-7 w-7 items-center justify-center rounded-full bg-rose-600 text-white shadow" aria-label="Hapus foto kondisi">${renderIcon('X', 'h-4 w-4')}</button>
-              </div>
-            ` : `
-              <div id="foto-kondisi-dropzone" role="button" tabindex="0" aria-label="Unggah foto kondisi barang" class="flex min-h-[130px] cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 px-5 py-6 text-center transition hover:border-primary hover:bg-slate-50">
-                <img src="assets/img/Image-Dropbox.png" alt="" class="mb-2 h-10 w-10 object-contain">
-                <p class="text-xs font-semibold text-slate-800">Seret foto ke sini, atau <span class="text-primary underline">Pilih File</span></p>
-                <p class="mt-1 text-[10px] text-slate-400">File harus berformat JPG atau PNG dengan ukuran maksimal 2 MB.</p>
-              </div>
-            `}
-            ${formData.fotoKondisiError ? `<p class="text-xs text-rose-600" role="alert">${escapeHtml(formData.fotoKondisiError)}</p>` : ''}
+          <div class="space-y-1.5">
+            <label for="foto-kondisi" class="text-xs font-semibold text-slate-700">Foto Kondisi Barang</label>
+            <button type="button" data-action="choose-return-photo" class="flex min-h-[120px] w-full flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4">${formData.fotoKondisi ? `<img src="${escapeHtml(formData.fotoKondisi)}" alt="Foto kondisi barang" class="max-h-24 rounded-lg object-contain">` : `<img src="assets/img/Image-Dropbox.png" alt="" class="mb-2 h-8 w-8 object-contain"><span class="text-xs font-semibold text-slate-700">Pilih foto kondisi barang</span>`}</button>
+            <input id="foto-kondisi" type="file" accept="image/jpeg,image/png,image/jpg" class="sr-only">
+            ${formData.fotoError ? `<p class="text-xs text-rose-600">${escapeHtml(formData.fotoError)}</p>` : ''}
           </div>
         </div>
 
@@ -311,7 +292,6 @@ function renderModal() {
   const org = organizationName(row);
   const isTerlambat = row.status === STATUS_PEMINJAMAN.TERLAMBAT || String(row.status).toLowerCase() === 'terlambat';
   const isDikembalikan = row.status === STATUS_PEMINJAMAN.DIKEMBALIKAN || String(row.status).toLowerCase() === 'dikembalikan' || String(row.status).toLowerCase() === 'selesai';
-  const isDitolak = row.status === STATUS_PEMINJAMAN.DITOLAK || String(row.status).toLowerCase() === 'ditolak';
   const showSanksi = !isDikembalikan;
   const daysLate = getDaysLate(row);
 
@@ -398,6 +378,9 @@ function renderModal() {
               <span class="text-sm font-medium text-slate-800">${escapeHtml(row.diprosesOleh || row.namaPeminjam || name)}</span>
             </div>
           ` : ''}
+          ${isDikembalikan && row.kondisiPengembalian ? `<div class="flex items-center justify-between py-1"><span class="text-xs sm:text-sm font-medium text-slate-900">Kondisi Barang</span><span class="text-sm font-medium text-slate-800">${escapeHtml(row.kondisiPengembalian)}</span></div>` : ''}
+          ${isDikembalikan && row.fotoKondisi ? `<div class="mt-4"><p class="text-xs font-semibold text-slate-900">Foto Kondisi Barang</p><img src="${escapeHtml(row.fotoKondisi)}" alt="Foto kondisi barang saat dikembalikan" class="mt-2 max-h-48 rounded-xl object-contain"></div>` : ''}
+          ${String(row.status).toLowerCase() === 'ditolak' && row.alasanPenolakan ? `<div class="mt-4"><p class="text-xs font-semibold text-slate-900">Alasan Ditolak</p><div class="mt-1.5 rounded-xl bg-slate-50/80 p-3 text-xs sm:text-sm text-slate-700 border border-slate-100">${escapeHtml(row.alasanPenolakan)}</div></div>` : ''}
         </div>
 
         <div class="mt-4">
@@ -406,36 +389,6 @@ function renderModal() {
             ${escapeHtml(row.keperluan || 'Seminar BEM')}
           </div>
         </div>
-
-        ${isDikembalikan ? `
-          <div class="mt-4">
-            <div class="flex items-center justify-between">
-              <p class="text-xs font-semibold text-slate-900">Kondisi Barang Saat Dikembalikan</p>
-              <span class="rounded-full px-2.5 py-1 text-[11px] font-semibold ${row.kondisiPengembalian === 'rusak' ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}">
-                ${row.kondisiPengembalian === 'rusak' ? 'Rusak' : 'Baik'}
-              </span>
-            </div>
-            <p class="mt-3 text-xs font-semibold text-slate-900">Foto Kondisi Barang</p>
-            ${row.fotoKondisi ? `
-              <div class="mt-1.5 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-2">
-                <img src="${escapeHtml(row.fotoKondisi)}" alt="Foto kondisi ${escapeHtml(itemName(row))} saat dikembalikan" class="max-h-64 w-full rounded-lg object-contain">
-              </div>
-            ` : `
-              <div class="mt-1.5 rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-center text-xs text-slate-400">
-                Tidak ada foto kondisi barang.
-              </div>
-            `}
-          </div>
-        ` : ''}
-
-        ${isDitolak ? `
-          <div class="mt-4">
-            <p class="text-xs font-semibold text-slate-900">Alasan Penolakan</p>
-            <div class="mt-1.5 rounded-xl border border-rose-100 bg-rose-50/60 p-3 text-xs sm:text-sm text-rose-800">
-              ${escapeHtml(row.alasanPenolakan || 'Tidak ada alasan penolakan.')}
-            </div>
-          </div>
-        ` : ''}
 
         ${showSanksi ? `
           <div class="mt-4">
@@ -636,14 +589,14 @@ function renderContent() {
 
   const count = visibleRows().length;
   const nAktif = countActiveFilters();
-  return `<section class="w-full px-5 pb-8 pt-6 sm:px-6 lg:px-7">
-    <div class="mb-6">
+  return `<section class="w-full px-5 pb-8 pt-8 sm:px-6 lg:px-7">
+    <div class="mb-9">
       <h1 class="text-3xl font-semibold tracking-tight text-slate-900">Kelola Pengembalian</h1>
       <p class="mt-1 text-sm text-slate-400">Pantau dan kelola proses pengembalian barang serta kondisi barang yang dikembalikan.</p>
     </div>
-    <div class="rounded-xl bg-white p-4 shadow-[0_1px_4px_rgba(15,23,42,0.025)] sm:p-5">
-      <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 class="text-base font-semibold text-slate-900">List Pengembalian</h2>
+    <div class="rounded-xl bg-white p-4 shadow-[0_1px_4px_rgba(15,23,42,0.025)] sm:p-6">
+      <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h2 class="text-lg font-semibold text-slate-900">List Pengembalian</h2>
         <div class="flex items-center gap-2.5">
           ${renderSearchInput({ id: 'search-pengembalian', value: searchTerm, placeholder: 'Cari nama peminjam', ariaLabel: 'Cari nama peminjam', className: 'w-full sm:w-64' })}
           ${renderFilterButton({
@@ -758,7 +711,7 @@ export async function mount(root) {
     alasanPenolakan: '',
     kondisiPengembalian: 'baik',
     fotoKondisi: '',
-    fotoKondisiError: '',
+    fotoError: '',
   };
   okiFilter = 'all';
   tanggalFilter = '';
@@ -767,10 +720,6 @@ export async function mount(root) {
   rootElement.innerHTML = renderContent();
 
   clickHandler = async (event) => {
-    if (event.target.closest('#foto-kondisi-dropzone')) {
-      rootElement.querySelector('#form-foto-kondisi')?.click();
-      return;
-    }
     const button = event.target.closest('[data-action]');
     if (!button) {
       if (event.target.closest('[data-modal-backdrop]') && event.target === event.target.closest('[data-modal-backdrop]')) {
@@ -794,6 +743,11 @@ export async function mount(root) {
       modalRow = rows.find((row) => String(row.id || row.idPeminjaman) === String(id)) || null;
       activeDialog = 'detail';
       refresh();
+      return;
+    }
+
+    if (action === 'choose-return-photo') {
+      rootElement.querySelector('#foto-kondisi')?.click();
       return;
     }
 
@@ -850,9 +804,6 @@ export async function mount(root) {
     if (action === 'open-form-approve') {
       formData.tanggalPengembalian = new Date().toISOString().slice(0, 10);
       formData.sanksi = '';
-      formData.kondisiPengembalian = 'baik';
-      formData.fotoKondisi = '';
-      formData.fotoKondisiError = '';
       activeDialog = 'form-approve';
       refresh();
       return;
@@ -866,13 +817,6 @@ export async function mount(root) {
       if (sanksi !== undefined) formData.sanksi = sanksi;
       if (kondisi) formData.kondisiPengembalian = kondisi;
       activeDialog = 'confirm-submit-form';
-      refresh();
-      return;
-    }
-
-    if (action === 'remove-foto-kondisi') {
-      formData.fotoKondisi = '';
-      formData.fotoKondisiError = '';
       refresh();
       return;
     }
@@ -971,21 +915,25 @@ export async function mount(root) {
   };
 
   changeHandler = async (event) => {
-    if (event.target?.id !== 'form-foto-kondisi') return;
+    if (event.target.name === 'kondisi-pengembalian') {
+      formData.kondisiPengembalian = event.target.value;
+      return;
+    }
+    if (event.target.id !== 'foto-kondisi') return;
     const file = event.target.files?.[0];
     if (!file) return;
     const error = validateFotoFile(file);
     if (error) {
-      formData.fotoKondisiError = error;
+      formData.fotoError = error;
       refresh();
       return;
     }
     try {
       formData.fotoKondisi = await compressImageToDataUrl(file);
-      formData.fotoKondisiError = '';
+      formData.fotoError = '';
       refresh();
     } catch {
-      formData.fotoKondisiError = 'Gagal memproses foto kondisi barang.';
+      formData.fotoError = 'Gagal memproses foto kondisi barang.';
       refresh();
     }
   };
@@ -1002,6 +950,7 @@ export function unmount() {
   rootElement = null;
   clickHandler = null;
   inputHandler = null;
+  changeHandler = null;
   rows = [];
   modalRow = null;
   activeDialog = null;
@@ -1009,9 +958,6 @@ export function unmount() {
     tanggalPengembalian: '',
     sanksi: '',
     alasanPenolakan: '',
-    kondisiPengembalian: 'baik',
-    fotoKondisi: '',
-    fotoKondisiError: '',
   };
   okiFilter = 'all';
   tanggalFilter = '';

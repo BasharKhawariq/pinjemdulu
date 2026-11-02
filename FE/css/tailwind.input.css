@@ -62,4 +62,25 @@
   }
 }
 /* Tombol Batal pada form inventaris: hover merah, mengalahkan style outline/primary. */
-.cancel-form-button:hover:not(:disabled) { background-color: #e11d48 !important; color: #ffffff !important; border-color: #e11d48 !important; }
+.cancel-form-button:hover:not(:disabled) { background-color: rgb(225, 29, 72) !important; color: rgb(255, 255, 255) !important; border-color: rgb(225, 29, 72) !important; }
+
+/* Efek hover tombol aksi: perubahan warna saja, tanpa pergeseran atau perubahan ukuran. */
+.button-hover-soft-red {
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+.button-hover-soft-red:hover:not(:disabled) {
+  background-color: rgb(201, 43, 43) !important;
+}
+.button-hover-soft-red:active:not(:disabled) {
+  background-color: rgb(185, 28, 28) !important;
+}
+
+.button-hover-soft-primary {
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+.button-hover-soft-primary:hover:not(:disabled) {
+  background-color: rgb(29, 59, 107) !important;
+}
+.button-hover-soft-primary:active:not(:disabled) {
+  background-color: rgb(25, 52, 94) !important;
+}

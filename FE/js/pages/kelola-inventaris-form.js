@@ -34,7 +34,6 @@ import {
 } from '../lib/inventaris-form.js';
 import { normalizeKondisi } from '../lib/kondisi.js';
 import { KONDISI_BARANG } from '../lib/constants.js';
-import { getInitials } from '../lib/navigation.js';
 
 export const HANDLED_FORM_ACTIONS = [
   'back-to-list',
@@ -298,7 +297,6 @@ export function renderFormPageContent(state = {}) {
     kategoriQuery = '',
     isKategoriDropdownOpen = false,
     isSubmitting = false,
-    namaOrganisasi = 'OKI Anda',
     loading = false,
     notFound = false,
     forbidden = false,
@@ -345,13 +343,12 @@ export function renderFormPageContent(state = {}) {
   }
 
   const isEdit = mode === 'edit';
-  const pageTitle = isEdit ? 'Edit Inventaris' : 'Tambah Inventaris';
+  const pageTitle = isEdit ? 'Ubah Barang' : 'Tambah Barang';
   const pageDesc = isEdit
     ? 'Perbarui detail informasi barang inventaris organisasi Anda.'
     : 'Isi detail informasi barang inventaris yang akan ditambahkan ke sistem.';
-  const submitText = isSubmitting ? 'Menyimpan...' : isEdit ? 'Edit Inventaris' : 'Tambah Inventaris';
+  const submitText = isSubmitting ? 'Menyimpan...' : isEdit ? 'Simpan Perubahan' : 'Tambah Barang';
   const minTotal = formData.minTotal || 1;
-  const initials = getInitials(namaOrganisasi).slice(0, 2);
 
   // Filter opsi kategori untuk combobox
   const filteredKategori = filterKategoriOptions(kategoriList, kategoriQuery);
@@ -359,7 +356,7 @@ export function renderFormPageContent(state = {}) {
   const selectedKat = kategoriList.find((k) => String(k.idKategori) === String(formData.idKategori));
 
   return html`
-    <div class="mx-auto w-full max-w-5xl space-y-5" id="kelola-form-root">
+    <div class="space-y-6 max-w-5xl mx-auto" id="kelola-form-root">
       <!-- Tombol Kembali Atas -->
       ${!isEdit ? html`
       <div>
@@ -377,27 +374,27 @@ export function renderFormPageContent(state = {}) {
       ` : raw('')}
 
       <!-- Header Halaman -->
-      <div class="px-1">
-        <h1 class="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">${pageTitle}</h1>
-        <p class="mt-1 text-xs text-muted-foreground sm:text-sm">${pageDesc}</p>
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">${pageTitle}</h1>
+        <p class="mt-1 text-sm text-muted-foreground">${pageDesc}</p>
       </div>
 
       <!-- Card Form Utama -->
-      <div class="rounded-xl border border-border bg-card p-5 shadow-sm sm:p-6">
-        <form id="form-inventaris-detail" onsubmit="return false;" novalidate class="space-y-5">
+      <div class="rounded-2xl border border-border bg-card p-5 sm:p-8 shadow-sm">
+        <form id="form-inventaris-detail" onsubmit="return false;" novalidate class="space-y-8">
           ${formErrors.umum ? html`
             <div class="${alertClass('destructive')}" role="alert">
               ${formErrors.umum}
             </div>
           ` : raw('')}
 
-          <div class="space-y-5">
-            <!-- Data utama -->
-            <div class="space-y-5">
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <!-- Kolom Kiri: Input Data Utama (7 cols) -->
+            <div class="lg:col-span-7 space-y-6">
               <!-- Field 1: Nama Barang -->
               <div class="space-y-2">
                 <div class="flex items-center justify-between">
-                  <label for="form-input-nama" class="${labelClass('text-xs')}">
+                  <label for="form-input-nama" class="${labelClass()}">
                     Nama Barang <span class="text-rose-500">*</span>
                   </label>
                 </div>
@@ -408,7 +405,7 @@ export function renderFormPageContent(state = {}) {
                   maxlength="100"
                   placeholder="Masukkan nama barang"
                   value="${formData.namaBarang || ''}"
-                  class="${inputClass(`h-9 rounded-lg px-3 text-xs ${formErrors.namaBarang ? 'border-rose-500' : ''}`)}"
+                  class="${inputClass({ error: Boolean(formErrors.namaBarang) })}"
                   aria-invalid="${Boolean(formErrors.namaBarang)}"
                   aria-describedby="${formErrors.namaBarang ? 'error-nama-barang' : ''}"
                   required
@@ -421,7 +418,7 @@ export function renderFormPageContent(state = {}) {
               <!-- Field 2: Jumlah Unit -->
               <div class="space-y-2">
                 <div class="flex items-center justify-between">
-                  <label for="form-input-jumlah" class="${labelClass('text-xs')}">
+                  <label for="form-input-jumlah" class="${labelClass()}">
                     Jumlah Unit <span class="text-rose-500">*</span>
                   </label>
                   ${isEdit && minTotal > 1 ? html`
@@ -438,7 +435,7 @@ export function renderFormPageContent(state = {}) {
                   max="999"
                   step="1"
                   value="${formData.totalBarang !== undefined ? formData.totalBarang : 1}"
-                  class="${inputClass(`h-9 rounded-lg px-3 text-xs ${formErrors.totalBarang ? 'border-rose-500' : ''}`)}"
+                  class="${inputClass({ error: Boolean(formErrors.totalBarang) })}"
                   aria-invalid="${Boolean(formErrors.totalBarang)}"
                   aria-describedby="${formErrors.totalBarang ? 'error-total-barang' : ''}"
                   required
@@ -450,7 +447,7 @@ export function renderFormPageContent(state = {}) {
 
               <!-- Field 3: Kategori (Combobox / Select Interaktif) -->
               <div class="space-y-2 relative" id="kategori-combobox-wrapper">
-                <label for="kategori-select-trigger" class="${labelClass('text-xs')}">
+                <label for="kategori-select-trigger" class="${labelClass()}">
                   Kategori <span class="text-rose-500">*</span>
                 </label>
 
@@ -477,7 +474,7 @@ export function renderFormPageContent(state = {}) {
                   data-action="toggle-kategori-dropdown"
                   aria-expanded="${isKategoriDropdownOpen}"
                   aria-haspopup="listbox"
-                  class="flex h-9 w-full items-center justify-between rounded-lg border border-input bg-background px-3 py-2 text-xs text-foreground ring-offset-background placeholder:text-muted-foreground hover:bg-muted/40 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${
+                  class="flex h-10 w-full items-center justify-between rounded-xl border border-input bg-background px-3.5 py-2 text-sm text-foreground ring-offset-background placeholder:text-muted-foreground hover:bg-muted/40 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${
                     formErrors.idKategori ? 'border-rose-500 focus:ring-rose-500' : ''
                   }"
                 >
@@ -556,35 +553,13 @@ export function renderFormPageContent(state = {}) {
                 ` : raw('')}
               </div>
 
-              <!-- Pemilik Inventaris hanya ditampilkan saat menambah barang -->
-              ${!isEdit ? html`
-                <div class="space-y-2">
-                  <label class="${labelClass('text-xs')}">Pemilik Inventaris</label>
-                  <div
-                    class="flex h-9 w-full items-center justify-between rounded-lg border border-input bg-muted/40 px-3 py-2 text-xs text-foreground/80 cursor-not-allowed select-none"
-                    title="Pemilik inventaris otomatis ditetapkan sebagai OKI Anda"
-                  >
-                    <div class="flex items-center gap-2">
-                      <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                        ${initials}
-                      </span>
-                      <span class="font-medium">${namaOrganisasi}</span>
-                    </div>
-                    ${renderIcon('Lock', 'h-4 w-4 text-muted-foreground opacity-60')}
-                  </div>
-                  <p class="text-xs text-muted-foreground">
-                    Otomatis ditetapkan sesuai organisasi kepengurusan Anda (hanya dapat mengelola barang OKI sendiri).
-                  </p>
-                </div>
-              ` : raw('')}
-
               <!-- Field 5: Kondisi Barang (Radio Horizontal) -->
               <div class="space-y-2.5">
-                <span class="${labelClass('text-xs')}">
+                <span class="${labelClass()}">
                   Kondisi <span class="text-rose-500">*</span>
                 </span>
                 <div class="flex items-center gap-6 pt-1">
-                  <label class="flex cursor-pointer items-center gap-2.5 text-xs font-medium text-foreground">
+                  <label class="flex cursor-pointer items-center gap-2.5 text-sm font-medium text-foreground">
                     <input
                       type="radio"
                       name="kondisi"
@@ -594,7 +569,7 @@ export function renderFormPageContent(state = {}) {
                     />
                     <span>Baik</span>
                   </label>
-                  <label class="flex cursor-pointer items-center gap-2.5 text-xs font-medium text-foreground">
+                  <label class="flex cursor-pointer items-center gap-2.5 text-sm font-medium text-foreground">
                     <input
                       type="radio"
                       name="kondisi"
@@ -612,13 +587,13 @@ export function renderFormPageContent(state = {}) {
 
               <!-- Field 6: Deskripsi Barang -->
               <div class="space-y-2">
-                <label for="form-input-deskripsi" class="${labelClass('text-xs')}">Deskripsi</label>
+                <label for="form-input-deskripsi" class="${labelClass()}">Deskripsi</label>
                 <textarea
                   id="form-input-deskripsi"
                   name="deskripsi"
                   rows="4"
                   placeholder="Masukkan deskripsi barang, spesifikasi teknis, atau kelengkapan..."
-                  class="${textareaClass('min-h-[82px] rounded-lg px-3 py-2 text-xs')}"
+                  class="${textareaClass()}"
                 >${formData.deskripsi || formData.deskripsiBarang || ''}</textarea>
                 ${formErrors.deskripsi ? html`
                   <p class="text-xs text-rose-500" role="alert">${formErrors.deskripsi}</p>
@@ -626,9 +601,9 @@ export function renderFormPageContent(state = {}) {
               </div>
             </div>
 
-            <!-- Foto Barang -->
-            <div class="space-y-3">
-              <label class="${labelClass('text-xs')}">Foto Barang</label>
+            <!-- Kolom Kanan: Foto Barang (Dropzone & Preview) (5 cols) -->
+            <div class="lg:col-span-5 space-y-3">
+              <label class="${labelClass()}">Foto Barang</label>
 
               <!-- Input file tersembunyi -->
               <input
@@ -640,8 +615,8 @@ export function renderFormPageContent(state = {}) {
 
               ${formData.thumbnail ? html`
                 <!-- Preview Foto Terpilih -->
-                <div class="space-y-3 rounded-xl border border-border p-3 bg-background">
-                  <div class="relative aspect-[16/5] w-full overflow-hidden rounded-lg bg-muted/20 border border-border">
+                <div class="space-y-3 rounded-2xl border border-border p-4 bg-background">
+                  <div class="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-muted/20 border border-border">
                     <img
                       id="foto-preview-img"
                       src="${formData.thumbnail}"
@@ -653,7 +628,7 @@ export function renderFormPageContent(state = {}) {
                       data-action="remove-foto"
                       aria-label="Hapus foto"
                       title="Hapus foto"
-                      class="absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-rose-600 text-white shadow-md hover:bg-rose-700 transition"
+                      class="absolute top-2 right-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-rose-600 text-white shadow-md hover:bg-rose-700 transition"
                     >
                       ${renderIcon('X', 'h-4 w-4')}
                     </button>
@@ -677,17 +652,19 @@ export function renderFormPageContent(state = {}) {
                   role="button"
                   tabindex="0"
                   aria-label="Unggah foto barang"
-                  class="flex min-h-[112px] cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-slate-300 bg-card px-6 py-5 text-center transition hover:border-primary/50 hover:bg-muted/30 focus:outline-none focus:ring-2 focus:ring-primary ${
+                  class="flex min-h-[240px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border bg-card p-6 text-center transition hover:border-primary/50 hover:bg-muted/30 focus:outline-none focus:ring-2 focus:ring-primary ${
                     formErrors.fotoFile ? 'border-rose-500 bg-rose-50/20' : ''
                   }"
                 >
-                  <div class="mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-sky-50 shadow-sm">
-                    <img src="assets/img/Image-Dropbox.png" alt="" class="h-7 w-7 object-contain" />
-                  </div>
-                  <p class="text-xs text-foreground">
+                  <img
+                    src="assets/img/Image-Dropbox.png"
+                    alt=""
+                    class="mb-3 h-14 w-14 object-contain"
+                  />
+                  <p class="text-sm text-foreground">
                     Seret file ke sini, atau <span class="font-semibold text-primary underline">Pilih File</span>
                   </p>
-                  <p class="mt-1 text-[10px] text-muted-foreground max-w-xs">
+                  <p class="mt-1.5 text-xs text-muted-foreground max-w-xs">
                     File harus berformat JPG atau PNG dengan ukuran maksimal 2 MB.
                   </p>
                 </div>
@@ -700,11 +677,11 @@ export function renderFormPageContent(state = {}) {
           </div>
 
           <!-- Baris Tombol Aksi Bawah -->
-          <div class="flex items-center justify-end gap-3 border-t border-border pt-5">
+          <div class="mt-8 flex items-center justify-end gap-3 border-t border-border pt-6">
             <button
               type="button"
               data-action="cancel-form"
-              class="cancel-form-button ${buttonClass({ variant: 'outline', size: 'sm', className: 'rounded-lg' })}"
+              class="cancel-form-button ${buttonClass({ variant: 'outline', size: 'default' })}"
               ${isSubmitting ? 'disabled' : ''}
             >
               Batal
@@ -712,7 +689,7 @@ export function renderFormPageContent(state = {}) {
             <button
               type="button"
               data-action="submit-form"
-              class="${buttonClass({ variant: 'default', size: 'sm', className: 'rounded-lg' })}"
+              class="${buttonClass({ variant: 'default', size: 'default', className: 'transition-colors hover:brightness-110' })}"
               ${isSubmitting ? 'disabled' : ''}
             >
               ${submitText}

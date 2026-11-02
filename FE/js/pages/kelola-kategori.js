@@ -131,7 +131,6 @@ export function renderFormModal({ dialog, editItem, inputNama = '', inputError =
         <div class="mt-4 space-y-2">
           <div class="flex items-center justify-between">
             <label for="input-kategori-nama" class="${labelClass()}">Nama Kategori</label>
-            <span class="text-xs text-muted-foreground" id="char-counter">${charCount}/${MAKS_PANJANG_KATEGORI}</span>
           </div>
           <input
             id="input-kategori-nama"
@@ -154,7 +153,7 @@ export function renderFormModal({ dialog, editItem, inputNama = '', inputError =
           <button
             type="button"
             data-action="close-form-dialog"
-            class="${buttonClass({ variant: 'outline', size: 'default' })}"
+            class="${buttonClass({ variant: 'outline', size: 'default', className: 'transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600' })}"
             ${isSubmitting ? 'disabled' : ''}
           >
             Batal
@@ -162,7 +161,7 @@ export function renderFormModal({ dialog, editItem, inputNama = '', inputError =
           <button
             type="button"
             data-action="submit-form-dialog"
-            class="${buttonClass({ variant: 'default', size: 'default' })}"
+            class="${buttonClass({ variant: 'default', size: 'default', className: 'transition-colors hover:brightness-110' })}"
             ${isSubmitting ? 'disabled' : ''}
           >
             ${submitText}
@@ -197,7 +196,7 @@ export function renderConfirmModal({ dialog, editItem, inputNama = '', isSubmitt
       <div class="flex flex-col p-6 text-center items-center">
         <!-- Icon Send / Pesawat Kertas -->
         <div class="mb-4 inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 p-1">
-          <img src="assets/animations/modal-send.gif" alt="Send" class="h-full w-full object-contain select-none pointer-events-none drop-shadow-sm" loading="eager" />
+          <img src="assets/animations/modal-send.gif" alt="Send" class="h-full w-full object-contain select-none pointer-events-none" loading="eager" />
         </div>
 
         <h2 id="dialog-confirm-kategori-title" class="text-lg font-bold text-foreground">${title}</h2>
@@ -250,20 +249,18 @@ export function renderDeleteModal(deleteItem, isSubmitting = false) {
     >
       <div class="flex flex-col p-6 text-center items-center">
         <!-- Icon Trash Merah -->
-        <div class="mb-4 inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-rose-50 text-rose-600 p-1">
+        <div class="mb-4 inline-flex h-24 w-24 items-center justify-center p-0">
           <img src="assets/animations/modal-delete.gif" alt="Hapus" class="h-full w-full object-contain select-none pointer-events-none drop-shadow-sm" loading="eager" />
         </div>
 
-        <h2 id="dialog-delete-kategori-title" class="text-lg font-bold text-foreground">Hapus kategori?</h2>
-        <p class="mt-1.5 text-sm text-muted-foreground">
-          Apakah anda yakin ingin menghapus kategori <strong>${nama}</strong>?
-        </p>
+        <h2 id="dialog-delete-kategori-title" class="text-lg font-bold text-foreground">Hapus Kategori</h2>
+        <p class="mt-1.5 text-sm text-muted-foreground">Apakah anda yakin ingin menghapus kategori?</p>
 
         <div class="mt-6 flex w-full items-center justify-center gap-3">
           <button
             type="button"
             data-action="close-delete-dialog"
-            class="${buttonClass({ variant: 'outline', size: 'default', className: 'flex-1 rounded-xl' })}"
+            class="${buttonClass({ variant: 'outline', size: 'default', className: 'flex-1 rounded-xl transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600' })}"
             ${isSubmitting ? 'disabled' : ''}
           >
             Kembali
@@ -272,7 +269,7 @@ export function renderDeleteModal(deleteItem, isSubmitting = false) {
             type="button"
             data-action="confirm-delete-kategori"
             data-id="${idKategori}"
-            class="${buttonClass({ variant: 'destructive', size: 'default', className: 'flex-1 rounded-xl' })}"
+            class="${buttonClass({ variant: 'destructive', size: 'default', className: 'flex-1 rounded-xl button-hover-soft-red' })}"
             ${isSubmitting ? 'disabled' : ''}
           >
             ${isSubmitting ? 'Menghapus...' : 'Hapus'}
@@ -403,7 +400,7 @@ export function renderKategoriTableContent({
         <button
           type="button"
           data-action="open-tambah-dialog"
-          class="${buttonClass({ variant: 'default', size: 'sm', className: 'mt-4' })}"
+          class="${buttonClass({ variant: 'default', size: 'sm', className: 'mt-4 button-hover-soft-primary' })}"
         >
           ${renderIcon('Plus', 'h-4 w-4 mr-1.5')}
           Tambah Kategori
@@ -457,33 +454,18 @@ export function renderKategoriTableContent({
                         ${renderIcon('Pencil', 'h-4 w-4')}
                       </button>
 
-                      ${isDipakai
-                        ? html`
-                            <button
-                              type="button"
-                              disabled
-                              aria-disabled="true"
-                              aria-label="Hapus kategori ${kat.namaKategori} nonaktif karena masih digunakan"
-                              title="Kategori masih digunakan"
-                              class="inline-flex h-8 w-8 items-center justify-center rounded-xl text-slate-300 cursor-not-allowed opacity-50"
-                            >
-                              ${renderIcon('Trash2', 'h-4 w-4')}
-                            </button>
-                          `
-                        : html`
-                            <button
-                              type="button"
-                              data-action="open-delete-dialog"
-                              data-id="${kat.idKategori}"
-                              data-nama="${kat.namaKategori}"
-                              data-count="${totalBarang}"
-                              aria-label="Hapus kategori ${kat.namaKategori}"
-                              title="Hapus ${kat.namaKategori}"
-                              class="inline-flex h-8 w-8 items-center justify-center rounded-xl text-red-600 transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            >
-                              ${renderIcon('Trash2', 'h-4 w-4')}
-                            </button>
-                          `}
+                      <button
+                        type="button"
+                        data-action="open-delete-dialog"
+                        data-id="${kat.idKategori}"
+                        data-nama="${kat.namaKategori}"
+                        data-count="${totalBarang}"
+                        aria-label="Hapus kategori ${kat.namaKategori}"
+                        title="Hapus ${kat.namaKategori}"
+                        class="inline-flex h-8 w-8 items-center justify-center rounded-xl text-red-600 transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        ${renderIcon('Trash2', 'h-4 w-4')}
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -567,7 +549,7 @@ export function renderKelolaKategoriContent(state = {}) {
             <button
               type="button"
               data-action="open-tambah-dialog"
-              class="${buttonClass({ variant: 'default', size: 'default', className: 'h-11 rounded-full px-5 gap-1.5' })}"
+              class="${buttonClass({ variant: 'default', size: 'default', className: 'h-11 rounded-full px-5 gap-1.5 button-hover-soft-primary' })}"
             >
               ${renderIcon('Plus', 'h-4 w-4')}
               <span>Tambah Kategori</span>
@@ -1036,10 +1018,6 @@ function handleSearchInput(e) {
   } else if (e.target.id === 'input-kategori-nama') {
     const val = e.target.value;
     pageState.inputNama = val;
-    const counter = currentContainer?.querySelector('#char-counter');
-    if (counter) {
-      counter.textContent = `${val.length}/${MAKS_PANJANG_KATEGORI}`;
-    }
     if (pageState.inputError) {
       pageState.inputError = null;
       const errEl = currentContainer?.querySelector('#kategori-error-msg');

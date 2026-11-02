@@ -235,8 +235,12 @@ function renderTableRows() {
         row.status === STATUS_PEMINJAMAN.DIAJUKAN ||
         String(row.status).toLowerCase() === "diajukan" ||
         String(row.status).toLowerCase() === "menunggu_persetujuan";
-      const approved = row.status === STATUS_PEMINJAMAN.DISETUJUI || String(row.status).toLowerCase() === "disetujui";
-      const borrowed = row.status === STATUS_PEMINJAMAN.DIPINJAM || String(row.status).toLowerCase() === "dipinjam";
+      const borrowed =
+        row.status === STATUS_PEMINJAMAN.DIPINJAM ||
+        String(row.status).toLowerCase() === "dipinjam";
+      const approved =
+        row.status === STATUS_PEMINJAMAN.DISETUJUI ||
+        String(row.status).toLowerCase() === "disetujui";
       return `<tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50/60">
       <td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400">${start + index + 1}</td>
       <td class="min-w-[210px] px-4 py-3">
@@ -325,19 +329,9 @@ function renderModal() {
     if (confirmModal.type === "reject-reason") {
       return `<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4" data-modal-backdrop>
         <section role="dialog" aria-modal="true" aria-labelledby="reject-loan-title" class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
-          <div class="flex items-start justify-between gap-4">
-            <h2 id="reject-loan-title" class="text-xl font-bold text-slate-900">Peminjaman Ditolak</h2>
-            <button type="button" data-action="close-confirm-modal" aria-label="Tutup" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100">${renderIcon("X", "h-5 w-5")}</button>
-          </div>
-          <div class="mt-5 space-y-2">
-            <label for="form-alasan-penolakan-peminjaman" class="text-sm font-semibold text-slate-900">Alasan Penolakan</label>
-            <textarea id="form-alasan-penolakan-peminjaman" rows="5" placeholder="Masukkan alasan penolakan peminjaman" class="w-full resize-none rounded-xl border ${rejectReasonError ? 'border-rose-500' : 'border-slate-200'} px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20">${escapeHtml(rejectReason)}</textarea>
-            ${rejectReasonError ? `<p class="text-xs text-rose-600" role="alert">${escapeHtml(rejectReasonError)}</p>` : ""}
-          </div>
-          <div class="mt-6 flex justify-end gap-3">
-            <button type="button" data-action="close-confirm-modal" class="rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Batal</button>
-            <button type="button" data-action="execute-reject" data-id="${escapeHtml(String(confirmModal.id))}" class="rounded-xl bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-rose-700">Tolak</button>
-          </div>
+          <h2 id="reject-loan-title" class="text-xl font-bold text-slate-900">Peminjaman Ditolak</h2>
+          <div class="mt-5 space-y-2"><label for="form-alasan-penolakan-peminjaman" class="text-sm font-semibold text-slate-900">Alasan Penolakan</label><textarea id="form-alasan-penolakan-peminjaman" rows="5" placeholder="Masukkan alasan penolakan peminjaman" class="w-full resize-none rounded-xl border ${rejectReasonError ? "border-rose-500" : "border-slate-200"} px-4 py-3 text-sm text-slate-800">${escapeHtml(rejectReason)}</textarea>${rejectReasonError ? `<p class="text-xs text-rose-600">${escapeHtml(rejectReasonError)}</p>` : ""}</div>
+          <div class="mt-6 flex justify-end gap-3"><button type="button" data-action="close-confirm-modal" class="rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-medium text-slate-600">Batal</button><button type="button" data-action="execute-reject" data-id="${escapeHtml(String(confirmModal.id))}" class="rounded-xl bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white">Tolak</button></div>
         </section>
       </div>`;
     }
@@ -414,7 +408,7 @@ function renderModal() {
             </div>
           </div>
 
-          <div class="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-zinc-200">
+          <div class="grid grid-cols-1 gap-3 sm:grid-cols-4 sm:gap-0 sm:divide-x sm:divide-zinc-200">
             <div class="sm:pr-4">
               <p class="text-xs font-semibold text-slate-900">Tanggal Pengajuan</p>
               <p class="mt-2 text-xs sm:text-sm text-slate-700">${escapeHtml(dateLabel(row.tanggalPengajuan || row.createdAt))}</p>
@@ -423,11 +417,8 @@ function renderModal() {
               <p class="text-xs font-semibold text-slate-900">Tanggal Mulai</p>
               <p class="mt-2 text-xs sm:text-sm text-slate-700">${escapeHtml(dateLabel(row.startDate || row.mulai))}</p>
             </div>
-            ${row.status === STATUS_PEMINJAMAN.DIPINJAM || String(row.status).toLowerCase() === "dipinjam" ? `<div class="sm:px-4">
-              <p class="text-xs font-semibold text-slate-900">Tanggal Pengambilan</p>
-              <p class="mt-2 text-xs sm:text-sm text-slate-700">${escapeHtml(dateLabel(row.tanggalPengambilan))}</p>
-            </div>` : ""}
-            <div class="sm:px-4">
+            ${row.status === STATUS_PEMINJAMAN.DIPINJAM || String(row.status).toLowerCase() === "dipinjam" ? `<div class="sm:px-4"><p class="text-xs font-semibold text-slate-900">Tanggal Pengambilan</p><p class="mt-2 text-xs sm:text-sm text-slate-700">${escapeHtml(dateLabel(row.tanggalPengambilan))}</p></div>` : ""}
+            <div class="sm:pl-4">
               <p class="text-xs font-semibold text-slate-900">Tanggal Selesai</p>
               <p class="mt-2 text-xs sm:text-sm text-slate-700">${escapeHtml(dateLabel(row.endDate || row.selesai))}</p>
             </div>
@@ -546,8 +537,8 @@ function renderContent() {
   const nAktif = countActiveFilters();
   return `<section class="w-full px-5 pb-8 pt-8 sm:px-6 lg:px-7">
     <div class="mb-9"><h1 class="text-3xl font-semibold tracking-tight text-slate-900">Kelola Peminjaman</h1><p class="mt-1 text-sm text-slate-400">Pantau dan kelola pengajuan peminjaman barang dari peminjam.</p></div>
-    <div class="rounded-xl bg-white p-4 shadow-[0_1px_4px_rgba(15,23,42,0.025)] sm:p-4">
-      <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div class="rounded-xl bg-white p-4 shadow-[0_1px_4px_rgba(15,23,42,0.025)] sm:p-6">
+      <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 class="text-lg font-semibold text-slate-900">List Peminjam</h2>
         <div class="flex items-center gap-3">
           ${renderSearchInput({ id: "search-peminjam", value: searchTerm, placeholder: "Cari nama peminjam", ariaLabel: "Cari nama peminjam", className: "w-full sm:w-[260px]" })}
@@ -676,8 +667,6 @@ export async function mount(root) {
   searchTerm = "";
   currentPage = 1;
   toastMessage = "";
-  rejectReason = "";
-  rejectReasonError = "";
   modalRow = null;
   feedbackModal = null;
   okiFilter = "all";
@@ -703,7 +692,6 @@ export async function mount(root) {
     const id = button.dataset.id;
     if (action === "close-modal") {
       modalRow = null;
-      pickupModal = null;
       refresh();
       return;
     }
@@ -744,7 +732,6 @@ export async function mount(root) {
         await updateMockPeminjamanPickup(pickupModal.id, pickupData);
         rows = await loadRows();
         pickupModal = null;
-        pickupData = { tanggalPengambilan: "", fotoPengambilan: "", error: "" };
         feedbackModal = { variant: "approve", title: "Pengambilan Berhasil", description: "Data pengambilan barang berhasil disimpan dan status menjadi Dipinjam." };
       } catch (error) {
         pickupData.error = error?.message || "Data pengambilan gagal disimpan.";
@@ -813,8 +800,6 @@ export async function mount(root) {
     }
     if (action === "close-confirm-modal") {
       confirmModal = null;
-      rejectReason = "";
-      rejectReasonError = "";
       refresh();
       return;
     }
@@ -834,9 +819,7 @@ export async function mount(root) {
         ? STATUS_PEMINJAMAN.DISETUJUI
         : STATUS_PEMINJAMAN.DITOLAK;
       try {
-        await updateMockPeminjamanStatus(targetId, nextStatus, isApprove ? {} : {
-          alasanPenolakan: rejectReason,
-        });
+        await updateMockPeminjamanStatus(targetId, nextStatus, isApprove ? {} : { alasanPenolakan: rejectReason });
         rows = await loadRows();
         toastType = "success";
         toastMessage = isApprove
