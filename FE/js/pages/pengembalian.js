@@ -1,15 +1,18 @@
 import { getPeminjaman } from '../services/peminjaman.js';
+import { ajukanPengembalian } from '../services/pengembalian.js';
 import { STATUS_PEMINJAMAN } from '../lib/constants.js';
 import { formatTanggal } from '../lib/format.js';
 import { renderIcon } from '../ui/icons.js';
 import { escapeHtml } from '../ui/html.js';
 import { renderSearchInput } from '../ui/search-input.js';
 import { renderStatusChip } from '../ui/status-chip.js';
+import { renderModal as renderGlobalModal } from '../ui/modal.js';
 
 const TABS = [
   { key: 'menunggu', label: 'Menunggu' },
   { key: 'dikembalikan', label: 'Dikembalikan' },
   { key: 'terlambat', label: 'Terlambat' },
+  { key: 'ditolak', label: 'Ditolak' },
 ];
 
 // Data contoh untuk menyamakan tampilan awal dengan desain Figma.
@@ -21,6 +24,7 @@ const DEMO_ROWS = [
   { id: 'ret-4', namaBarang: 'Speaker Portable', organisasi: 'HIMANIA', tanggalMulai: '2026-04-26', tanggalSelesai: '2026-04-30', tanggalDikembalikan: null, jumlahUnit: 1, status: 'menunggu', keperluan: 'Pentas seni' },
   { id: 'ret-5', namaBarang: 'Proyektor Epson', organisasi: 'HMTI', tanggalMulai: '2026-10-20', tanggalSelesai: '2026-10-17', tanggalDikembalikan: '2026-10-25', jumlahUnit: 1, status: 'dikembalikan', diprosesOleh: 'Hanin Maizah', keperluan: 'Seminar BEM' },
   { id: 'ret-6', namaBarang: 'Kabel HDMI', organisasi: 'HME', tanggalMulai: '2026-10-20', tanggalSelesai: '2026-10-17', tanggalDikembalikan: '2026-10-25', jumlahUnit: 1, status: 'terlambat', diprosesOleh: 'Hanin Maizah', waktuTerlambat: 3, keperluan: 'Seminar BEM' },
+  { id: 'ret-7', namaBarang: 'Kabel HDMI', organisasi: 'HME', tanggalMulai: '2026-10-20', tanggalSelesai: '2026-10-17', tanggalDikembalikan: null, jumlahUnit: 1, status: 'ditolak', diprosesOleh: 'Hanin Maizah', alasanPenolakan: 'Jumlah barang yang dikembalikan kurang lengkap', keperluan: 'Seminar BEM' },
 ];
 
 let activeTab = 'menunggu';
@@ -30,6 +34,7 @@ const PAGE_SIZE = 5;
 let rootElement = null;
 let onClickHandler = null;
 let onInputHandler = null;
+let actionDialog = null;
 
 function dateLabel(value) {
   return value ? formatTanggal(String(value).slice(0, 10)) : '—';
@@ -73,7 +78,7 @@ function renderRows() {
       <td class="whitespace-nowrap px-4 py-4 text-center text-[11px] text-slate-500">${escapeHtml(dateLabel(row.tanggalDikembalikan))}</td>
       <td class="px-4 py-4 text-center text-[11px] text-slate-600">${row.jumlahUnit}</td>
       <td class="px-4 py-4 text-center">${renderStatusChip({ status: row.status })}</td>
-      <td class="px-4 py-4 text-center"><button type="button" data-detail="${row.id}" aria-label="Lihat detail ${escapeHtml(row.namaBarang)}" title="Lihat detail" class="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-blue-50 hover:text-blue-700">${renderIcon('Info', 'h-[17px] w-[17px]')}</button></td>
+      <td class="px-4 py-4 text-center">${row.status === 'ditolak' ? `<button type="button" data-return-again="${escapeHtml(row.id)}" aria-label="Ajukan kembali pengembalian" title="Ajukan kembali pengembalian" class="mr-1 inline-flex h-8 w-8 items-center justify-center rounded-full text-emerald-600 transition hover:bg-emerald-50">${renderIcon('CircleCheck', 'h-[18px] w-[18px]')}</button>` : ''}<button type="button" data-detail="${escapeHtml(row.id)}" aria-label="Lihat detail ${escapeHtml(row.namaBarang)}" title="Lihat detail" class="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-blue-50 hover:text-blue-700">${renderIcon('Info', 'h-[17px] w-[17px]')}</button></td>
     </tr>`).join('');
 }
 
@@ -94,11 +99,12 @@ function renderPagination() {
 function renderDetail(row) {
   const isTerlambat = row.status === 'terlambat' || row.status === STATUS_PEMINJAMAN.TERLAMBAT;
   const isDikembalikan = row.status === 'dikembalikan' || row.status === STATUS_PEMINJAMAN.DIKEMBALIKAN || row.status === 'selesai';
+  const isDitolak = row.status === 'ditolak' || row.status === STATUS_PEMINJAMAN.DITOLAK;
   const daysLate = row.waktuTerlambat || 3;
   return `<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4" data-modal-overlay>
     <section role="dialog" aria-modal="true" aria-labelledby="return-detail-title" class="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
       <div class="flex items-start justify-between gap-4">
-        <h2 id="return-detail-title" class="text-xl font-bold text-slate-900">Detail Pengembalian</h2>
+        <h2 id="return-detail-title" class="text-xl font-bold text-slate-900">${isDitolak ? 'Detail Penolakan' : 'Detail Pengembalian'}</h2>
         <button type="button" data-close-detail aria-label="Tutup detail" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100">${renderIcon('X', 'h-5 w-5')}</button>
       </div>
       <div class="mt-6 space-y-5">
@@ -168,6 +174,7 @@ function renderDetail(row) {
             ` : ''}
           </div>
         </div>
+        ${isDitolak ? `<div><p class="text-xs font-semibold text-slate-900">Alasan Penolakan</p><div class="mt-2 rounded-2xl border border-zinc-200/80 bg-white p-3.5 text-xs sm:text-sm text-slate-700">${escapeHtml(row.alasanPenolakan || 'Pengembalian ditolak oleh pengelola.')}</div></div>` : ''}
       </div>
 
       <div class="mt-6 flex justify-end">
@@ -177,6 +184,27 @@ function renderDetail(row) {
       </div>
     </section>
   </div>`;
+}
+
+function renderActionDialog() {
+  if (!actionDialog) return '';
+  if (actionDialog.type === 'success') {
+    return renderGlobalModal({
+      variant: 'success',
+      title: 'Pengembalian Berhasil Dikirim Kembali!',
+      description: 'Anda telah berhasil mengirimkan kembali pengajuan pengembalian.',
+      primaryAction: { label: 'Kembali', action: 'close-return-dialog', className: 'w-full rounded-xl bg-primary text-white' },
+    });
+  }
+  return renderGlobalModal({
+    variant: 'send',
+    title: 'Ajukan Kembali Pengembalian?',
+    description: 'Periksa kembali data pengajuan yang akan anda kirim',
+    actions: [
+      { label: 'Kembali', action: 'close-return-dialog', variant: 'outline', className: 'w-1/2 rounded-xl' },
+      { label: 'Kirim', action: 'submit-return-again', variant: 'default', className: 'w-1/2 rounded-xl bg-primary text-white' },
+    ],
+  });
 }
 
 function refreshTable() {
@@ -190,6 +218,10 @@ function refreshTable() {
   if (title) title.textContent = `List Barang ${TABS.find((tab) => tab.key === activeTab)?.label || 'Pengembalian'}`;
 }
 
+function refreshPage() {
+  if (rootElement) rootElement.innerHTML = render();
+}
+
 export function render() {
   return `<section class="min-h-[calc(100vh-112px)] rounded-none bg-background -m-4 p-4 sm:-m-7 sm:p-7">
     <div class="mb-6"><h1 class="text-[22px] font-semibold leading-tight text-slate-900">Pengembalian</h1><p class="mt-1 text-[11px] text-slate-400 sm:text-xs">Pantau status pengembalian dan riwayat pengembalian barangmu.</p></div>
@@ -198,7 +230,7 @@ export function render() {
       <div class="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5"><h2 data-list-title class="text-[15px] font-semibold text-slate-900">List Barang Menunggu</h2>${renderSearchInput({ dataSearch: true, value: searchTerm, placeholder: 'Cari barang inventaris', ariaLabel: 'Cari barang inventaris', className: 'w-full sm:w-64' })}</div>
       <div class="overflow-x-auto"><table class="w-full min-w-[900px] border-collapse text-left"><thead class="bg-white text-[10px] font-semibold uppercase tracking-[0.02em] text-slate-400"><tr class="border-b border-zinc-100"><th class="px-4 py-3 text-center font-semibold">No</th><th class="px-4 py-3 font-semibold">Nama Barang</th><th class="px-4 py-3 text-center font-semibold">Tanggal Mulai</th><th class="px-4 py-3 text-center font-semibold">Tanggal Selesai</th><th class="px-4 py-3 text-center font-semibold">Tanggal Dikembalikan</th><th class="px-4 py-3 text-center font-semibold">Jumlah Unit</th><th class="px-4 py-3 text-center font-semibold">Status</th><th class="px-4 py-4 text-center font-semibold">Aksi</th></tr></thead><tbody data-table-body class="divide-y divide-zinc-50">${renderRows()}</tbody></table></div>
       <div data-pagination>${renderPagination()}</div>
-    </section><div data-detail-modal></div>
+    </section><div data-detail-modal></div>${renderActionDialog()}
   </section>`;
 }
 
@@ -207,6 +239,7 @@ export async function mount(root, ctx = {}) {
   activeTab = 'menunggu';
   searchTerm = '';
   currentPage = 1;
+  actionDialog = null;
   try {
     const all = await getPeminjaman();
     const mapped = all.filter((p) => {
@@ -215,17 +248,20 @@ export async function mount(root, ctx = {}) {
         s === STATUS_PEMINJAMAN.MENUNGGU_KONFIRMASI_PENGEMBALIAN ||
         s === STATUS_PEMINJAMAN.DIKEMBALIKAN ||
         s === STATUS_PEMINJAMAN.TERLAMBAT ||
+        s === STATUS_PEMINJAMAN.DITOLAK ||
         s === 'menunggu_pengembalian' ||
         s === 'menunggu' ||
         s === 'selesai' ||
         s === 'dikembalikan' ||
-        s === 'terlambat'
+        s === 'terlambat' ||
+        s === 'ditolak'
       );
     }).map((p) => {
       const s = String(p.status).toLowerCase();
       let tabKey = 'menunggu';
       if (s === STATUS_PEMINJAMAN.DIKEMBALIKAN || s === 'selesai' || s === 'dikembalikan') tabKey = 'dikembalikan';
       if (s === STATUS_PEMINJAMAN.TERLAMBAT || s === 'terlambat') tabKey = 'terlambat';
+      if (s === STATUS_PEMINJAMAN.DITOLAK || s === 'ditolak') tabKey = 'ditolak';
       return {
         id: String(p.id || p.idPeminjaman),
         namaBarang: p.inventaris?.namaBarang || p.barang?.namaBarang || p.namaBarang,
@@ -238,6 +274,9 @@ export async function mount(root, ctx = {}) {
         status: tabKey,
         keperluan: p.keperluan,
         diprosesOleh: p.diprosesOleh,
+        alasanPenolakan: p.alasanPenolakan,
+        kondisiPengembalian: p.kondisiPengembalian,
+        fotoKondisi: p.fotoKondisi,
         waktuTerlambat: p.waktuTerlambat,
       };
     });
@@ -249,9 +288,35 @@ export async function mount(root, ctx = {}) {
     // pertahankan demo rows
   }
   refreshTable();
-  onClickHandler = (event) => {
+  onClickHandler = async (event) => {
     const tab = event.target.closest('[data-tab]');
     if (tab) { activeTab = tab.dataset.tab; currentPage = 1; refreshTable(); return; }
+    const returnAgain = event.target.closest('[data-return-again]');
+    if (returnAgain) {
+      actionDialog = { type: 'confirm', id: returnAgain.dataset.returnAgain };
+      refreshPage();
+      return;
+    }
+    const modalAction = event.target.closest('[data-action]');
+    if (modalAction?.dataset.action === 'close-return-dialog') {
+      actionDialog = null;
+      refreshPage();
+      return;
+    }
+    if (modalAction?.dataset.action === 'submit-return-again') {
+      const target = DEMO_ROWS.find((row) => row.id === actionDialog?.id);
+      if (!target) return;
+      try {
+        await ajukanPengembalian(target.id);
+        target.status = 'menunggu';
+        target.tanggalDikembalikan = null;
+        actionDialog = { type: 'success' };
+      } catch {
+        actionDialog = null;
+      }
+      refreshPage();
+      return;
+    }
     const page = event.target.closest('[data-page]');
     if (page && !page.disabled) {
       const pages = Math.max(1, Math.ceil(getFilteredRows().length / PAGE_SIZE));

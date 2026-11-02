@@ -958,6 +958,9 @@ export function unmount() {
     tanggalPengembalian: '',
     sanksi: '',
     alasanPenolakan: '',
+    kondisiPengembalian: 'baik',
+    fotoKondisi: '',
+    fotoError: '',
   };
   okiFilter = 'all';
   tanggalFilter = '';

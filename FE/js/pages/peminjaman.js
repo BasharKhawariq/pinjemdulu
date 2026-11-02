@@ -156,7 +156,7 @@ function renderRows() {
         </td>
         <td class="whitespace-nowrap px-4 py-4 text-center text-[11px] text-slate-500">${escapeHtml(dateOnly(submitted))}</td>
         <td class="whitespace-nowrap px-4 py-4 text-center text-[11px] text-slate-500">${escapeHtml(dateOnly(startDate))}</td>
-        ${activeTab === 'dipinjam' && (String(row.status).toLowerCase() === 'dipinjam' || row.status === STATUS_PEMINJAMAN.DIPINJAM) ? `<td class="whitespace-nowrap px-4 py-4 text-center text-[11px] text-slate-500">${row.tanggalPengambilan ? escapeHtml(dateOnly(row.tanggalPengambilan)) : '–'}</td>` : ''}
+        ${activeTab === 'dipinjam' ? `<td class="whitespace-nowrap px-4 py-4 text-center text-[11px] text-slate-500">${row.tanggalPengambilan ? escapeHtml(dateOnly(row.tanggalPengambilan)) : '–'}</td>` : ''}
         <td class="whitespace-nowrap px-4 py-4 text-center text-[11px] text-slate-500">${escapeHtml(dateOnly(endDate))}</td>
         <td class="px-4 py-4 text-center text-[11px] text-slate-600">${escapeHtml(qty)}</td>
         <td class="px-4 py-4 text-center">${renderStatusChip({ status: row.status })}</td>
@@ -184,12 +184,29 @@ function renderPagination() {
 }
 
 function renderTableContent() {
+  const head = rootElement?.querySelector('[data-table-head]');
+  if (head) head.innerHTML = renderTableHead();
   const body = rootElement?.querySelector('[data-table-body]');
   if (body) body.innerHTML = renderRows();
   const pagination = rootElement?.querySelector('[data-pagination]');
   if (pagination) pagination.innerHTML = renderPagination();
   const tabs = rootElement?.querySelector('[data-tabs]');
   if (tabs) tabs.innerHTML = renderTabs();
+}
+
+function renderTableHead() {
+  return `
+    <tr class="border-b border-zinc-100">
+      <th class="px-4 py-3 text-center font-semibold">No</th>
+      <th class="px-4 py-3 font-semibold">Nama Barang</th>
+      <th class="px-4 py-3 text-center font-semibold">Tanggal Diajukan</th>
+      <th class="px-4 py-3 text-center font-semibold">Tanggal Mulai</th>
+      ${activeTab === 'dipinjam' ? '<th class="px-4 py-3 text-center font-semibold">Tanggal Pengambilan</th>' : ''}
+      <th class="px-4 py-3 text-center font-semibold">Tanggal Selesai</th>
+      <th class="px-4 py-3 text-center font-semibold">Jumlah Unit</th>
+      <th class="px-4 py-3 text-center font-semibold">Status</th>
+      <th class="px-4 py-3 text-center font-semibold">Aksi</th>
+    </tr>`;
 }
 
 function renderDetail(row) {
@@ -369,19 +386,7 @@ export function render() {
         </div>
         <div class="overflow-x-auto">
           <table class="w-full min-w-[900px] border-collapse text-left">
-            <thead class="bg-white text-[10px] font-semibold uppercase tracking-[0.02em] text-slate-400">
-              <tr class="border-b border-zinc-100">
-                <th class="px-4 py-3 text-center font-semibold">No</th>
-                <th class="px-4 py-3 font-semibold">Nama Barang</th>
-                <th class="px-4 py-3 text-center font-semibold">Tanggal Diajukan</th>
-                <th class="px-4 py-3 text-center font-semibold">Tanggal Mulai</th>
-                ${activeTab === 'dipinjam' ? '<th class="px-4 py-3 text-center font-semibold">Tanggal Pengambilan</th>' : ''}
-                <th class="px-4 py-3 text-center font-semibold">Tanggal Selesai</th>
-                <th class="px-4 py-3 text-center font-semibold">Jumlah Unit</th>
-                <th class="px-4 py-3 text-center font-semibold">Status</th>
-                <th class="px-4 py-3 text-center font-semibold">Aksi</th>
-              </tr>
-            </thead>
+            <thead data-table-head class="bg-white text-[10px] font-semibold uppercase tracking-[0.02em] text-slate-400">${renderTableHead()}</thead>
             <tbody data-table-body class="divide-y divide-zinc-50">${renderRows()}</tbody>
           </table>
         </div>

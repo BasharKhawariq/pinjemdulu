@@ -34,10 +34,11 @@ export async function ajukanPengembalian(id) {
   if (user?.nim && ownerNim && String(user.nim) !== String(ownerNim) && !isDefaultMock) {
     throw buatGalat(403, 'BUKAN_PEMILIK', 'Anda tidak berhak mengajukan pengembalian ini.');
   }
-  if (row.status !== STATUS_PEMINJAMAN.DIPINJAM) {
+  if (row.status !== STATUS_PEMINJAMAN.DIPINJAM && row.status !== STATUS_PEMINJAMAN.DITOLAK) {
     throw buatGalat(409, 'BUKAN_SEDANG_DIPINJAM', 'Hanya barang yang sedang dipinjam yang dapat diajukan pengembaliannya.');
   }
   row.status = STATUS_PEMINJAMAN.MENUNGGU_KONFIRMASI_PENGEMBALIAN;
+  row.alasanPenolakan = null;
   if (!row.tanggalPengembalian) {
     row.tanggalPengembalian = new Date().toISOString().slice(0, 10);
   }
