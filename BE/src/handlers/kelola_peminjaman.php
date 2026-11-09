@@ -1,76 +1,82 @@
 <?php
-// Kelola Peminjaman (PJ).
-//   GET /api/kelola-peminjaman[?status=&q=&dari=&sampai=&page=&limit=]  daftar (default: Diajukan,Disetujui,Ditolak,Dipinjam)
-//   GET /api/kelola-peminjaman?id=                                      detail
-//   PUT /api/kelola-peminjaman?id=   { "aksi": "setujui" | "tolak" | "serahkan", "alasanPenolakan": "..." }
+declare(strict_types=1);
 
-$method = $_SERVER['REQUEST_METHOD'];
-$id     = query_id();
+/*
+ * Kelola Peminjaman: pengajuan untuk barang milik OKI si PJ.
+ * Data peminjaman OKI lain dianggap tidak ada (404).
+ */
 
-try {
-    $pj  = wajib_pj($pdo);
-    $org = $pj['idOrganisasi'];
+/** Pastikan peminjaman ada dan barangnya milik OKI si PJ. */
+function pinjam_milik_oki(int $id): array
+{
+    return ambil_atau_404(
+        'SELECT id_peminjaman, status FROM v_peminjaman_detail WHERE id_peminjaman = :id AND id_organisasi_pemilik = :org',
+        ['id' => $id, 'org' => me()['id_organisasi']],
+        'Peminjaman tidak ditemukan'
+    );
+}
 
-    switch ($method) {
-        case 'GET':
-            if ($id) {
-                $r = ambil_peminjaman_pj($pdo, $org, $id);
-                if (!$r) {
-                    json_error('Peminjaman tidak ditemukan.', 'NOT_FOUND', 404);
-                }
-                json_out(camel_keys($r));
-            }
-            daftar_peminjaman_pj(
-                $pdo, $org,
-                ['Diajukan', 'Disetujui', 'Ditolak', 'Dipinjam'],
-                "CASE p.status WHEN 'Diajukan' THEN 0 ELSE 1 END, p.tanggal_pengajuan DESC, p.id_peminjaman DESC"
-            );
-
-        case 'PUT':
-            if (!$id) {
-                json_error('Parameter id wajib.', 'ID_WAJIB', 400);
-            }
-            $in   = input();
-            $aksi = $in['aksi'] ?? '';
-            $peta = ['setujui' => 'Disetujui', 'tolak' => 'Ditolak', 'serahkan' => 'Dipinjam'];
-            if (!is_string($aksi) || !isset($peta[$aksi])) {
-                json_error('Validasi gagal.', 'VALIDASI_GAGAL', 422, ['aksi' => "Pilihan: setujui, tolak, serahkan."]);
-            }
-            $alasan = null;
-            if ($aksi === 'tolak') {
-                $alasan = trim((string)($in['alasanPenolakan'] ?? ''));
-                if ($alasan === '' || mb_strlen($alasan) > 255) {
-                    json_error('Validasi gagal.', 'VALIDASI_GAGAL', 422, [
-                        'alasanPenolakan' => 'Alasan penolakan wajib diisi (maksimal 255 karakter).',
-                    ]);
-                }
-            }
-
-            $pdo->beginTransaction();
-            $row = kunci_peminjaman_pj($pdo, $org, $id);
-            if (!$row) {
-                json_error('Peminjaman tidak ditemukan.', 'NOT_FOUND', 404);
-            }
-            $dari = ['setujui' => 'Diajukan', 'tolak' => 'Diajukan', 'serahkan' => 'Disetujui'][$aksi];
-            if ($row['status'] !== $dari) {
-                json_error("Aksi '$aksi' hanya untuk peminjaman berstatus $dari (sekarang: {$row['status']}).", 'STATUS_TIDAK_SESUAI', 409);
-            }
-
-            $stmt = $pdo->prepare('UPDATE peminjaman SET status = :st, alasan_penolakan = :alasan WHERE id_peminjaman = :id');
-            $stmt->execute(['st' => $peta[$aksi], 'alasan' => $alasan, 'id' => $id]);
-            $pdo->commit();
-
-            json_out([
-                'message'    => ['setujui' => 'Peminjaman disetujui.', 'tolak' => 'Peminjaman ditolak.', 'serahkan' => 'Barang ditandai sudah diserahkan (Dipinjam).'][$aksi],
-                'peminjaman' => camel_keys(ambil_peminjaman_pj($pdo, $org, $id)),
-            ]);
-
-        default:
-            json_error('Method tidak didukung.', 'METHOD_NOT_ALLOWED', 405);
+function h_kp_list(array $p): void
+{
+    $w = new Where();
+    $w->add('id_organisasi_pemilik = ?', [me()['id_organisasi']]);
+    $st = qs_enum_multi('status', STATUS_PEMINJAMAN);
+    if ($st) {
+        $w->add('status::text = ANY(CAST(? AS text[]))', [pg_array($st)]);
     }
-} catch (PDOException $e) {
-    if ($pdo->inTransaction()) {
-        $pdo->rollBack();
-    }
-    pdo_error($e);
+    filter_cari($w, ['nama_barang', 'nama_peminjam', 'nim_peminjam', 'oki_peminjam']);
+    filter_rentang($w, 'tgl_mulai', 'tgl_selesai');
+    list_out(paginate(KOLOM_PINJAM, 'v_peminjaman_detail', $w, 'created_at DESC, id_peminjaman DESC'), 'pinjam_map');
+}
+
+function h_kp_detail(array $p): void
+{
+    peminjaman_detail_out(
+        'id_peminjaman = :id AND id_organisasi_pemilik = :org',
+        ['id' => path_id($p), 'org' => me()['id_organisasi']]
+    );
+}
+
+function h_kp_setujui(array $p): void
+{
+    $id = path_id($p);
+    pinjam_milik_oki($id);
+    db_one(
+        "SELECT sp_proses_peminjaman(CAST(:id AS integer), CAST(:nim AS varchar), 'Setujui', NULL)",
+        ['id' => $id, 'nim' => me()['nim']]
+    );
+    json_out(['message' => 'Pengajuan peminjaman disetujui']);
+}
+
+/** POST .../tolak  { alasan } */
+function h_kp_tolak(array $p): void
+{
+    $id = path_id($p);
+    $err = [];
+    $alasan = f_str('alasan', $err, true, 500, 'Alasan penolakan');
+    validasi_selesai($err);
+    pinjam_milik_oki($id);
+    db_one(
+        "SELECT sp_proses_peminjaman(CAST(:id AS integer), CAST(:nim AS varchar), 'Tolak', CAST(:alasan AS text))",
+        ['id' => $id, 'nim' => me()['nim'], 'alasan' => $alasan]
+    );
+    json_out(['message' => 'Pengajuan peminjaman ditolak']);
+}
+
+/** POST .../pengambilan (multipart): tanggal (YYYY-MM-DD), foto (JPG/PNG maks 2 MB) */
+function h_kp_pengambilan(array $p): void
+{
+    $id = path_id($p);
+    $err = [];
+    $tgl = f_date('tanggal', $err, true, 'Tanggal pengambilan');
+    $foto = upload_validasi('foto', MIME_GAMBAR, true, $err, 'Foto pengambilan');
+    validasi_selesai($err);
+    pinjam_milik_oki($id);
+
+    $path = storage_put('pengambilan', $foto);
+    bersihkan_jika_gagal([$path], fn() => db_one(
+        'SELECT sp_pengambilan_barang(CAST(:id AS integer), CAST(:nim AS varchar), CAST(:tgl AS date), CAST(:path AS text))',
+        ['id' => $id, 'nim' => me()['nim'], 'tgl' => $tgl, 'path' => $path]
+    ));
+    json_out(['message' => 'Pengambilan barang dicatat, status peminjaman menjadi Dipinjam']);
 }

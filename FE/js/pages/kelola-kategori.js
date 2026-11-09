@@ -112,7 +112,7 @@ export function renderFormModal({ dialog, editItem, inputNama = '', inputError =
     <dialog
       id="dialog-form-kategori"
       aria-labelledby="dialog-form-kategori-title"
-      class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 z-50 w-full max-w-md rounded-2xl border border-border bg-background p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
+      class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 z-50 w-full max-w-md rounded-2xl border border-border bg-white p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
       ${isOpen ? 'open' : ''}
     >
       <form id="form-kategori" class="p-6" onsubmit="return false;">
@@ -153,7 +153,7 @@ export function renderFormModal({ dialog, editItem, inputNama = '', inputError =
           <button
             type="button"
             data-action="close-form-dialog"
-            class="${buttonClass({ variant: 'outline', size: 'default', className: 'transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600' })}"
+            class="cancel-form-button rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-sm font-semibold text-slate-600 transition-colors"
             ${isSubmitting ? 'disabled' : ''}
           >
             Batal
@@ -190,7 +190,7 @@ export function renderConfirmModal({ dialog, editItem, inputNama = '', isSubmitt
     <dialog
       id="dialog-confirm-kategori"
       aria-labelledby="dialog-confirm-kategori-title"
-      class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 z-50 w-full max-w-md rounded-2xl border border-border bg-background p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
+      class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 z-50 w-full max-w-md rounded-2xl border border-border bg-white p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
       ${isOpen ? 'open' : ''}
     >
       <div class="flex flex-col p-6 text-center items-center">
@@ -244,7 +244,7 @@ export function renderDeleteModal(deleteItem, isSubmitting = false) {
     <dialog
       id="dialog-delete-kategori"
       aria-labelledby="dialog-delete-kategori-title"
-      class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 z-50 w-full max-w-md rounded-2xl border border-border bg-background p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
+      class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 z-50 w-full max-w-md rounded-2xl border border-border bg-white p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
       ${isOpen ? 'open' : ''}
     >
       <div class="flex flex-col p-6 text-center items-center">
@@ -299,15 +299,13 @@ export function renderFeedbackModal(feedback) {
     <dialog
       id="dialog-feedback-kategori"
       aria-labelledby="dialog-feedback-kategori-title"
-      class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 z-50 w-full max-w-md rounded-2xl border border-border bg-background p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
+      class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 z-50 w-full max-w-md rounded-2xl border border-border bg-white p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
       ${isOpen ? 'open' : ''}
     >
       <div class="flex flex-col p-6 text-center items-center">
-        <div class="mb-4 inline-flex h-20 w-20 items-center justify-center rounded-2xl ${iconColor} p-1">
-          ${isDipakai || isError
-            ? html`<img src="assets/animations/modal-reject.gif" alt="Galat" class="h-full w-full object-contain select-none pointer-events-none drop-shadow-sm" loading="eager" />`
-            : html`<img src="assets/animations/modal-success.gif" alt="Sukses" class="h-full w-full object-contain select-none pointer-events-none drop-shadow-sm" loading="eager" />`}
-        </div>
+        ${isDipakai || isError
+          ? html`<img src="assets/animations/modal-reject.gif" alt="Galat" class="mb-4 h-24 w-24 object-contain select-none pointer-events-none" loading="eager" />`
+          : html`<img src="assets/animations/modal-success.gif" alt="Sukses" class="mb-4 h-24 w-24 object-contain select-none pointer-events-none" loading="eager" />`}
 
         <h2 id="dialog-feedback-kategori-title" class="text-lg font-bold text-foreground">${title}</h2>
         <p class="mt-1.5 text-sm text-muted-foreground">${message}</p>
@@ -316,7 +314,7 @@ export function renderFeedbackModal(feedback) {
           <button
             type="button"
             data-action="close-feedback-dialog"
-            class="${buttonClass({ variant: 'default', size: 'default', className: 'w-full rounded-xl' })}"
+            class="${buttonClass({ variant: 'default', size: 'default', className: 'w-full rounded-xl transition-colors hover:bg-secondary-hover hover:text-secondary-hover-foreground hover:border-secondary-hover' })}"
           >
             Kembali
           </button>

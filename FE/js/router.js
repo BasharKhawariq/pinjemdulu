@@ -5,6 +5,7 @@
 import { resolveRoute } from './lib/route-guard.js';
 import * as LoginPage from './pages/login.js';
 import * as DashboardPeminjamPage from './pages/dashboard-peminjam.js';
+import * as DashboardPjPage from './pages/dashboard-pj.js';
 import * as InventarisPage from './pages/inventaris.js';
 import * as DetailPage from './pages/detail.js';
 import * as KelolaInventarisPage from './pages/kelola-inventaris.js';
@@ -27,7 +28,7 @@ import * as NotFoundPage from './pages/notfound.js';
 const MODULES = {
   login: LoginPage,
   'dashboard-peminjam': DashboardPeminjamPage,
-  'dashboard-pj': PlaceholderPage,
+  'dashboard-pj': DashboardPjPage,
   inventaris: InventarisPage,
   detail: DetailPage,
   ajukan: AjukanPage,
@@ -85,6 +86,8 @@ export function navigate(targetPath, replace = false) {
 }
 
 let currentPageModule = null;
+let lastHashSeen = '';
+const KELOLA_INVENTARIS_TAB_KEY = 'pinjemdulu:last-kelola-inventaris-tab';
 
 /**
  * Tangani perubahan rute saat ini dengan Route Guard.
@@ -95,8 +98,29 @@ let currentPageModule = null;
 export async function handleRouteChange(appRoot, ctx = {}, onRouteResolved = null) {
   if (typeof window === 'undefined' || !appRoot) return;
 
-  const currentHash = window.location.hash || '';
+  let currentHash = window.location.hash || '';
   const user = ctx.user || null;
+
+  // Pertahankan tab terakhir pada kelompok Kelola Inventaris/Kelola Kategori
+  // ketika pengguna kembali dari halaman lain melalui navigasi sidebar.
+  const cleanCurrentHash = currentHash.split('?')[0].replace(/\/+$/, '');
+  const cleanPreviousHash = String(lastHashSeen || '').split('?')[0].replace(/\/+$/, '');
+  const isKelolaInventoryTab = ['#/kelola/inventaris', '#/kelola/kategori'].includes(cleanCurrentHash);
+  const wasOnKelolaInventoryTab = ['#/kelola/inventaris', '#/kelola/kategori'].includes(cleanPreviousHash);
+  if (isKelolaInventoryTab && !wasOnKelolaInventoryTab && cleanCurrentHash === '#/kelola/inventaris') {
+    try {
+      const rememberedTab = window.sessionStorage.getItem(KELOLA_INVENTARIS_TAB_KEY);
+      if (rememberedTab === '#/kelola/kategori') {
+        currentHash = rememberedTab;
+        window.location.hash = rememberedTab;
+      }
+    } catch { /* sessionStorage dapat tidak tersedia pada mode privat tertentu */ }
+  }
+  const finalCleanHash = currentHash.split('?')[0].replace(/\/+$/, '');
+  if (['#/kelola/inventaris', '#/kelola/kategori'].includes(finalCleanHash)) {
+    try { window.sessionStorage.setItem(KELOLA_INVENTARIS_TAB_KEY, finalCleanHash); } catch { /* abaikan */ }
+  }
+  lastHashSeen = currentHash;
 
   const resolution = resolveRoute({ hash: currentHash, user });
   if (resolution.type === 'redirect') {

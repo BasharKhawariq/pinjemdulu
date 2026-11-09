@@ -93,7 +93,7 @@ export const INITIAL_MOCK_PEMINJAMAN = [
   buatPeminjaman({
     nomor: 2, indeksInventaris: 4, namaBarang: 'Camera Canon 700D', namaOrganisasi: 'HMS',
     pengajuan: '2026-10-17', mulai: '2026-10-20', selesai: '2026-10-25',
-    status: STATUS_PEMINJAMAN.DIPINJAM, keperluan: 'Dokumentasi acara kampus',
+    status: STATUS_PEMINJAMAN.DIPINJAM, keperluan: 'Dokumentasi acara kampus', tanggalPengambilan: '2026-10-20',
     kondisiSebelum: 'baik', deskripsiSebelum: 'Lensa bersih, baterai terpasang',
   }),
   buatPeminjaman({
@@ -131,7 +131,7 @@ export const INITIAL_MOCK_PEMINJAMAN = [
   buatPeminjaman({
     nomor: 9, indeksInventaris: 1, namaBarang: 'Speaker Portable', namaOrganisasi: 'HIMANIA',
     pengajuan: '2026-08-12', mulai: '2026-08-15', selesai: '2026-08-20',
-    status: STATUS_PEMINJAMAN.DIPINJAM, keperluan: 'Pentas seni HIMANIA',
+    status: STATUS_PEMINJAMAN.DIPINJAM, keperluan: 'Pentas seni HIMANIA', tanggalPengambilan: '2026-10-20',
     kondisiSebelum: 'baik', deskripsiSebelum: 'Speaker berfungsi normal',
   }),
   buatPeminjaman({

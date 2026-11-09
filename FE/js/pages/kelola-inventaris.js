@@ -377,7 +377,7 @@ export function renderDetailModal(item) {
       <div class="flex flex-col max-h-[90vh]">
         <!-- Header -->
         <div class="flex items-center justify-between border-b border-border px-6 py-4">
-          <h2 id="dialog-detail-title" class="text-lg font-semibold text-foreground">Detail Inventaris</h2>
+          <h2 id="dialog-detail-title" class="text-xl font-semibold text-foreground">Detail Inventaris</h2>
           <button
             type="button"
             data-action="close-detail-dialog"
@@ -393,7 +393,7 @@ export function renderDetailModal(item) {
           <dl class="divide-y divide-border text-sm">
             <!-- Nama Barang -->
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 py-3">
-              <dt class="font-medium text-muted-foreground flex items-center">Nama Barang</dt>
+              <dt class="text-sm font-medium text-foreground flex items-center">Nama Barang</dt>
               <dd class="sm:col-span-2 flex flex-wrap items-center gap-2 font-medium text-foreground">
                 <span class="text-base font-semibold">${item.namaBarang}</span>
               </dd>
@@ -401,7 +401,7 @@ export function renderDetailModal(item) {
 
             <!-- Kategori -->
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 py-3">
-              <dt class="font-medium text-muted-foreground flex items-center">Kategori</dt>
+              <dt class="text-sm font-medium text-foreground flex items-center">Kategori</dt>
               <dd class="sm:col-span-2 flex items-center">
                 ${renderKategoriBadge(item.namaKategori)}
               </dd>
@@ -409,15 +409,15 @@ export function renderDetailModal(item) {
 
             <!-- Jumlah -->
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 py-3">
-              <dt class="font-medium text-muted-foreground flex items-center">Jumlah</dt>
-              <dd class="sm:col-span-2 flex items-center font-medium text-foreground">
+              <dt class="text-sm font-medium text-foreground flex items-center">Jumlah</dt>
+              <dd class="sm:col-span-2 flex items-center text-sm font-medium text-foreground">
                 ${jumlahText}
               </dd>
             </div>
 
             <!-- Kondisi -->
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 py-3">
-              <dt class="font-medium text-muted-foreground flex items-center">Kondisi</dt>
+              <dt class="text-sm font-medium text-foreground flex items-center">Kondisi</dt>
               <dd class="sm:col-span-2 flex items-center">
                 ${renderKondisiBadge(item.kondisi)}
               </dd>
@@ -425,7 +425,7 @@ export function renderDetailModal(item) {
 
             <!-- Status -->
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 py-3">
-              <dt class="font-medium text-muted-foreground flex items-center">Status</dt>
+              <dt class="text-sm font-medium text-foreground flex items-center">Status</dt>
               <dd class="sm:col-span-2 flex items-center">
                 ${renderStatusBadge(item)}
               </dd>
@@ -433,9 +433,9 @@ export function renderDetailModal(item) {
 
             <!-- Deskripsi -->
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 py-3">
-              <dt class="font-medium text-muted-foreground">Deskripsi</dt>
+              <dt class="text-sm font-medium text-foreground">Deskripsi</dt>
               <dd class="sm:col-span-2 text-foreground">
-                <div class="rounded-xl border border-border bg-card/60 p-3 whitespace-pre-line text-sm">
+                <div class="rounded-xl border border-border bg-card/60 p-3 whitespace-pre-line text-sm font-medium text-foreground">
                   ${item.deskripsiBarang || '–'}
                 </div>
               </dd>
@@ -443,7 +443,7 @@ export function renderDetailModal(item) {
 
             <!-- Foto Barang -->
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 py-3">
-              <dt class="font-medium text-muted-foreground">Foto Barang</dt>
+              <dt class="text-sm font-medium text-foreground">Foto Barang</dt>
               <dd class="sm:col-span-2">
                 <div class="w-full max-w-xs overflow-hidden rounded-xl border border-border aspect-[4/3] bg-muted/20 flex items-center justify-center">
                   ${item.thumbnail ? html`
@@ -851,6 +851,7 @@ export function renderFeedbackModal(feedback) {
     id: 'dialog-feedback-kelola',
     titleId: 'dialog-feedback-title',
     variant: isSuccess ? 'success' : 'reject',
+    plainGif: true,
     title: feedback.title,
     description: feedback.message,
     actions: [
@@ -858,7 +859,7 @@ export function renderFeedbackModal(feedback) {
         label: 'Kembali',
         action: 'close-feedback-dialog',
         variant: 'default',
-        className: 'w-full rounded-xl',
+        className: 'w-full rounded-xl transition-colors hover:bg-secondary-hover hover:text-secondary-hover-foreground hover:border-secondary-hover',
       },
     ],
   });
@@ -1627,3 +1628,4 @@ export function unmount() {
   currentUser = null;
   lastTriggerEl = null;
 }
+

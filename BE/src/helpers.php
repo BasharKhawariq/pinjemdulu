@@ -1,231 +1,438 @@
 <?php
 declare(strict_types=1);
 
-/** Kirim JSON lalu hentikan skrip. */
-function json_out(mixed $data, int $code = 200): never
+/* ------------------------------------------------------------------ */
+/* Galat & respons                                                     */
+/* ------------------------------------------------------------------ */
+final class ApiError extends RuntimeException
 {
-    http_response_code($code);
+    public function __construct(
+        public readonly int $status,
+        public readonly string $errorCode,
+        string $message,
+        public readonly array $errors = []
+    ) {
+        parent::__construct($message);
+    }
+}
+
+function fail(int $status, string $code, string $message, array $errors = []): never
+{
+    throw new ApiError($status, $code, $message, $errors);
+}
+
+function json_out(mixed $data, int $status = 200): never
+{
+    http_response_code($status);
     header('Content-Type: application/json; charset=utf-8');
-    echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRESERVE_ZERO_FRACTION);
     exit;
 }
 
-/** Kirim galat dengan bentuk seragam: { message, code, errors? }. */
-function json_error(string $message, string $code, int $status, array $errors = []): never
+function error_out(ApiError $e): never
 {
-    $body = ['message' => $message, 'code' => $code];
-    if ($errors) {
-        $body['errors'] = $errors;
+    $body = ['message' => $e->getMessage(), 'code' => $e->errorCode];
+    if ($e->errors) {
+        $body['errors'] = $e->errors;
     }
-    json_out($body, $status);
+    json_out($body, $e->status);
 }
 
-/** Baca body JSON; kalau bukan JSON, pakai form biasa ($_POST). */
-function input(): array
+/** snake_case -> camelCase (rekursif, hanya kunci string). */
+function camelize(mixed $v): mixed
 {
-    $json = json_decode(file_get_contents('php://input') ?: '', true);
-    return is_array($json) ? $json : $_POST;
+    if (!is_array($v)) {
+        return $v;
+    }
+    $o = [];
+    foreach ($v as $k => $x) {
+        $key = is_string($k) ? lcfirst(str_replace(' ', '', ucwords(str_replace('_', ' ', $k)))) : $k;
+        $o[$key] = camelize($x);
+    }
+    return $o;
 }
 
-/** nama_barang -> namaBarang */
-function snake_to_camel(string $s): string
+/** Ganti kolom path berkas dengan URL siap pakai (kolom asal dibuang). */
+function urlize(array $row, string $pathKey, string $newKey): array
 {
-    return lcfirst(str_replace(' ', '', ucwords(str_replace('_', ' ', $s))));
+    $row[$newKey] = storage_url($row[$pathKey] ?? null);
+    unset($row[$pathKey]);
+    return $row;
 }
 
-/** Ubah semua kunci satu baris hasil query dari snake_case ke camelCase. */
-function camel_keys(array $row): array
+function list_out(array $res, ?callable $map = null): never
 {
+    $rows = $map ? array_map($map, $res['rows']) : $res['rows'];
+    json_out(['data' => array_map('camelize', $rows), 'meta' => $res['meta']]);
+}
+
+/* ------------------------------------------------------------------ */
+/* Input                                                               */
+/* ------------------------------------------------------------------ */
+function body(): array
+{
+    static $b = null;
+    if ($b !== null) {
+        return $b;
+    }
+    $ct = strtolower($_SERVER['CONTENT_TYPE'] ?? '');
+    if (str_contains($ct, 'application/json')) {
+        $raw = file_get_contents('php://input');
+        if (trim((string) $raw) === '') {
+            return $b = [];
+        }
+        $d = json_decode($raw, true);
+        if (!is_array($d)) {
+            fail(400, 'JSON_TIDAK_VALID', 'Body harus berupa JSON object yang valid');
+        }
+        return $b = $d;
+    }
+    return $b = $_POST;
+}
+
+function f_str(string $k, array &$err, bool $required = true, int $max = 255, ?string $label = null): ?string
+{
+    $label ??= $k;
+    $v = body()[$k] ?? null;
+    if ($v === null || (is_string($v) && trim($v) === '')) {
+        if ($required) {
+            $err[$k] = "$label wajib diisi";
+        }
+        return null;
+    }
+    if (!is_scalar($v) || is_bool($v)) {
+        $err[$k] = "$label tidak valid";
+        return null;
+    }
+    $v = trim((string) $v);
+    if (mb_strlen($v) > $max) {
+        $err[$k] = "$label maksimal $max karakter";
+        return null;
+    }
+    return $v;
+}
+
+function f_int(string $k, array &$err, bool $required = true, int $min = 1, int $max = PHP_INT_MAX, ?string $label = null): ?int
+{
+    $label ??= $k;
+    $v = body()[$k] ?? null;
+    if ($v === null || $v === '') {
+        if ($required) {
+            $err[$k] = "$label wajib diisi";
+        }
+        return null;
+    }
+    $i = filter_var($v, FILTER_VALIDATE_INT);
+    if ($i === false || $i < $min || $i > $max) {
+        $err[$k] = "$label harus bilangan bulat $min sampai $max";
+        return null;
+    }
+    return $i;
+}
+
+function valid_date(string $s): bool
+{
+    $d = DateTime::createFromFormat('!Y-m-d', $s);
+    return $d !== false && $d->format('Y-m-d') === $s;
+}
+
+function f_date(string $k, array &$err, bool $required = true, ?string $label = null): ?string
+{
+    $label ??= $k;
+    $v = f_str($k, $err, $required, 10, $label);
+    if ($v === null) {
+        return null;
+    }
+    if (!valid_date($v)) {
+        $err[$k] = "$label harus berformat YYYY-MM-DD";
+        return null;
+    }
+    return $v;
+}
+
+function f_enum(string $k, array &$err, array $allowed, bool $required = true, ?string $default = null, ?string $label = null): ?string
+{
+    $label ??= $k;
+    $v = f_str($k, $err, false, 50, $label);
+    if ($v === null) {
+        if ($default !== null) {
+            return $default;
+        }
+        if ($required) {
+            $err[$k] = "$label wajib diisi";
+        }
+        return null;
+    }
+    if (!in_array($v, $allowed, true)) {
+        $err[$k] = "$label harus salah satu dari: " . implode(', ', $allowed);
+        return null;
+    }
+    return $v;
+}
+
+function f_bool(string $k, array &$err, bool $required = true, ?string $label = null): ?bool
+{
+    $label ??= $k;
+    $v = body()[$k] ?? null;
+    if ($v === null || $v === '') {
+        if ($required) {
+            $err[$k] = "$label wajib diisi";
+        }
+        return null;
+    }
+    $b = filter_var($v, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+    if ($b === null) {
+        $err[$k] = "$label harus true atau false";
+        return null;
+    }
+    return $b;
+}
+
+function validasi_selesai(array $err): void
+{
+    if ($err) {
+        fail(422, 'VALIDASI_GAGAL', 'Data yang dikirim belum valid', $err);
+    }
+}
+
+/** ID dari path harus bilangan bulat positif; selain itu dianggap tidak ada. */
+function path_id(array $p, string $key = 'id'): int
+{
+    $v = $p[$key] ?? '';
+    if (!is_string($v) || !ctype_digit($v) || (int) $v < 1 || (int) $v > 2147483647) {
+        fail(404, 'NOT_FOUND', 'Data tidak ditemukan');
+    }
+    return (int) $v;
+}
+
+/** NIM di path: huruf/angka 3-20; selain itu dianggap tidak ada. */
+function path_nim(array $p): string
+{
+    $v = $p['nim'] ?? '';
+    if (!is_string($v) || !preg_match('/^[A-Za-z0-9]{3,20}$/', $v)) {
+        fail(404, 'NOT_FOUND', 'Pengguna tidak ditemukan');
+    }
+    return $v;
+}
+
+/* ------------------------------------------------------------------ */
+/* Query string, filter, paginasi                                      */
+/* ------------------------------------------------------------------ */
+function qs(string $k): string
+{
+    $v = $_GET[$k] ?? '';
+    return is_string($v) ? trim($v) : '';
+}
+
+function qs_enum(string $k, array $allowed): ?string
+{
+    $v = qs($k);
+    if ($v === '') {
+        return null;
+    }
+    if (!in_array($v, $allowed, true)) {
+        fail(422, 'VALIDASI_GAGAL', "Parameter $k tidak valid", [$k => 'Harus salah satu dari: ' . implode(', ', $allowed)]);
+    }
+    return $v;
+}
+
+/** "1,2,3" -> [1,2,3] (hanya bilangan bulat positif). */
+function qs_ids(string $k): array
+{
+    $v = qs($k);
+    if ($v === '') {
+        return [];
+    }
     $out = [];
-    foreach ($row as $k => $v) {
-        $out[snake_to_camel((string)$k)] = $v;
+    foreach (explode(',', $v) as $x) {
+        $x = trim($x);
+        if (!ctype_digit($x) || (int) $x < 1 || (int) $x > 2147483647) {
+            fail(422, 'VALIDASI_GAGAL', "Parameter $k tidak valid", [$k => 'Harus daftar ID dipisah koma']);
+        }
+        $out[] = (int) $x;
     }
-    return $out;
+    return array_values(array_unique($out));
 }
 
-/**
- * Terjemahkan galat database menjadi respons HTTP.
- * - P0001 = RAISE EXCEPTION dari trigger/fungsi database (pesannya memang
- *   ditulis untuk pengguna, mis. "Stok tidak cukup. Tersedia: 1, diminta: 2.")
- */
-function pdo_error(PDOException $e): never
+function qs_date(string $k): ?string
 {
-    $state = (string)$e->getCode();
-    $pesan = $e->getMessage();
-
-    if ($state === 'P0001') {
-        if (preg_match('/ERROR:\s+(.+?)(?:\R(?:CONTEXT|DETAIL|HINT):.*)?$/s', $pesan, $m)) {
-            $pesan = trim($m[1]);
-        }
-        json_error($pesan, 'ATURAN_BISNIS', 422);
-    }
-
-    if ($state === '23503') {
-        if (str_contains($pesan, 'still referenced')) {
-            json_error('Data masih dipakai oleh data lain.', 'DATA_TERPAKAI', 409);
-        }
-        json_error('Data yang dirujuk (kategori/organisasi/barang) tidak ada.', 'RUJUKAN_TIDAK_ADA', 422);
-    }
-
-    if ($state === '23505') {
-        json_error('Data sudah ada (duplikat).', 'DUPLIKAT', 409);
-    }
-
-    if (in_array($state, ['23502', '23514', '22P02', '22001'], true)) {
-        json_error('Data tidak memenuhi aturan tabel.', 'VALIDASI_GAGAL', 422);
-    }
-
-    error_log($pesan); // detail hanya di log server
-    json_error('Kesalahan database', 'DB_ERROR', 500);
-}
-
-/** Deteksi JPG/PNG dari byte awal file (bukan dari nama file atau header klien). */
-function deteksi_mime_gambar(string $awal): ?string
-{
-    if (str_starts_with($awal, "\xFF\xD8\xFF")) {
-        return 'image/jpeg';
-    }
-    if (str_starts_with($awal, "\x89PNG\r\n\x1A\n")) {
-        return 'image/png';
-    }
-    return null;
-}
-
-/**
- * Ambil unggahan gambar dari $_FILES[$kolom] (hanya multipart/form-data).
- * Mengembalikan path file sementara kalau valid. Kalau tidak ada file:
- * null, atau galat 422 bila $wajib = true.
- * Kalau file tidak valid (bukan JPG/PNG, lebih dari 2 MB, unggah gagal): 422.
- */
-function ambil_unggahan_gambar(string $kolom, bool $wajib = false, int $maksByte = 2097152): ?string
-{
-    $f    = $_FILES[$kolom] ?? null;
-    $kode = $f['error'] ?? UPLOAD_ERR_NO_FILE;
-
-    if ($kode === UPLOAD_ERR_NO_FILE) {
-        if ($wajib) {
-            json_error('Foto wajib diunggah.', 'VALIDASI_GAGAL', 422, [$kolom => 'Foto wajib diunggah.']);
-        }
+    $v = qs($k);
+    if ($v === '') {
         return null;
     }
-    if ($kode === UPLOAD_ERR_INI_SIZE || $kode === UPLOAD_ERR_FORM_SIZE || $f['size'] > $maksByte) {
-        json_error('Ukuran file maksimal 2 MB.', 'VALIDASI_GAGAL', 422, [$kolom => 'Ukuran file maksimal 2 MB.']);
+    if (!valid_date($v)) {
+        fail(422, 'VALIDASI_GAGAL', "Parameter $k tidak valid", [$k => 'Harus berformat YYYY-MM-DD']);
     }
-    if ($kode !== UPLOAD_ERR_OK || !is_uploaded_file($f['tmp_name'])) {
-        json_error('Unggahan file gagal.', 'UNGGAH_GAGAL', 422, [$kolom => 'Unggahan file gagal.']);
-    }
-
-    $h    = fopen($f['tmp_name'], 'rb');
-    $awal = $h ? (string)fread($h, 8) : '';
-    if ($h) {
-        fclose($h);
-    }
-    if (deteksi_mime_gambar($awal) === null) {
-        json_error('File harus berformat JPG atau PNG.', 'VALIDASI_GAGAL', 422, [$kolom => 'File harus berformat JPG atau PNG.']);
-    }
-
-    return $f['tmp_name'];
+    return $v;
 }
 
-
-/** Alamat dasar server ini untuk membuat URL absolut. Bisa dipaksa lewat APP_URL di .env. */
-function base_url(): string
+function like_pattern(string $q): string
 {
-    if (!empty($_ENV['APP_URL'])) {
-        return rtrim($_ENV['APP_URL'], '/');
-    }
-    $https = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
-    return ($https ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
+    return '%' . strtr($q, ['\\' => '\\\\', '%' => '\\%', '_' => '\\_']) . '%';
 }
 
-/** URL gambar absolut, atau null bila datanya tidak punya gambar. */
-function url_gambar(string $path, int $id, bool $ada): ?string
+function page_params(int $defaultLimit = 10): array
 {
-    return $ada ? base_url() . $path . '?id=' . $id : null;
+    $page = max(1, (int) ($_GET['page'] ?? 1));
+    $limit = (int) ($_GET['limit'] ?? $defaultLimit);
+    $limit = min(100, max(1, $limit));
+    return [$page, $limit];
 }
 
-/** Ambil ?id= sebagai bilangan bulat positif. null bila tidak ada; 400 bila tidak valid. */
-function query_id(): ?int
+/** Pembangun klausa WHERE dengan placeholder bernama (anti injeksi). */
+final class Where
 {
-    if (!isset($_GET['id']) || $_GET['id'] === '') {
-        return null;
-    }
-    $id = filter_var($_GET['id'], FILTER_VALIDATE_INT);
-    if ($id === false || $id < 1) {
-        json_error('Parameter id tidak valid.', 'VALIDASI_GAGAL', 400);
-    }
-    return $id;
-}
+    private array $parts = [];
+    public array $params = [];
+    private int $i = 0;
 
-/**
- * Baca filter berbentuk daftar nilai dipisah koma, mis. ?status=Diajukan,Dipinjam.
- * Nilai di luar $diizinkan ditolak (422). Bila parameter kosong, pakai $default.
- */
-function filter_enum(string $nama, array $diizinkan, array $default): array
-{
-    $mentah = trim((string)($_GET[$nama] ?? ''));
-    if ($mentah === '') {
-        return $default;
-    }
-    $nilai = array_values(array_unique(array_filter(array_map('trim', explode(',', $mentah)), 'strlen')));
-    foreach ($nilai as $n) {
-        if (!in_array($n, $diizinkan, true)) {
-            json_error("Nilai $nama tidak valid.", 'VALIDASI_GAGAL', 422, [
-                $nama => 'Pilihan: ' . implode(', ', $diizinkan),
-            ]);
+    /** Gunakan tanda ? sebagai placeholder; nilai dipasang berurutan. */
+    public function add(string $sql, array $vals = []): self
+    {
+        foreach ($vals as $v) {
+            $name = 'w' . (++$this->i);
+            $sql = preg_replace('/\?/', ':' . $name, $sql, 1);
+            $this->params[$name] = $v;
         }
+        $this->parts[] = $sql;
+        return $this;
     }
-    return $nilai ?: $default;
+
+    public function sql(): string
+    {
+        return $this->parts ? implode(' AND ', $this->parts) : 'TRUE';
+    }
 }
 
-/**
- * Buat daftar placeholder untuk IN (...). Mengisi $params dan mengembalikan
- * string seperti ":st0, :st1". Daftar kosong menghasilkan "NULL" (tidak cocok apa pun).
- */
-function in_params(string $prefix, array $nilai, array &$params): string
+function paginate(string $cols, string $from, Where $w, string $order, int $defaultLimit = 10): array
 {
-    if (!$nilai) {
-        return 'NULL';
-    }
-    $ph = [];
-    foreach (array_values($nilai) as $i => $v) {
-        $kunci = $prefix . $i;
-        $params[$kunci] = $v;
-        $ph[] = ':' . $kunci;
-    }
-    return implode(', ', $ph);
+    [$page, $limit] = page_params($defaultLimit);
+    $where = $w->sql();
+    $total = (int) db_val("SELECT COUNT(*) FROM $from WHERE $where", $w->params);
+    $rows = db_all(
+        "SELECT $cols FROM $from WHERE $where ORDER BY $order LIMIT $limit OFFSET " . (($page - 1) * $limit),
+        $w->params
+    );
+    return [
+        'rows' => $rows,
+        'meta' => ['total' => $total, 'page' => $page, 'limit' => $limit, 'totalHalaman' => (int) ceil($total / $limit)],
+    ];
 }
 
-/** Escape karakter khusus LIKE (% _ \) agar pencarian dianggap teks biasa. */
-function like_escape(string $s): string
+/** Filter rentang tanggal: peminjaman beririsan dengan [dari, sampai]. */
+function filter_rentang(Where $w, string $colMulai, string $colSelesai): void
 {
-    return addcslashes($s, '%_\\');
-}
-
-/** Paginasi dari ?page= dan ?limit= (default 20, maksimal 100). Mengembalikan [page, limit, offset]. */
-function paging(): array
-{
-    $page  = filter_var($_GET['page'] ?? 1, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-    $limit = filter_var($_GET['limit'] ?? 20, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 100]]);
-    if ($page === false || $limit === false) {
-        json_error('Parameter page/limit tidak valid (page >= 1, limit 1-100).', 'VALIDASI_GAGAL', 422, [
-            'page'  => 'Bilangan bulat >= 1',
-            'limit' => 'Bilangan bulat 1-100',
-        ]);
+    $dari = qs_date('dari');
+    $sampai = qs_date('sampai');
+    if ($dari && $sampai && $dari > $sampai) {
+        fail(422, 'VALIDASI_GAGAL', 'Rentang tanggal tidak valid', ['dari' => 'Tidak boleh setelah sampai']);
     }
-    return [$page, $limit, ($page - 1) * $limit];
+    if ($sampai) {
+        $w->add("$colMulai <= CAST(? AS date)", [$sampai]);
+    }
+    if ($dari) {
+        $w->add("$colSelesai >= CAST(? AS date)", [$dari]);
+    }
 }
 
-/** Kirim daftar berhalaman: { data: [...], meta: { total, page, limit, totalHalaman } }. */
-function json_list(array $rows, int $total, int $page, int $limit): never
+/* ------------------------------------------------------------------ */
+/* Galat PostgreSQL -> respons HTTP                                    */
+/* ------------------------------------------------------------------ */
+function pg_state(PDOException $e): string
 {
-    json_out([
-        'data' => array_map('camel_keys', $rows),
-        'meta' => [
-            'total'        => $total,
-            'page'         => $page,
-            'limit'        => $limit,
-            'totalHalaman' => (int)ceil($total / $limit),
-        ],
+    return (string) ($e->errorInfo[0] ?? '');
+}
+
+/** Pesan RAISE EXCEPTION murni (tanpa awalan ERROR: dan CONTEXT). */
+function pg_message(PDOException $e): string
+{
+    $m = (string) ($e->errorInfo[2] ?? $e->getMessage());
+    $m = explode("\n", $m)[0];
+    return trim((string) preg_replace('/^ERROR:\s*/', '', $m));
+}
+
+function map_pg_error(PDOException $e): never
+{
+    switch (pg_state($e)) {
+        case 'P0001':
+            fail(422, 'ATURAN_BISNIS', pg_message($e));
+        case '23505':
+            fail(409, 'DATA_SUDAH_ADA', 'Data tersebut sudah ada');
+        case '23503':
+            fail(409, 'RELASI_TERPAKAI', 'Data masih berhubungan dengan data lain atau rujukannya tidak ditemukan');
+        case '23514':
+        case '23502':
+        case '22001':
+        case '22P02':
+        case '22007':
+        case '22008':
+        case '22003':
+            fail(422, 'VALIDASI_GAGAL', 'Data tidak memenuhi aturan penyimpanan');
+        default:
+            error_log('[DB] ' . $e->getMessage());
+            fail(500, 'GALAT_SERVER', 'Terjadi kesalahan pada server');
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/* Jaringan & pembatasan percobaan                                     */
+/* ------------------------------------------------------------------ */
+function client_ip(): string
+{
+    return (string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
+}
+
+/** HTTP klien ringkas (curl). Mengembalikan [status, isi]. */
+function http_request(string $method, string $url, array $headers = [], ?string $body = null): array
+{
+    if (!function_exists('curl_init')) {
+        fail(500, 'KONFIGURASI_SALAH', 'Ekstensi curl PHP belum aktif');
+    }
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_CUSTOMREQUEST => $method,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 15,
+        CURLOPT_HTTPHEADER => $headers,
     ]);
+    if ($body !== null) {
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+    }
+    $res = curl_exec($ch);
+    $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    return [$status, $res === false ? '' : (string) $res];
+}
+
+function rl_file(string $key): string
+{
+    return sys_get_temp_dir() . '/pinjemdulu_rl_' . hash('sha256', $key);
+}
+
+function rl_read(string $key, int $window): array
+{
+    $f = rl_file($key);
+    $d = is_file($f) ? json_decode((string) file_get_contents($f), true) : [];
+    $now = time();
+    return array_values(array_filter(is_array($d) ? $d : [], fn($t) => is_int($t) && $t > $now - $window));
+}
+
+/** Tolak (429) bila percobaan dalam jendela waktu sudah mencapai batas. */
+function rl_check(string $key, int $max, int $window): void
+{
+    if (count(rl_read($key, $window)) >= $max) {
+        fail(429, 'TERLALU_BANYAK_PERCOBAAN', 'Terlalu banyak percobaan. Coba lagi beberapa menit lagi.');
+    }
+}
+
+function rl_hit(string $key, int $window): void
+{
+    $d = rl_read($key, $window);
+    $d[] = time();
+    file_put_contents(rl_file($key), json_encode($d), LOCK_EX);
+}
+
+function rl_reset(string $key): void
+{
+    @unlink(rl_file($key));
 }

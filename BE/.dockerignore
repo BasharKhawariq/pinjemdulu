@@ -1,0 +1,3 @@
+*.zip
+tests
+database/02_pengujian.sql

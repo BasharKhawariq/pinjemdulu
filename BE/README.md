@@ -1,82 +1,55 @@
-# Backend PinjemDulu
+# PinjemDulu: Backend (PHP native)
 
-PHP native + PostgreSQL (Supabase). Tanpa framework.
+BE tipis di atas database PostgreSQL (Supabase). Aturan bisnis ada di database; BE hanya
+memeriksa siapa yang meminta, memvalidasi input, memanggil view/fungsi, dan menerjemahkan hasil ke JSON.
 
-## Menjalankan
-
-1. Salin `.env.example` menjadi `.env`, isi kredensial database. Untuk PostgreSQL lokal pakai `DB_SSLMODE=disable`.
-2. Dari folder `BE/`:
-
-   ```bash
-   php -S localhost:8000 -t public public/index.php
-   ```
-
-Butuh PHP 8.1+ dengan ekstensi `pdo_pgsql` dan `mbstring`.
+Kontrak endpoint lengkap: [`docs/API.md`](docs/API.md).
 
 ## Struktur
 
-- `public/`    satu-satunya folder yang diakses browser (`index.php` = router)
-- `src/`       bootstrap, koneksi DB, helper, dan handler per resource
-- `database/`  skema SQL (`schema.sql`)
+```
+public/index.php          router tunggal + penanganan galat + CORS
+src/bootstrap.php         .env, pemuatan file, cek konfigurasi wajib
+src/db.php                koneksi PDO + helper db_one/db_all/db_val/db_exec/db_tx
+src/auth.php              token HS256, me(), require_*(), captcha Turnstile
+src/helpers.php           respons JSON, validasi input, paginasi, pemetaan galat PG
+src/storage.php           unggah berkas (local / Supabase Storage)
+src/routes.php            daftar rute: [METHOD, pola, handler, akses]
+src/handlers/*.php        handler per area
+database/                 skema final + pengujian (jalankan di Supabase)
+```
 
-## Format respons
+## Menjalankan
 
-- Kunci JSON memakai camelCase (`idInventaris`, `namaBarang`).
-- Galat berbentuk `{ "message": "...", "code": "...", "errors": { "field": "..." } }`.
-- Aturan bisnis (stok, alur status) ditegakkan oleh trigger database; pesannya
-  diteruskan apa adanya dengan kode `ATURAN_BISNIS` (HTTP 422).
+Syarat: PHP 8.1+ dengan ekstensi `pdo_pgsql`, `curl`, `fileinfo`, `mbstring`.
 
-## Endpoint
+1. Jalankan `database/01_skema_final.sql` di Supabase SQL Editor (database kosong). Opsional: `02_pengujian.sql`.
+2. Buat bucket Storage: `pinjemdulu-publik` (publik) dan `pinjemdulu-privat` (privat) bila memakai `STORAGE_DRIVER=supabase`.
+3. `cp .env.example .env`, lalu isi minimal `DB_*` dan `TOKEN_SECRET` (`php -r "echo bin2hex(random_bytes(32));"`).
+4. Jalankan: `php -S localhost:8000 -t public public/index.php`
+5. Uji: `curl localhost:8000/api/health`
 
-| Method | URL | Keterangan |
-|---|---|---|
-| GET | /api/inventaris[?id=] | daftar / detail (termasuk `jumlahTersedia`) |
-| POST | /api/inventaris | tambah |
-| PUT | /api/inventaris?id= | ubah |
-| DELETE | /api/inventaris?id= | hapus |
-| GET | /api/kategori | daftar kategori + jumlah barang |
-| GET | /api/organisasi | daftar organisasi (termasuk `iconUrl`) |
-| GET | /api/inventaris/thumbnail?id= | gambar barang (biner, ETag) |
-| GET | /api/organisasi/icon?id= | gambar icon organisasi (biner, ETag) |
+Login data uji (password awal = NIM): PJ HMTI `2441720001`, Peminjam BEM `2441720013`.
 
-Upload foto barang: `POST /api/inventaris` multipart (`thumbnail` JPG/PNG maks 2 MB). Untuk ubah dengan foto, kirim `POST /api/inventaris?id=N&_method=PUT`.
+```bash
+curl -s localhost:8000/api/login -H 'Content-Type: application/json' \
+  -d '{"nim":"2441720013","password":"2441720013"}'
+```
 
-### Area PJ (Pengelola) — wajib login
+Untuk unggah berkas, pastikan `upload_max_filesize` dan `post_max_size` di `php.ini` minimal 3M.
 
-Semua endpoint `/api/*` hanya untuk akun berperan **Pengelola** yang aktif, dan selalu dibatasi ke
-organisasi milik PJ yang login (data organisasi lain dianggap tidak ada: 404).
-Daftar berhalaman memakai `?page=` dan `?limit=` (1-100) dan mengembalikan `{ data: [...], meta: { total, page, limit, totalHalaman } }`.
+## Keamanan yang sudah ditangani
 
-| Halaman | Method | URL | Keterangan |
-|---|---|---|---|
-| Dashboard PJ | GET | /api/dashboard-pj | ringkasan peminjaman, inventaris, pengajuan PJ; daftar yang perlu diputuskan / ditagih |
-| Kelola Peminjaman | GET | /api/kelola-peminjaman[?status=&q=&dari=&sampai=&page=&limit=] | daftar (default Diajukan, Disetujui, Ditolak, Dipinjam) |
-| | GET | /api/kelola-peminjaman?id= | detail |
-| | PUT | /api/kelola-peminjaman?id= | body `{"aksi":"setujui"\|"tolak"\|"serahkan","alasanPenolakan":"..."}` |
-| Kelola Pengembalian | GET | /api/kelola-pengembalian[?status=&q=&dari=&sampai=&page=&limit=] | default Dipinjam + Terlambat; `status=Dikembalikan` untuk riwayat |
-| | GET | /api/kelola-pengembalian?id= | detail |
-| | PUT | /api/kelola-pengembalian?id= | body `{"tanggalPengembalian":"YYYY-MM-DD","kondisiSesudah":"Baik"\|"Rusak","sanksi":"..."}`; bila sudah dikembalikan hanya `sanksi` yang bisa diubah |
-| List Pengajuan PJ | GET | /api/kelola-pengajuan-pj[?status=&q=&page=&limit=] | permintaan menjadi PJ organisasi ini |
-| | GET | /api/kelola-pengajuan-pj?id= | detail |
-| | GET | /api/kelola-pengajuan-pj/lampiran?id= | berkas lampiran (PDF/gambar) |
-| | PUT | /api/kelola-pengajuan-pj?id= | body `{"aksi":"setujui"\|"tolak","alasanPenolakan":"..."}`; setuju = pengaju otomatis jadi PJ |
-| Kelola Pengguna | GET | /api/kelola-pengguna[?q=&role=&statusAkun=aktif\|nonaktif&page=&limit=] | anggota organisasi + peminjam barang organisasi |
-| | GET | /api/kelola-pengguna?nim= | detail + 10 peminjaman terakhir |
-| | PUT | /api/kelola-pengguna?nim= | body `{"aksi":"nonaktifkan"\|"aktifkan"\|"cabutPj"}` |
+- Query selalu prepared statement; nilai tidak pernah disambung ke SQL.
+- Role, OKI, dan status akun dibaca ulang dari database di setiap request. Token hanya berisi NIM, waktu terbit, dan kedaluwarsa. Token yang terbit sebelum akun berubah (password, role, status) otomatis tidak berlaku.
+- Semua data PJ difilter ke OKI-nya; data OKI lain dijawab 404.
+- Pembatasan percobaan login/reset/ubah password (per NIM dan per IP) memakai berkas sementara. Cukup untuk satu server; pindahkan ke Redis/tabel bila BE dijalankan di beberapa instance.
+- Berkas privat (foto pengambilan/kondisi, surat PJ) hanya diakses lewat URL bertanda tangan berumur 1 jam.
+- Token reset password tidak pernah disimpan; bila tertulis di pesan konfirmasi, disamarkan sebelum disimpan.
+- `CAPTCHA_MODE=off` ditolak jika `APP_ENV` bukan `local`.
 
-Kode galat: 400 `VALIDASI_GAGAL`/`ID_WAJIB`, 401 `TIDAK_TERAUTENTIKASI`, 403 `BUKAN_PJ`/`AKUN_NONAKTIF`/`AKSI_DITOLAK`,
-404 `NOT_FOUND`, 405 `METHOD_NOT_ALLOWED`, 409 `STATUS_TIDAK_SESUAI`, 422 `VALIDASI_GAGAL`/`ATURAN_BISNIS`.
+## Catatan
 
-### Autentikasi (`AUTH_MODE` di `.env`)
-
-- `dev`: header `X-Dev-Nim: <nim>` dipercaya. Hanya jalan bila `APP_ENV=local`. Untuk uji lokal.
-- `supabase`: header `Authorization: Bearer <access_token>` divalidasi ke Supabase Auth. Isi `SUPABASE_URL` dan `SUPABASE_ANON_KEY`. Mode untuk produksi.
-
-PHP terhubung ke database sebagai pemilik, sehingga RLS tidak berlaku di sini; pembatasan organisasi dilakukan di kode PHP.
-Endpoint `/api/inventaris`, `/api/kategori`, `/api/organisasi` (dan gambarnya) untuk GET belum memakai autentikasi (publik); tulis inventaris (POST/PUT/DELETE) sudah wajib login PJ.
-
-## Perubahan penyelarasan dengan FE
-- `GET /api/me`: profil pemanggil (role, isPj, organisasi). Dipanggil FE setelah login untuk menentukan menu.
-- `POST/PUT/DELETE /api/inventaris` kini wajib login sebagai PJ. Organisasi barang diambil dari akun PJ
-  (field `idOrganisasi` dari klien diabaikan) dan PJ hanya bisa mengubah/menghapus barang organisasinya (404 untuk organisasi lain).
-- `database/schema.sql`: `tanggal_mulai`/`tanggal_selesai` kini generated column, sama seperti di Supabase.
+- Koneksi database: pakai koneksi langsung atau Session pooler (port 5432).
+- Lampiran surat PJ menerima JPG/PNG/PDF; foto barang dan foto kondisi hanya JPG/PNG. Ubah `MIME_LAMPIRAN` di `src/storage.php` bila ingin membatasi.
+- Segarkan laporan otomatis dengan pg_cron (perintahnya ada di komentar `01_skema_final.sql`) atau manual lewat `POST /api/laporan/refresh`.

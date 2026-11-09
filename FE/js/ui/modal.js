@@ -105,6 +105,7 @@ export function getModalVariantConfig(variant) {
  * @param {string|import('./html.js').SafeHtml} [props.customIcon=''] SVG icon kustom jika variant='custom'
  * @param {string} [props.customBadgeClass=''] Kelas badge kustom jika variant='custom'
  * @param {boolean} [props.useGif=true] Menggunakan animasi GIF dari LottieFiles jika tersedia
+ * @param {boolean} [props.plainGif=false] Menampilkan GIF langsung tanpa container pembungkus
  * @param {string|import('./html.js').SafeHtml} [props.content=''] Konten opsional (misal data ringkasan)
  * @param {Array<{ label: string, action?: string, id?: string, dataId?: string, variant?: string, className?: string, disabled?: boolean, type?: string }>|string|import('./html.js').SafeHtml} [props.actions=[]]
  * @param {boolean} [props.asDialog=false] Apakah merender tag <dialog> native
@@ -123,6 +124,7 @@ export function renderModal({
   customIcon = '',
   customBadgeClass = '',
   useGif = true,
+  plainGif = false,
   content = '',
   actions = [],
   primaryAction = null,
@@ -174,16 +176,18 @@ export function renderModal({
         </div>
       `
     : useGif && gifSrc
-      ? html`
-          <div class="mb-4 inline-flex h-24 w-24 items-center justify-center p-0">
-            <img
-              src="${gifSrc}"
-              alt="${title || 'Animasi'}"
-              class="h-full w-full object-contain select-none pointer-events-none"
-              loading="eager"
-            />
-          </div>
-        `
+      ? (plainGif
+          ? html`<img src="${gifSrc}" alt="${title || 'Animasi'}" class="mb-4 h-24 w-24 object-contain select-none pointer-events-none" loading="eager" />`
+          : html`
+              <div class="mb-4 inline-flex h-24 w-24 items-center justify-center p-0">
+                <img
+                  src="${gifSrc}"
+                  alt="${title || 'Animasi'}"
+                  class="h-full w-full object-contain select-none pointer-events-none"
+                  loading="eager"
+                />
+              </div>
+            `)
       : html`
           <div class="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl ${badgeClass}">
             ${raw(iconHtml.toString())}
@@ -235,7 +239,7 @@ export function renderModal({
       <dialog
         ${id ? raw(`id="${escapeHtml(id)}"`) : ''}
         aria-labelledby="${escapeHtml(tId)}"
-        class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 !m-0 z-50 w-full ${maxWidth} rounded-2xl border border-border bg-background p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
+        class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 !m-0 z-[9999] w-full ${maxWidth} rounded-2xl border border-border bg-white p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
         ${open ? raw('open') : ''}
       >
         ${innerContent}
@@ -246,14 +250,14 @@ export function renderModal({
   return html`
     <div
       ${id ? raw(`id="${escapeHtml(id)}"`) : ''}
-      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4"
+      class="fixed inset-0 z-[9999] isolate flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4"
       data-modal-backdrop
     >
       <section
         role="dialog"
         aria-modal="true"
         aria-labelledby="${escapeHtml(tId)}"
-        class="w-full ${maxWidth} rounded-2xl border border-slate-100 bg-white shadow-2xl transition-all"
+        class="relative z-10 isolate w-full ${maxWidth} rounded-2xl border border-slate-100 bg-white shadow-2xl transition-all"
       >
         ${innerContent}
       </section>

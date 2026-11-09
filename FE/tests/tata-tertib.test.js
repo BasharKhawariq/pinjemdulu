@@ -17,7 +17,8 @@ test('tata tertib: bagian A-D berurutan dan setiap bagian punya butir', () => {
 test('tata tertib: render memuat judul, pengantar, dan semua butir', () => {
   const out = render();
   assert.match(out, /Pahami Aturan Sebelum Meminjam/);
-  assert.match(out, /Tata Tertib Peminjaman dan Pengembalian/);
+  assert.match(out, />TATA TERTIB</);
+  assert.match(out, /Tata tertib ini dibuat untuk menjaga inventaris organisasi/);
   const jumlahButir = TATA_TERTIB.bagian.reduce((n, b) => n + b.butir.length, 0);
   assert.equal((out.match(/<li>/g) || []).length, jumlahButir);
   assert.equal((out.match(/<ol /g) || []).length, TATA_TERTIB.bagian.length);

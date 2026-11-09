@@ -1,36 +1,53 @@
 <?php
 declare(strict_types=1);
 
-// 1. Baca .env
-$envPath = __DIR__ . '/../.env';
-if (is_file($envPath)) {
-    foreach (file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $baris) {
-        $baris = trim($baris);
-        if ($baris === '' || str_starts_with($baris, '#') || !str_contains($baris, '=')) continue;
-        [$k, $v] = explode('=', $baris, 2);
-        $_ENV[trim($k)] = trim($v);
+date_default_timezone_set('Asia/Jakarta');
+define('BASE_PATH', dirname(__DIR__));
+
+/** Memuat .env sederhana (KEY=VALUE, # komentar, tanda kutip opsional). */
+function env_load(string $file): void
+{
+    if (!is_file($file)) {
+        return;
+    }
+    foreach (file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+        $line = trim($line);
+        if ($line === '' || $line[0] === '#' || !str_contains($line, '=')) {
+            continue;
+        }
+        [$k, $v] = explode('=', $line, 2);
+        $v = trim($v);
+        if (strlen($v) >= 2 && ($v[0] === '"' || $v[0] === "'") && substr($v, -1) === $v[0]) {
+            $v = substr($v, 1, -1);
+        }
+        $_ENV[trim($k)] = $v;
     }
 }
 
-require __DIR__ . '/helpers.php';
-require __DIR__ . '/auth.php';
-require __DIR__ . '/peminjaman_sql.php';
-
-// 2. CORS (diperlukan selama FE dan BE beda alamat/port)
-$origin = $_ENV['CORS_ORIGIN'] ?? 'http://127.0.0.1:5500';
-header("Access-Control-Allow-Origin: $origin");
-header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Dev-Nim');
-header('Vary: Origin');
-if (($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') {
-    http_response_code(204);
-    exit;
+function env(string $key, ?string $default = null): ?string
+{
+    if (array_key_exists($key, $_ENV)) {
+        return $_ENV[$key] === '' ? $default : $_ENV[$key];
+    }
+    $v = getenv($key);
+    return ($v === false || $v === '') ? $default : $v;
 }
 
-// 3. Error tak terduga: catat di log, jangan tampilkan detailnya ke pengguna
-set_exception_handler(function (Throwable $e) {
-    error_log($e->getMessage());
-    json_out(['message' => 'Kesalahan server', 'code' => 'SERVER_ERROR'], 500);
-});
+env_load(BASE_PATH . '/.env');
 
-require __DIR__ . '/db.php';
+foreach (['helpers', 'db', 'auth', 'storage'] as $f) {
+    require_once __DIR__ . "/$f.php";
+}
+foreach (['_util','akun','katalog','pengajuan_saya','pengajuan_pj','kelola_inventaris',
+          'kelola_kategori','kelola_peminjaman','kelola_pengembalian','kelola_pengajuan_pj',
+          'kelola_pengguna','laporan'] as $h) {
+    require_once __DIR__ . "/handlers/$h.php";
+}
+
+// Pemeriksaan konfigurasi wajib (gagal cepat, bukan diam-diam tidak aman).
+if (strlen((string) env('TOKEN_SECRET', '')) < 32) {
+    fail(500, 'KONFIGURASI_SALAH', 'TOKEN_SECRET wajib diisi minimal 32 karakter');
+}
+if (env('CAPTCHA_MODE', 'turnstile') === 'off' && env('APP_ENV', 'production') !== 'local') {
+    fail(500, 'KONFIGURASI_SALAH', 'CAPTCHA_MODE=off hanya boleh dengan APP_ENV=local');
+}

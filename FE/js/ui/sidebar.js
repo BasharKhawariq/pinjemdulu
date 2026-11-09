@@ -9,6 +9,18 @@ import { getNavForRole, ROLE_LABEL, isActivePath, getInitials } from '../lib/nav
 import { ROLES } from '../lib/constants.js';
 
 export const STORAGE_KEY_SIDEBAR = 'pd:v1:sidebar-collapsed';
+export const STORAGE_KEY_SIDEBAR_GROUPS = 'pd:v1:sidebar-groups';
+
+function getStoredGroupOpen(groupKey) {
+  try {
+    const saved = window.localStorage.getItem(STORAGE_KEY_SIDEBAR_GROUPS);
+    if (!saved) return null;
+    const groups = JSON.parse(saved);
+    return typeof groups?.[groupKey] === 'boolean' ? groups[groupKey] : null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Render Brand Header di Sidebar.
@@ -90,9 +102,12 @@ function renderSidebarNav(items, collapsed, currentHash, role = '', idPrefix = '
           role === ROLES.PEMINJAM &&
           item.key === 'nav-pengajuan-saya' &&
           isActivePath('#/dashboard-peminjam', currentHash);
-        const isOpen = hasActiveChild || isDashboardOpen;
-        const icon = item.icon ? renderIcon(item.icon, 'h-6 w-6 text-zinc-400') : '';
-        const chevron = isOpen ? renderIcon('ChevronUp', 'h-4 w-4 text-zinc-400') : renderIcon('ChevronDown', 'h-4 w-4 text-zinc-400');
+        // Preferensi buka/tutup manual tetap dipertahankan saat berpindah halaman.
+        // Jika belum ada preferensi, buka otomatis ketika salah satu submenu aktif.
+        const storedOpen = getStoredGroupOpen(item.key);
+        const isOpen = storedOpen ?? (hasActiveChild || isDashboardOpen);
+        const icon = item.icon ? renderIcon(item.icon, 'h-6 w-6 text-zinc-400 transition-colors sidebar-nav-group-icon-svg') : '';
+        const chevron = isOpen ? renderIcon('ChevronUp', 'h-4 w-4 text-zinc-400 transition-colors sidebar-nav-group-chevron-svg') : renderIcon('ChevronDown', 'h-4 w-4 text-zinc-400 transition-colors sidebar-nav-group-chevron-svg');
         const tooltip = collapsed ? `title="${escapeHtml(item.label)}"` : '';
         const groupBadge = item.badge
           ? `<span class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-semibold text-white">${escapeHtml(String(item.badge))}</span>`
@@ -119,7 +134,12 @@ function renderSidebarNav(items, collapsed, currentHash, role = '', idPrefix = '
 
         const childItems = (item.children || [])
           .map((child) => {
-            const childActive = isActivePath(child.href, currentHash);
+            // Kelola Kategori merupakan tab di dalam halaman Kelola Inventaris,
+            // sehingga menu sidebar Kelola Inventaris tetap aktif pada kedua route.
+            const isKelolaInventarisMenu = child.key === 'nav-kelola-inventaris';
+            const childActive =
+              isActivePath(child.href, currentHash) ||
+              (isKelolaInventarisMenu && isActivePath('#/kelola/kategori', currentHash));
             const childBadge = child.badge
               ? `<span class="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-semibold text-white">${escapeHtml(String(child.badge))}</span>`
               : '';
@@ -155,7 +175,7 @@ function renderSidebarNav(items, collapsed, currentHash, role = '', idPrefix = '
               data-group="${escapeHtml(item.key)}"
               aria-expanded="${isOpen}"
               aria-controls="${escapeHtml(subId)}"
-              class="group flex w-full items-center justify-between rounded-2xl px-3 py-3 text-[15px] text-zinc-400 transition hover:bg-zinc-50/60 hover:text-zinc-900 font-medium"
+              class="group sidebar-nav-group flex w-full items-center justify-between rounded-2xl px-3 py-3 text-[15px] text-zinc-400 transition hover:bg-zinc-50/60 hover:text-zinc-900 font-medium"
             >
               <div class="flex items-center gap-3">
                 <span class="inline-flex h-6 w-6 shrink-0 items-center justify-center">

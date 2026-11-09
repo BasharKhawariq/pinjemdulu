@@ -4,7 +4,6 @@
  * gambar desain, sehingga isinya masih draf dan perlu disamakan dengan teks asli.
  */
 export const TATA_TERTIB = Object.freeze({
-  label: 'Tata Tertib Peminjaman dan Pengembalian',
   judul: 'Pahami Aturan Sebelum Meminjam',
   subjudul: 'Simak tata tertib peminjaman dan penggunaan inventaris agar proses peminjaman berjalan tertib dan lancar.',
   heading: 'TATA TERTIB',

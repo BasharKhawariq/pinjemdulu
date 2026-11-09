@@ -1,130 +1,200 @@
 <?php
 declare(strict_types=1);
 
-/**
- * Autentikasi untuk endpoint area PJ (kelola-*, dashboard-pj, inventaris tulis).
- *
- * PENTING: PHP terhubung ke database sebagai pemilik database (bukan role
- * 'authenticated'), jadi RLS dan pemeriksaan "siapa yang boleh" di trigger
- * TIDAK berlaku di sini. Karena itu semua pemeriksaan hak akses PJ dilakukan
- * di PHP, di file ini dan di tiap handler (selalu dibatasi id_organisasi PJ).
- *
- * AUTH_MODE (di .env):
- *   supabase : token Supabase (Authorization: Bearer <access_token>) divalidasi
- *              ke {SUPABASE_URL}/auth/v1/user. Perlu SUPABASE_URL dan
- *              SUPABASE_ANON_KEY. Ini mode untuk produksi.
- *   dev      : header X-Dev-Nim: <nim> dipercaya begitu saja. HANYA jalan bila
- *              APP_ENV=local. Dipakai untuk uji lokal / Postman tanpa login.
- */
-
-/** Ambil token dari header "Authorization: Bearer ...". */
-function bearer_token(): ?string
+/* ------------------------------------------------------------------ */
+/* Token HS256 buatan sendiri (tanpa composer)                         */
+/* Payload hanya: sub (NIM), iat, exp. Role/OKI dibaca ulang dari DB.  */
+/* ------------------------------------------------------------------ */
+function b64u_enc(string $s): string
 {
-    $h = $_SERVER['HTTP_AUTHORIZATION']
-        ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION']
-        ?? (function_exists('getallheaders') ? (getallheaders()['Authorization'] ?? '') : '');
-    if (is_string($h) && preg_match('/^Bearer\s+(\S+)$/i', trim($h), $m)) {
-        return $m[1];
-    }
-    return null;
+    return rtrim(strtr(base64_encode($s), '+/', '-_'), '=');
 }
 
-/** Tanya Supabase Auth: token ini milik siapa? Mengembalikan auth user id (UUID) atau null. */
-function supabase_user_id(string $token): ?string
+function b64u_dec(string $s): string
 {
-    $url = rtrim($_ENV['SUPABASE_URL'] ?? '', '/');
-    $key = $_ENV['SUPABASE_ANON_KEY'] ?? '';
-    if ($url === '' || $key === '') {
-        error_log('SUPABASE_URL / SUPABASE_ANON_KEY belum diisi di .env');
-        json_error('Autentikasi belum dikonfigurasi di server.', 'AUTH_CONFIG', 500);
+    $s = strtr($s, '-_', '+/');
+    $pad = strlen($s) % 4;
+    if ($pad > 0) {
+        $s .= str_repeat('=', 4 - $pad);
     }
+    $d = base64_decode($s, true);
+    return $d === false ? '' : $d;
+}
 
-    $ctx = stream_context_create(['http' => [
-        'method'        => 'GET',
-        'header'        => "Authorization: Bearer $token\r\napikey: $key\r\nAccept: application/json\r\n",
-        'timeout'       => 8,
-        'ignore_errors' => true,
-    ]]);
-    $body = @file_get_contents($url . '/auth/v1/user', false, $ctx);
-    if ($body === false) {
-        error_log('Gagal menghubungi Supabase Auth');
-        json_error('Layanan autentikasi tidak bisa dihubungi.', 'AUTH_DOWN', 502);
-    }
-    $status = 0;
-    foreach ($http_response_header ?? [] as $line) {
-        if (preg_match('#^HTTP/\S+\s+(\d{3})#', $line, $m)) {
-            $status = (int)$m[1];
-        }
-    }
-    $data = json_decode($body, true);
-    if ($status !== 200 || !is_array($data) || empty($data['id'])) {
+function now_epoch(): int
+{
+    static $n = null;
+    return $n ??= (int) db_val('SELECT floor(extract(epoch FROM now()))::bigint');
+}
+
+function token_sign(string $data): string
+{
+    return b64u_enc(hash_hmac('sha256', $data, (string) env('TOKEN_SECRET'), true));
+}
+
+/** @return array{token:string, expiresAt:string} */
+function token_make(string $nim): array
+{
+    $ttl = max(1, (int) env('TOKEN_TTL_HOURS', '8')) * 3600;
+    // Waktu diambil dari database agar sejalan dengan pengguna.updated_at (hindari selisih jam server).
+    $now = now_epoch();
+    $head = b64u_enc(json_encode(['alg' => 'HS256', 'typ' => 'JWT']));
+    $pay = b64u_enc(json_encode(['sub' => $nim, 'iat' => $now, 'exp' => $now + $ttl]));
+    return [
+        'token' => "$head.$pay." . token_sign("$head.$pay"),
+        'expiresAt' => date('c', $now + $ttl),
+    ];
+}
+
+/** Verifikasi tanda tangan & kedaluwarsa. Algoritma dipatok HS256 (header token diabaikan). */
+function token_parse(string $token): ?array
+{
+    $parts = explode('.', $token);
+    if (count($parts) !== 3) {
         return null;
     }
-    return (string)$data['id'];
+    [$h, $p, $s] = $parts;
+    if (!hash_equals(token_sign("$h.$p"), $s)) {
+        return null;
+    }
+    $pay = json_decode(b64u_dec($p), true);
+    if (!is_array($pay) || !isset($pay['sub'], $pay['iat'], $pay['exp']) || !is_string($pay['sub'])) {
+        return null;
+    }
+    if ((int) $pay['exp'] < now_epoch()) {
+        return null;
+    }
+    return $pay;
 }
 
-/**
- * Identifikasi pemanggil (role apa pun). Mengembalikan baris pengguna
- * (nim, nama_pengguna, role, id_organisasi, status_akun) atau menghentikan
- * request dengan 401 / 403 (akun nonaktif).
- */
-function pengguna_login(PDO $pdo): array
+/* ------------------------------------------------------------------ */
+/* Pengguna saat ini                                                   */
+/* ------------------------------------------------------------------ */
+function load_user(string $nim): ?array
 {
-    $mode = $_ENV['AUTH_MODE'] ?? 'supabase';
-
-    if ($mode === 'dev') {
-        if (($_ENV['APP_ENV'] ?? '') !== 'local') {
-            json_error('Mode dev hanya boleh dengan APP_ENV=local.', 'AUTH_CONFIG', 500);
-        }
-        $nim = trim((string)($_SERVER['HTTP_X_DEV_NIM'] ?? ''));
-        if ($nim === '') {
-            json_error('Header X-Dev-Nim wajib (mode dev).', 'TIDAK_TERAUTENTIKASI', 401);
-        }
-        $stmt = $pdo->prepare('SELECT nim, nama_pengguna, role, id_organisasi, status_akun
-                                 FROM pengguna WHERE nim = :nim');
-        $stmt->execute(['nim' => $nim]);
-    } else {
-        $token = bearer_token();
-        if ($token === null) {
-            json_error('Token login wajib dikirim (Authorization: Bearer ...).', 'TIDAK_TERAUTENTIKASI', 401);
-        }
-        $uid = supabase_user_id($token);
-        if ($uid === null) {
-            json_error('Token tidak valid atau sudah kedaluwarsa.', 'TIDAK_TERAUTENTIKASI', 401);
-        }
-        $stmt = $pdo->prepare('SELECT nim, nama_pengguna, role, id_organisasi, status_akun
-                                 FROM pengguna WHERE auth_id = :uid');
-        $stmt->execute(['uid' => $uid]);
-    }
-
-    $u = $stmt->fetch();
-    if (!$u) {
-        json_error('Akun belum terdaftar sebagai pengguna aplikasi.', 'TIDAK_TERAUTENTIKASI', 401);
-    }
-    if (!$u['status_akun']) {
-        json_error('Akun dinonaktifkan.', 'AKUN_NONAKTIF', 403);
+    $u = db_one(
+        'SELECT u.nim, u.nama_pengguna, u.role, u.status_akun, u.id_organisasi,
+                o.nama_organisasi, o.singkatan, o.logo_path,
+                floor(extract(epoch FROM u.updated_at))::bigint AS diubah_epoch
+         FROM pengguna u JOIN organisasi o ON o.id_organisasi = u.id_organisasi
+         WHERE u.nim = :nim',
+        ['nim' => $nim]
+    );
+    if ($u) {
+        $u['is_pj'] = $u['role'] === 'Penanggung Jawab';
     }
     return $u;
 }
 
-/**
- * Memastikan pemanggil adalah PJ (role Pengelola, akun aktif, punya organisasi).
- * Mengembalikan: ['nim','nama','idOrganisasi','namaOrganisasi'].
- */
-function wajib_pj(PDO $pdo): array
+function user_payload(array $u): array
 {
-    $u = pengguna_login($pdo);
-    if ($u['role'] !== 'Pengelola' || $u['id_organisasi'] === null) {
-        json_error('Hanya PJ (Pengelola) yang boleh mengakses endpoint ini.', 'BUKAN_PJ', 403);
-    }
-
-    $o = $pdo->prepare('SELECT nama_organisasi FROM organisasi WHERE id_organisasi = :o');
-    $o->execute(['o' => $u['id_organisasi']]);
-
     return [
-        'nim'            => $u['nim'],
-        'nama'           => $u['nama_pengguna'],
-        'idOrganisasi'   => (int)$u['id_organisasi'],
-        'namaOrganisasi' => (string)$o->fetchColumn(),
+        'nim' => $u['nim'],
+        'namaPengguna' => $u['nama_pengguna'],
+        'role' => $u['role'],
+        'isPj' => $u['is_pj'],
+        'idOrganisasi' => $u['id_organisasi'],
+        'organisasi' => [
+            'nama' => $u['nama_organisasi'],
+            'singkatan' => $u['singkatan'],
+            'logoUrl' => storage_url($u['logo_path']),
+        ],
     ];
+}
+
+function bearer_token(): ?string
+{
+    $h = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+    if ($h === '' && function_exists('getallheaders')) {
+        foreach (getallheaders() as $k => $v) {
+            if (strtolower($k) === 'authorization') {
+                $h = $v;
+            }
+        }
+    }
+    return preg_match('/^Bearer\s+(\S+)$/i', $h, $m) ? $m[1] : null;
+}
+
+/** Pengguna aktif dari token; null bila tidak ada/ tidak valid. Memoized per request. */
+function me(): ?array
+{
+    static $cache = false;
+    if ($cache !== false) {
+        return $cache;
+    }
+    $cache = null;
+    $t = bearer_token();
+    if ($t === null) {
+        return null;
+    }
+    $pay = token_parse($t);
+    if ($pay === null) {
+        return null;
+    }
+    $u = load_user($pay['sub']);
+    if ($u === null) {
+        return null;
+    }
+    // Token yang terbit sebelum data akun berubah (password, role, status) tidak berlaku lagi.
+    if ((int) $pay['iat'] < (int) $u['diubah_epoch']) {
+        return null;
+    }
+    return $cache = $u;
+}
+
+function require_login(): array
+{
+    $u = me();
+    if ($u === null) {
+        fail(401, 'TIDAK_TERAUTENTIKASI', 'Sesi tidak valid atau sudah berakhir. Silakan login kembali.');
+    }
+    if (!$u['status_akun']) {
+        fail(403, 'AKUN_NONAKTIF', 'Akun nonaktif, hubungi penanggung jawab');
+    }
+    return $u;
+}
+
+function require_pj(): array
+{
+    $u = require_login();
+    if (!$u['is_pj']) {
+        fail(403, 'BUKAN_PJ', 'Fitur ini hanya untuk Penanggung Jawab');
+    }
+    return $u;
+}
+
+function require_peminjam(): array
+{
+    $u = require_login();
+    if ($u['is_pj']) {
+        fail(403, 'HANYA_PEMINJAM', 'Fitur ini hanya untuk role Peminjam');
+    }
+    return $u;
+}
+
+/* ------------------------------------------------------------------ */
+/* Captcha Cloudflare Turnstile                                        */
+/* ------------------------------------------------------------------ */
+function captcha_verify(mixed $token): void
+{
+    if (env('CAPTCHA_MODE', 'turnstile') === 'off') {
+        return;
+    }
+    if (!is_string($token) || trim($token) === '') {
+        fail(422, 'CAPTCHA_WAJIB', 'Captcha wajib diselesaikan', ['captchaToken' => 'Captcha wajib diselesaikan']);
+    }
+    $secret = env('TURNSTILE_SECRET');
+    if (!$secret) {
+        fail(500, 'KONFIGURASI_SALAH', 'TURNSTILE_SECRET belum diisi');
+    }
+    [$status, $res] = http_request(
+        'POST',
+        'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+        ['Content-Type: application/x-www-form-urlencoded'],
+        http_build_query(['secret' => $secret, 'response' => $token, 'remoteip' => client_ip()])
+    );
+    $j = json_decode($res, true);
+    if ($status !== 200 || !is_array($j) || ($j['success'] ?? false) !== true) {
+        fail(422, 'CAPTCHA_GAGAL', 'Verifikasi captcha gagal, silakan coba lagi', ['captchaToken' => 'Verifikasi gagal']);
+    }
 }
