@@ -4,6 +4,7 @@
  */
 
 import { getUser, logout } from './state/session.js';
+import { checkSession } from './services/auth.js';
 import { renderSidebar, renderMobileDrawer, STORAGE_KEY_SIDEBAR, STORAGE_KEY_SIDEBAR_GROUPS } from './ui/sidebar.js';
 import { renderNavbar } from './ui/navbar.js';
 import { renderFooter } from './ui/footer.js';
@@ -183,6 +184,7 @@ function initApp() {
     route();
   });
 
+  checkSession().catch(() => {});
   route();
 }
 

@@ -6,7 +6,8 @@
 import { html, raw, escapeHtml } from '../ui/html.js';
 import { inputClass, labelClass, buttonClass, alertClass } from '../ui/classes.js';
 import { renderIcon } from '../ui/icons.js';
-import { getCaptcha, login } from '../services/auth.js';
+import { getCaptcha, login, lupaPassword } from '../services/auth.js';
+import { isMockEnabled } from '../services/client.js';
 import { mockUsers } from '../data/users.js';
 import { login as setSession } from '../state/session.js';
 import { navigate } from '../router.js';
@@ -17,6 +18,8 @@ let currentCaptchaText = '';
 let authView = 'login';
 let forgotModal = null;
 let forgotError = '';
+let pendingForgotNim = '';
+let pendingForgotWhatsapp = '';
 
 function renderForgotPasswordPage() {
   let modal = '';
@@ -80,6 +83,65 @@ function renderForgotPasswordPage() {
   `.toString();
 }
 
+const REAL_DEMO_USERS = [
+  {
+    nama: 'Rizky Pratama',
+    nim: '2441720001',
+    role: 'penanggung_jawab',
+    organisasi: { nama: 'HMTI', singkatan: 'HMTI' },
+    statusAkun: 'aktif',
+  },
+  {
+    nama: 'Fajar Nugroho',
+    nim: '2441720011',
+    role: 'peminjam',
+    organisasi: { nama: 'HMTI', singkatan: 'HMTI' },
+    statusAkun: 'aktif',
+  },
+  {
+    nama: 'Nadia Putri',
+    nim: '2441720002',
+    role: 'penanggung_jawab',
+    organisasi: { nama: 'BEM', singkatan: 'BEM' },
+    statusAkun: 'aktif',
+  },
+  {
+    nama: 'Andi Setiawan',
+    nim: '2441720013',
+    role: 'peminjam',
+    organisasi: { nama: 'BEM', singkatan: 'BEM' },
+    statusAkun: 'aktif',
+  },
+  {
+    nama: 'Dimas Saputra',
+    nim: '2441720003',
+    role: 'penanggung_jawab',
+    organisasi: { nama: 'THEATRISIC', singkatan: 'THEATRISIC' },
+    statusAkun: 'aktif',
+  },
+  {
+    nama: 'Putri Ayu',
+    nim: '2441720014',
+    role: 'peminjam',
+    organisasi: { nama: 'THEATRISIC', singkatan: 'THEATRISIC' },
+    statusAkun: 'aktif',
+  },
+  {
+    nama: 'Salsa Maharani',
+    nim: '2441720004',
+    role: 'penanggung_jawab',
+    organisasi: { nama: 'HME', singkatan: 'HME' },
+    statusAkun: 'aktif',
+  },
+  {
+    nama: 'Rendra Mahendra',
+    nim: '2441720015',
+    role: 'peminjam',
+    organisasi: { nama: 'HME', singkatan: 'HME' },
+    statusAkun: 'aktif',
+  },
+];
+
 function getInitials(name = '') {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (!parts.length) return 'U';
@@ -101,14 +163,15 @@ export function render(ctx = {}) {
     return renderForgotPasswordPage();
   }
 
-  const quickUsers = mockUsers.map((u) => {
+  const demoList = isMockEnabled() ? mockUsers : REAL_DEMO_USERS;
+  const quickUsers = demoList.map((u) => {
     const isNonaktif = (u.statusAkun || u.status_akun) !== 'aktif';
     const isPj = u.role === 'penanggung_jawab';
     const roleName = isPj ? 'PJ' : 'Peminjam';
     const roleFullName = isPj ? 'PJ Inventaris' : 'Peminjam';
     const orgName =
       typeof u.organisasi === 'object' && u.organisasi
-        ? u.organisasi.namaOrganisasi || u.organisasi.nama || 'OKI'
+        ? u.organisasi.namaOrganisasi || u.organisasi.nama || u.organisasi.singkatan || 'OKI'
         : String(u.organisasi || 'OKI');
     const initials = getInitials(u.nama);
 
@@ -118,7 +181,8 @@ export function render(ctx = {}) {
         data-action="quick-login"
         data-role="${u.role}"
         data-nim="${u.nim || ''}"
-        data-email="${u.email}"
+        data-password="${u.nim || ''}"
+        data-email="${u.email || ''}"
         class="group flex items-center justify-between gap-2.5 rounded-xl border border-zinc-200/90 bg-white p-2.5 text-left transition hover:border-primary/40 hover:bg-zinc-50 hover:shadow-xs focus:outline-none focus:ring-2 focus:ring-primary/20"
       >
         <div class="flex min-w-0 items-center gap-2.5">
@@ -377,7 +441,7 @@ export function mount(root) {
   if (!root) return;
 
   if (!root.dataset.authViewHandlers) {
-    root.addEventListener('click', (event) => {
+    root.addEventListener('click', async (event) => {
       const action = event.target.closest('[data-action]')?.getAttribute('data-action');
       if (!action) return;
 
@@ -395,7 +459,14 @@ export function mount(root) {
         forgotModal = null;
         root.innerHTML = render();
       } else if (action === 'forgot-submit-confirm') {
-        forgotModal = 'success';
+        try {
+          await lupaPassword({ nim: pendingForgotNim, noWhatsapp: pendingForgotWhatsapp });
+          forgotModal = 'success';
+          forgotError = '';
+        } catch (err) {
+          forgotModal = null;
+          forgotError = err?.message || 'Gagal mengirim permintaan ubah password.';
+        }
         root.innerHTML = render();
       }
     });
@@ -437,7 +508,7 @@ export function mount(root) {
         }
         nimInput?.setAttribute('aria-invalid', 'true');
         hasError = true;
-      } else if (!mockUsers.some((user) => String(user.nim) === nim)) {
+      } else if (isMockEnabled() && !mockUsers.some((user) => String(user.nim) === nim)) {
         if (nimError) {
           nimError.textContent = 'NIM tidak terdaftar';
           nimError.classList.remove('hidden');
@@ -456,6 +527,8 @@ export function mount(root) {
       }
 
       if (hasError) return;
+      pendingForgotNim = nim;
+      pendingForgotWhatsapp = whatsapp;
       forgotError = '';
       forgotModal = 'confirm';
       root.innerHTML = render();
@@ -600,11 +673,12 @@ export function mount(root) {
     if (!btn || submitting) return;
     const nim = btn.getAttribute('data-nim');
     const email = btn.getAttribute('data-email');
+    const password = btn.getAttribute('data-password') || (isMockEnabled() ? '' : nim);
     if (nim || email) {
       performLogin({
         nim,
         email,
-        password: '',
+        password,
         captchaId: 'MOCK-QUICKLOGIN',
         captchaAnswer: '',
       });

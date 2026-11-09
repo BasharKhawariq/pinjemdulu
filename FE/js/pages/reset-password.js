@@ -5,6 +5,7 @@ import { inputClass, labelClass, buttonClass } from '../ui/classes.js';
 import { renderIcon } from '../ui/icons.js';
 import { renderModal as renderModalComponent } from '../ui/modal.js';
 import { navigate } from '../router.js';
+import { resetPassword } from '../services/auth.js';
 
 let modalMode = null;
 let formError = '';
@@ -12,6 +13,8 @@ let currentRoot = null;
 let clickHandler = null;
 let submitHandler = null;
 let currentToken = '';
+let pendingPassword = '';
+let pendingConfirmation = '';
 
 function passwordField(id, label) {
   return html`
@@ -99,7 +102,7 @@ export function mount(root, ctx = {}) {
   currentRoot = root;
   currentToken = ctx.query?.token || '';
 
-  clickHandler = (event) => {
+  clickHandler = async (event) => {
     const actionElement = event.target.closest('[data-action]');
     if (!actionElement) return;
     const action = actionElement.dataset.action;
@@ -115,7 +118,18 @@ export function mount(root, ctx = {}) {
       return;
     }
     if (action === 'confirm-reset-password') {
-      modalMode = 'success';
+      try {
+        await resetPassword({
+          token: currentToken,
+          passwordBaru: pendingPassword,
+          konfirmasiPassword: pendingConfirmation,
+        });
+        modalMode = 'success';
+        formError = '';
+      } catch (err) {
+        modalMode = null;
+        formError = err?.message || 'Gagal mengubah password.';
+      }
       root.innerHTML = render(ctx);
       return;
     }
@@ -141,6 +155,8 @@ export function mount(root, ctx = {}) {
     } else if (!currentToken) {
       formError = 'Tautan ubah password tidak valid atau sudah kedaluwarsa.';
     } else {
+      pendingPassword = password;
+      pendingConfirmation = confirmation;
       formError = '';
       modalMode = 'confirm';
     }
@@ -160,4 +176,6 @@ export function unmount() {
   modalMode = null;
   formError = '';
   currentToken = '';
+  pendingPassword = '';
+  pendingConfirmation = '';
 }
