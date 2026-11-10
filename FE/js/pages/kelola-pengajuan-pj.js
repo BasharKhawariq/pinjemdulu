@@ -6,6 +6,7 @@ import { renderIcon } from '../ui/icons.js';
 import { escapeHtml } from '../ui/html.js';
 import { renderSearchInput } from '../ui/search-input.js';
 import { renderModal as renderModalComponent } from '../ui/modal.js';
+import { renderOrganisasiLogo } from '../ui/organisasi-badge.js';
 
 let rows = [];
 let activeTab = STATUS_REQUEST_PJ.MENUNGGU;
@@ -54,11 +55,12 @@ function renderTableRows() {
   return pageRows.map((row, index) => {
     const id = String(row.id);
     const name = personName(row);
+    const org = row.organisasi?.namaOrganisasi || row.pemohon?.organisasi?.namaOrganisasi || row.pemohon?.displayOrganization || row.organisasi || '';
     const status = statusInfo(row.status);
     const pending = row.status === STATUS_REQUEST_PJ.MENUNGGU;
     return `<tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50/60">
       <td class="whitespace-nowrap px-4 py-3.5 text-center text-xs text-slate-400">${start + index + 1}</td>
-      <td class="min-w-[220px] px-4 py-3"><div class="flex items-center gap-2.5"><span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-xs font-semibold text-white">${escapeHtml(initials(name))}</span><span class="block truncate text-xs font-medium text-slate-500">${escapeHtml(name)}</span></div></td>
+      <td class="min-w-[220px] px-4 py-3"><div class="flex items-center gap-2.5"><span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-xs font-semibold text-white">${escapeHtml(initials(name))}</span><div class="min-w-0"><span class="block truncate text-xs font-medium text-slate-500">${escapeHtml(name)}</span>${org ? `<span class="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500">${renderOrganisasiLogo(org, row.pemohon?.logoUrl || row.logoUrl, 'h-3.5 w-3.5')}<span>${escapeHtml(org)}</span></span>` : ''}</div></div></td>
       <td class="w-[190px] whitespace-nowrap px-4 py-3.5 text-center text-xs text-slate-400">${escapeHtml(dateLabel(row.tanggalPengajuan || row.createdAt))}</td>
       <td class="w-[140px] px-4 py-3.5 text-center"><span class="inline-flex whitespace-nowrap rounded-xl px-2.5 py-1 text-xs font-semibold ${status.cls}">${escapeHtml(status.label)}</span></td>
       <td class="whitespace-nowrap px-4 py-3.5"><div class="flex items-center justify-center gap-0"><button type="button" data-action="detail" data-id="${escapeHtml(id)}" title="Lihat detail" aria-label="Lihat detail" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100">${renderIcon('Info', 'h-4 w-4')}</button>${pending ? `<button type="button" data-action="approve" data-id="${escapeHtml(id)}" title="Setujui pengajuan" aria-label="Setujui pengajuan" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-green-600 hover:bg-green-50">${renderIcon('CircleCheck', 'h-4 w-4')}</button><button type="button" data-action="reject" data-id="${escapeHtml(id)}" title="Tolak pengajuan" aria-label="Tolak pengajuan" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-red-600 hover:bg-red-50">${renderIcon('CircleX', 'h-4 w-4')}</button>` : ''}</div></td>
@@ -152,7 +154,7 @@ function renderModal() {
             <p class="text-base font-semibold text-slate-900">Nama Pemohon</p>
             <div class="text-right">
               <p class="text-base font-medium text-slate-800">${escapeHtml(personName(row))}</p>
-              <p class="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-slate-600"><span class="inline-flex h-4 w-4 items-center justify-center rounded-full bg-amber-100 text-[9px] font-bold text-amber-700">${escapeHtml(initials(organization).slice(0, 1))}</span>${escapeHtml(organization)}</p>
+              <p class="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-slate-600">${renderOrganisasiLogo(organization, row.pemohon?.logoUrl || row.logoUrl, 'h-4 w-4')}<span>${escapeHtml(organization)}</span></p>
             </div>
           </div>
           <div class="flex items-center justify-between gap-6"><p class="text-base font-semibold text-slate-900">NIM</p><p class="break-all text-right text-base font-medium text-slate-800">${escapeHtml(nim)}</p></div>

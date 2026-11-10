@@ -7,6 +7,7 @@ import { renderIcon } from '../ui/icons.js';
 import { ROLES } from '../lib/constants.js';
 import { renderModal as renderModalComponent } from '../ui/modal.js';
 import { ubahPassword } from '../services/auth.js';
+import { renderOrganisasiLogo } from '../ui/organisasi-badge.js';
 
 let rootElement = null;
 let clickHandler = null;
@@ -30,18 +31,7 @@ function organizationOf(user) {
 }
 
 function organizationBadge(organization, logoUrl = null) {
-  if (logoUrl) {
-    return `<img src="${escapeHtml(logoUrl)}" alt="${escapeHtml(organization)}" class="inline-block h-5 w-5 rounded-full object-contain bg-white shadow-xs" onerror="this.style.display='none'" />`;
-  }
-  const key = String(organization || '').toUpperCase();
-  const classes = {
-    HMTI: 'bg-amber-400 text-amber-950',
-    HME: 'bg-fuchsia-600 text-white',
-    HMS: 'bg-emerald-600 text-white',
-    HIMANIA: 'bg-blue-600 text-white',
-    BEM: 'bg-indigo-600 text-white',
-  };
-  return `<span class="inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${classes[key] || 'bg-slate-200 text-slate-700'}">${escapeHtml(String(organization || 'O').slice(0, 1).toUpperCase())}</span>`;
+  return renderOrganisasiLogo(organization, logoUrl, 'h-5 w-5', 'bg-white shadow-xs');
 }
 
 function roleLabel(user) {

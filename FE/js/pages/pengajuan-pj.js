@@ -20,6 +20,7 @@ import { renderStatusChip } from '../ui/status-chip.js';
 import { renderModal } from '../ui/modal.js';
 import { renderPagination as renderSharedPagination } from '../ui/pagination.js';
 import { mockUsers } from '../data/users.js';
+import { renderOrganisasiLogo } from '../ui/organisasi-badge.js';
 
 const PAGE_SIZE = 5;
 
@@ -100,8 +101,8 @@ function renderRows() {
       <tr class="border-b border-zinc-100 last:border-0 hover:bg-zinc-50/60">
         <td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-500">${start + index + 1}</td>
         <td class="px-4 py-4">
-          <div class="flex items-center gap-2 text-xs font-medium text-slate-700">
-            <span class="inline-block h-3.5 w-3.5 shrink-0 rounded-full ${orgDotClass(org)}" aria-hidden="true"></span>
+          <div class="flex items-center gap-1.5 text-xs font-medium text-slate-700">
+            ${renderOrganisasiLogo(org, row.logoUrl, 'h-3.5 w-3.5')}
             <span>${escapeHtml(org)}</span>
           </div>
         </td>
@@ -176,7 +177,7 @@ function renderDetail(row) {
             <p class="text-base font-semibold text-slate-900">Nama Pemohon</p>
             <div class="text-right">
               <p class="text-base font-medium text-slate-800">${escapeHtml(row.pemohon?.nama || '—')}</p>
-              <p class="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-slate-600"><span class="inline-flex h-4 w-4 items-center justify-center rounded-full bg-amber-100 text-[9px] font-bold text-amber-700">${escapeHtml(org.slice(0, 1))}</span>${escapeHtml(org)}</p>
+              <p class="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-slate-600">${renderOrganisasiLogo(org, row.pemohon?.logoUrl || row.logoUrl || row.organisasi?.logoUrl, 'h-4 w-4')}<span>${escapeHtml(org)}</span></p>
             </div>
           </div>
           <div class="flex items-center justify-between gap-6"><p class="text-base font-semibold text-slate-900">NIM</p><p class="break-all text-right text-base font-medium text-slate-800">${escapeHtml(row.pemohon?.nim || '—')}</p></div>
@@ -212,7 +213,7 @@ function renderForm(state) {
             <p class="text-base font-semibold text-slate-900">Nama Pemohon</p>
             <div class="text-right">
               <p class="text-base font-medium text-slate-800">${escapeHtml(user?.nama || '—')}</p>
-              <p class="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-slate-600"><span class="inline-flex h-4 w-4 items-center justify-center rounded-full bg-amber-100 text-[9px] font-bold text-amber-700">${escapeHtml(org.slice(0, 1))}</span>${escapeHtml(org)}</p>
+              <p class="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-slate-600">${renderOrganisasiLogo(org, user?.organisasi?.logoUrl || user?.logoUrl, 'h-4 w-4')}<span>${escapeHtml(org)}</span></p>
             </div>
           </div>
           <div class="flex items-center justify-between gap-6"><p class="text-base font-semibold text-slate-900">NIM</p><p class="break-all text-right text-base font-medium text-slate-800">${escapeHtml(user?.nim || '—')}</p></div>

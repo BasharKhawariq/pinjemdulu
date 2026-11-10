@@ -1,5 +1,6 @@
 import { getPeminjaman } from '../services/peminjaman.js';
-import { ajukanPengembalian } from '../services/pengembalian.js';
+import { ajukanPengembalian, getPengembalian, ajukanUlangPengembalian } from '../services/pengembalian.js';
+import { isMockEnabled } from '../services/client.js';
 import { STATUS_PEMINJAMAN } from '../lib/constants.js';
 import { formatTanggal } from '../lib/format.js';
 import { renderIcon } from '../ui/icons.js';
@@ -7,6 +8,7 @@ import { escapeHtml } from '../ui/html.js';
 import { renderSearchInput } from '../ui/search-input.js';
 import { renderStatusChip } from '../ui/status-chip.js';
 import { renderModal as renderGlobalModal } from '../ui/modal.js';
+import { renderOrganisasiLogo } from '../ui/organisasi-badge.js';
 
 const TABS = [
   { key: 'menunggu', label: 'Menunggu' },
@@ -68,8 +70,8 @@ function renderRows() {
       <td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-500">${start + index + 1}</td>
       <td class="min-w-[180px] px-4 py-3">
         <div class="max-w-[220px] truncate text-xs font-medium text-slate-500" title="${escapeHtml(row.namaBarang)}">${escapeHtml(row.namaBarang)}</div>
-        <div class="mt-1.5 flex items-center gap-2 text-xs font-medium text-slate-700">
-          <span class="inline-flex h-4 w-4 items-center justify-center rounded-full bg-slate-100 text-[9px] font-bold text-slate-700">${escapeHtml(row.organisasi.slice(0, 1))}</span>
+        <div class="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-slate-700">
+          ${renderOrganisasiLogo(row.organisasi, row.logoUrl, 'h-3.5 w-3.5')}
           <span>${escapeHtml(row.organisasi)}</span>
         </div>
       </td>
@@ -124,7 +126,7 @@ function renderDetail(row) {
           <p class="text-base font-semibold text-slate-900">Barang Dipinjam</p>
           <div class="text-right">
             <p class="text-base font-medium text-slate-800">${escapeHtml(row.namaBarang)}</p>
-            <p class="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-slate-600"><span class="inline-flex h-4 w-4 items-center justify-center rounded-full bg-slate-800 text-[9px] font-bold text-white">${escapeHtml(String(row.organisasi || 'O').slice(0, 1).toUpperCase())}</span>${escapeHtml(row.organisasi)}</p>
+            <p class="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-slate-600">${renderOrganisasiLogo(row.organisasi, row.logoUrl, 'h-4 w-4')}<span>${escapeHtml(row.organisasi)}</span></p>
           </div>
         </div>
         <div class="flex items-center justify-between gap-6"><p class="text-base font-semibold text-slate-900">Jumlah Unit</p><p class="text-base font-medium text-slate-800">${escapeHtml(row.jumlahUnit || 1)}</p></div>
@@ -243,7 +245,7 @@ export async function mount(root, ctx = {}) {
   currentPage = 1;
   actionDialog = null;
   try {
-    const all = await getPeminjaman();
+    const all = isMockEnabled() ? await getPeminjaman() : await getPengembalian();
     const mapped = all.filter((p) => {
       const s = String(p.status).toLowerCase();
       return (
@@ -265,12 +267,15 @@ export async function mount(root, ctx = {}) {
       if (s === STATUS_PEMINJAMAN.TERLAMBAT || s === 'terlambat') tabKey = 'terlambat';
       if (s === STATUS_PEMINJAMAN.DITOLAK || s === 'ditolak') tabKey = 'ditolak';
       return {
-        id: String(p.id || p.idPeminjaman),
+        id: String(p.id || p.idPengembalian || p.idPeminjaman),
+        idPengembalian: p.idPengembalian,
+        idPeminjaman: p.idPeminjaman,
         namaBarang: p.inventaris?.namaBarang || p.barang?.namaBarang || p.namaBarang,
-        organisasi: p.inventaris?.namaOrganisasi || p.barang?.namaOrganisasi || p.namaOrganisasi || 'Organisasi',
+        organisasi: p.inventaris?.namaOrganisasi || p.barang?.namaOrganisasi || p.organisasi || p.namaOrganisasi || 'Organisasi',
+        logoUrl: p.inventaris?.logoUrl || p.barang?.logoUrl || p.logoUrl,
         tanggalMulai: p.startDate || p.mulai || p.tanggalMulai,
         tanggalSelesai: p.endDate || p.selesai || p.tanggalSelesai,
-        tanggalDikembalikan: p.tanggalPengembalian,
+        tanggalDikembalikan: p.tanggalPengembalian || p.tanggalDikembalikan,
         tanggalPengambilan: p.tanggalPengambilan,
         jumlahUnit: p.jumlahPinjam ?? p.jumlahUnit ?? 1,
         status: tabKey,
@@ -309,7 +314,11 @@ export async function mount(root, ctx = {}) {
       const target = DEMO_ROWS.find((row) => row.id === actionDialog?.id);
       if (!target) return;
       try {
-        await ajukanPengembalian(target.id);
+        if (!isMockEnabled() && target.idPengembalian) {
+          await ajukanUlangPengembalian(target.idPengembalian);
+        } else {
+          await ajukanPengembalian(target.idPeminjaman || target.id);
+        }
         target.status = 'menunggu';
         target.tanggalDikembalikan = null;
         actionDialog = { type: 'success' };

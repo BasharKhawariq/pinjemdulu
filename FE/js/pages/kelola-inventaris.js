@@ -37,6 +37,7 @@ import { validateInventarisInput, validateFotoFile, MAKS_FOTO_BYTES } from '../l
 import { normalizeKondisi } from '../lib/kondisi.js';
 import { KONDISI_BARANG, LABEL_KONDISI } from '../lib/constants.js';
 import { renderKelolaTabs } from '../ui/kelola-tabs.js';
+import { renderOrganisasiBadge as renderSharedBadge, renderOrganisasiLogo } from '../ui/organisasi-badge.js';
 
 export const renderTabs = renderKelolaTabs;
 
@@ -77,22 +78,12 @@ export function dispatchAction(actionName, handlers = {}) {
 /**
  * Render OrganisasiBadge kecil untuk tabel.
  * @param {string} nama
+ * @param {string|null} [logoUrl]
  * @returns {import('../ui/html.js').SafeHtml}
  */
-export function renderOrganisasiBadge(nama = '') {
+export function renderOrganisasiBadge(nama = '', logoUrl = null) {
   if (!nama) return raw('');
-  const initials = getInitials(nama).slice(0, 2);
-  return html`
-    <span class="inline-flex items-center gap-1.5 font-medium text-zinc-600">
-      <span
-        class="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent text-[9px] font-semibold text-white"
-        aria-hidden="true"
-      >
-        ${initials}
-      </span>
-      <span class="truncate text-xs">${nama}</span>
-    </span>
-  `;
+  return renderSharedBadge(nama, { logoUrl, size: 'sm', asSafeHtml: true });
 }
 
 /**
@@ -654,13 +645,19 @@ export function renderFormModal({
           <!-- Pemilik Inventaris (Readonly) -->
           <div>
             <label class="${labelClass()}">Pemilik Inventaris</label>
-            <input
-              type="text"
-              readonly
-              disabled
-              value="${namaOrganisasi}"
-              class="${inputClass()} bg-muted/40 text-muted-foreground cursor-not-allowed"
-            />
+            <div class="relative flex items-center">
+              <span class="pointer-events-none absolute left-3.5 flex items-center">
+                ${raw(renderOrganisasiLogo(namaOrganisasi, null, 'h-5 w-5'))}
+              </span>
+              <input
+                id="field-organisasi"
+                type="text"
+                readonly
+                disabled
+                value="${namaOrganisasi}"
+                class="${inputClass()} bg-muted/40 text-muted-foreground cursor-not-allowed pl-11"
+              />
+            </div>
           </div>
 
           <!-- Kondisi Barang (Radio) -->

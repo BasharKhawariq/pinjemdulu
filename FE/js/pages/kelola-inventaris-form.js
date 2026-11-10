@@ -16,7 +16,7 @@ import {
 import { renderIcon } from '../ui/icons.js';
 import { renderModal } from '../ui/modal.js';
 import {
-  getInventarisById,
+  getInventarisKelolaDetail,
   createInventaris,
   updateInventaris,
 } from '../services/inventaris.js';
@@ -771,6 +771,8 @@ function readCurrentFormInputs() {
     kondisi: normalizeKondisi(kondisi),
     deskripsi: deskripsi !== undefined ? deskripsi : pageState.formData.deskripsi,
     thumbnail: pageState.formData.thumbnail || '',
+    fotoFile: pageState.formData.fotoFile || null,
+    hapusFoto: Boolean(pageState.formData.hapusFoto),
   };
 }
 
@@ -847,6 +849,8 @@ async function handleFotoFileSelected(file) {
   try {
     const dataUrl = await compressImageToDataUrl(file);
     pageState.formData.thumbnail = dataUrl;
+    pageState.formData.fotoFile = file;
+    pageState.formData.hapusFoto = false;
     delete pageState.formErrors.fotoFile;
     updateUI();
   } catch {
@@ -935,6 +939,8 @@ async function handleDocumentClick(e) {
     }
   } else if (action === 'remove-foto') {
     pageState.formData.thumbnail = '';
+    pageState.formData.fotoFile = null;
+    pageState.formData.hapusFoto = true;
     const fileInput = document.getElementById('form-foto-input');
     if (fileInput) fileInput.value = '';
     updateUI();
@@ -1110,7 +1116,7 @@ export async function mount(container, ctx = {}) {
   // Jika mode edit, muat data inventaris
   if (mode === 'edit' && idInventaris) {
     try {
-      const inv = await getInventarisById(idInventaris);
+      const inv = await getInventarisKelolaDetail(idInventaris);
       if (!inv) {
         pageState.notFound = true;
         pageState.loading = false;
@@ -1134,12 +1140,12 @@ export async function mount(container, ctx = {}) {
       const initialData = {
         idInventaris: inv.idInventaris,
         namaBarang: inv.namaBarang,
-        totalBarang: inv.totalBarang,
+        totalBarang: inv.totalBarang ?? inv.totalUnit,
         idKategori: inv.idKategori,
         kondisi: normalizeKondisi(inv.kondisi) || 'baik',
-        deskripsi: inv.deskripsiBarang || '',
-        thumbnail: inv.thumbnail || '',
-        minTotal: 1,
+        deskripsi: inv.deskripsi || inv.deskripsiBarang || '',
+        thumbnail: inv.fotoUrl || inv.thumbnail || '',
+        minTotal: inv.unitKeluar || 1,
       };
 
       pageState.formData = { ...initialData };

@@ -22,26 +22,17 @@ import {
   KATALOG_DEFAULTS,
 } from '../lib/katalog.js';
 import { CATALOG_QUERY_KEY } from '../lib/catalog-nav.js';
+import { renderOrganisasiBadge as renderSharedBadge } from '../ui/organisasi-badge.js';
 
 /**
  * Render OrganisasiBadge mini untuk kartu katalog.
  * @param {string} nama
+ * @param {string|null} [logoUrl]
  * @returns {import('../ui/html.js').SafeHtml}
  */
-export function renderOrganisasiBadge(nama = '') {
+export function renderOrganisasiBadge(nama = '', logoUrl = null) {
   if (!nama) return raw('');
-  const initials = getInitials(nama).slice(0, 2);
-  return html`
-    <span class="inline-flex items-center gap-2 font-medium text-zinc-700">
-      <span
-        class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent text-[10px] font-semibold text-white"
-        aria-hidden="true"
-      >
-        ${initials}
-      </span>
-      <span class="truncate text-xs">${nama}</span>
-    </span>
-  `;
+  return renderSharedBadge(nama, { logoUrl, size: 'lg', asSafeHtml: true });
 }
 
 /**
@@ -96,7 +87,7 @@ export function renderInventarisCard(inv) {
       <!-- Baris atas: OKI (kiri) & Kategori (kanan) -->
       <div class="mb-3 flex items-start justify-between gap-2">
         <div class="min-w-0 flex-1 truncate">
-          ${renderOrganisasiBadge(inv.namaOrganisasi)}
+          ${renderOrganisasiBadge(inv.namaOrganisasi, inv.logoUrl || inv.logoOrganisasi)}
         </div>
         <div class="shrink-0">
           ${renderKategoriBadge(inv.namaKategori)}

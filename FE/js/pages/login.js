@@ -12,6 +12,7 @@ import { mockUsers } from '../data/users.js';
 import { login as setSession } from '../state/session.js';
 import { navigate } from '../router.js';
 import { renderModal as renderModalComponent } from '../ui/modal.js';
+import { renderOrganisasiLogo } from '../ui/organisasi-badge.js';
 
 let currentCaptchaId = '';
 let currentCaptchaText = '';
@@ -207,7 +208,7 @@ export function render(ctx = {}) {
                   )}
             </div>
             <p class="truncate text-[11px] font-mono text-zinc-500">NIM: ${u.nim || '—'}</p>
-            <p class="truncate text-[10px] text-zinc-400">${roleFullName} · ${orgName}</p>
+            <p class="flex items-center gap-1 truncate text-[10px] text-zinc-400"><span>${roleFullName} ·</span> <span class="inline-flex items-center gap-1">${raw(renderOrganisasiLogo(orgName, u.logoUrl || u.organisasi?.logoUrl, 'h-3.5 w-3.5'))}<span>${orgName}</span></span></p>
           </div>
         </div>
         <span class="shrink-0 text-zinc-300 transition-transform group-hover:translate-x-0.5 group-hover:text-primary">

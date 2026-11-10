@@ -12,7 +12,7 @@ import {
 import { hitungPenggunaan, sortKategori } from '../lib/kelola-kategori.js';
 import { ROLES } from '../lib/constants.js';
 import * as store from '../state/store.js';
-import { delay } from './client.js';
+import { delay, isMockEnabled, apiFetch } from './client.js';
 
 const KATEGORI_STORE_KEY = 'data:kategori';
 const INVENTARIS_STORE_KEY = 'data:inventaris';
@@ -66,6 +66,15 @@ export function _resetKategoriMock() {
  * @returns {Promise<Array<{idKategori:string, namaKategori:string}>>}
  */
 export async function getKategori() {
+  if (!isMockEnabled()) {
+    const res = await apiFetch('/api/kategori');
+    const list = Array.isArray(res) ? res : res?.data || [];
+    return list.map((k) => ({
+      idKategori: k.idKategori,
+      namaKategori: k.namaKategori,
+    }));
+  }
+
   await delay(60);
   const list = store.load(KATEGORI_STORE_KEY, () => mockKategori.map((k) => ({ ...k })));
   return list.map((k) => ({
@@ -81,6 +90,18 @@ export async function getKategori() {
  * @returns {Promise<Array<{ idKategori: string, namaKategori: string, totalBarang: number }>>}
  */
 export async function getKategoriDenganJumlah() {
+  if (!isMockEnabled()) {
+    const res = await apiFetch('/api/kelola-kategori');
+    const list = Array.isArray(res) ? res : res?.data || [];
+    return list.map((k) => ({
+      idKategori: k.idKategori,
+      namaKategori: k.namaKategori,
+      totalBarang: k.jumlahBarang ?? 0,
+      jumlahBarang: k.jumlahBarang ?? 0,
+      bisaDihapus: k.bisaDihapus ?? (k.jumlahBarang === 0),
+    }));
+  }
+
   await delay(60);
   const kategories = store.load(KATEGORI_STORE_KEY, () => mockKategori.map((k) => ({ ...k })));
   const inventarisList = getInventarisItems();
@@ -108,8 +129,6 @@ export async function getKategoriDenganJumlah() {
  * @returns {Promise<{idKategori: string, namaKategori: string}>}
  */
 export async function createKategori(userOrNama, namaOptional) {
-  await delay(80);
-
   let user = null;
   let rawNama = '';
 
@@ -118,6 +137,22 @@ export async function createKategori(userOrNama, namaOptional) {
   } else {
     user = userOrNama;
     rawNama = namaOptional || '';
+  }
+
+  if (!isMockEnabled()) {
+    const res = await apiFetch('/api/kelola-kategori', {
+      method: 'POST',
+      body: { namaKategori: String(rawNama).trim() },
+    });
+    return {
+      idKategori: res.idKategori,
+      namaKategori: res.namaKategori || String(rawNama).trim(),
+    };
+  }
+
+  await delay(80);
+
+  if (typeof userOrNama !== 'string') {
     checkPJRole(user);
   }
 
@@ -178,6 +213,19 @@ export async function createKategori(userOrNama, namaOptional) {
  * @returns {Promise<{idKategori: string, namaKategori: string}>}
  */
 export async function updateKategori(user, idKategori, namaBaru) {
+  if (!isMockEnabled()) {
+    const cleanId = String(idKategori).replace(/\D/g, '') || idKategori;
+    const res = await apiFetch(`/api/kelola-kategori/${cleanId}`, {
+      method: 'PUT',
+      body: { namaKategori: String(namaBaru).trim() },
+    });
+    return {
+      idKategori: Number(cleanId),
+      namaKategori: String(namaBaru).trim(),
+      ...res,
+    };
+  }
+
   await delay(80);
   checkPJRole(user);
 
@@ -262,6 +310,14 @@ export async function updateKategori(user, idKategori, namaBaru) {
  * @returns {Promise<{ success: boolean, idKategori: string }>}
  */
 export async function deleteKategori(user, idKategori) {
+  if (!isMockEnabled()) {
+    const cleanId = String(idKategori).replace(/\D/g, '') || idKategori;
+    const res = await apiFetch(`/api/kelola-kategori/${cleanId}`, {
+      method: 'DELETE',
+    });
+    return { success: true, idKategori: cleanId, ...res };
+  }
+
   await delay(80);
   checkPJRole(user);
 

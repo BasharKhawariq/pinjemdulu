@@ -109,8 +109,14 @@ function captchaError() {
  * @param {{ nim?: string, email?: string, password?: string, captchaId?: string, captchaAnswer?: string }} payload
  * @returns {Promise<{ user: object, token?: string }>}
  */
-export async function login(payload) {
-  const { nim, email, password, captchaId, captchaAnswer } = payload || {};
+export async function login(payload, passwordArg) {
+  let nim, email, password, captchaId, captchaAnswer;
+  if (typeof payload === 'string') {
+    nim = payload;
+    password = passwordArg;
+  } else {
+    ({ nim, email, password, captchaId, captchaAnswer } = payload || {});
+  }
 
   if (isMockEnabled()) {
     void password; // MOCK: kata sandi tidak diverifikasi
@@ -172,7 +178,9 @@ export async function login(payload) {
     normalizedUser.token = token;
   }
 
-  if (token) {
+  if (normalizedUser) {
+    loginSession(normalizedUser, token);
+  } else if (token) {
     setToken(token);
   }
 

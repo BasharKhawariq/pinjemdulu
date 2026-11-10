@@ -7,6 +7,7 @@ import { renderSearchInput } from '../ui/search-input.js';
 import { renderModal as renderModalComponent } from '../ui/modal.js';
 import { renderFilterButton, renderFilterModal } from '../ui/filter.js';
 import { selectClass } from '../ui/classes.js';
+import { renderOrganisasiLogo } from '../ui/organisasi-badge.js';
 
 const DEMO_ORDER = ['Bintang Putra', 'Berbinar Neira', 'Gama Punta', 'Gentala Arka', 'Hanin Maizah', 'Jingga Pratama', 'Maitri Sakti', 'Maria Khalda', 'Rion Ardian', 'Tiara Ayudya'];
 const PAGE_SIZE = 10;
@@ -47,10 +48,7 @@ function orgBadgeClass(org) {
 function renderOrgLogo(user) {
   const org = organizationOf(user);
   const logo = orgLogoOf(user);
-  if (logo) {
-    return `<img src="${escapeHtml(logo)}" alt="Logo ${escapeHtml(org)}" class="h-4 w-4 shrink-0 rounded-full object-cover" onerror="this.style.display='none';this.nextElementSibling?.classList.remove('hidden');" /><span class="hidden inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold ${orgBadgeClass(org)}" aria-hidden="true">${escapeHtml(orgInitial(org))}</span>`;
-  }
-  return `<span class="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold ${orgBadgeClass(org)}" aria-hidden="true" title="Logo ${escapeHtml(org)}">${escapeHtml(orgInitial(org))}</span>`;
+  return renderOrganisasiLogo(org, logo, 'h-4 w-4');
 }
 function normalizeRole(role) {
   const r = String(role || '').trim().toLowerCase();

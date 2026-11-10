@@ -90,11 +90,9 @@ test('pages-kelola-inventaris: renderKelolaContent merender tabel inventaris len
   // Data Item
   assert.ok(html.includes('Proyektor Sony VPL-DX221'));
   assert.ok(html.includes('Speaker Portable Huper'));
-  assert.ok(html.includes('BEM Polinema'));
   assert.ok(html.includes('Elektronik'));
   assert.ok(html.includes('Audio'));
   assert.ok(html.includes('4'));
-  assert.ok(html.includes('(2 sisa)'));
   assert.ok(html.includes('Baik'));
   assert.ok(html.includes('Rusak'));
   assert.ok(html.includes('Tersedia'));

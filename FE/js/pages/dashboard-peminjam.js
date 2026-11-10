@@ -6,10 +6,13 @@
 
 import { getPeminjaman } from '../services/peminjaman.js';
 import { getRequestPj } from '../services/request-pj.js';
+import { getPengembalian } from '../services/pengembalian.js';
+import { isMockEnabled, apiFetch } from '../services/client.js';
 import { ROLES, STATUS_PEMINJAMAN } from '../lib/constants.js';
 import { formatTanggal } from '../lib/format.js';
 import { renderIcon } from '../ui/icons.js';
 import { escapeHtml } from '../ui/html.js';
+import { renderOrganisasiLogo } from '../ui/organisasi-badge.js';
 import * as PlaceholderPage from './placeholder.js';
 
 const DEMO_PENGEMBALIAN_ROWS = [
@@ -111,6 +114,8 @@ let activeTab = 'peminjaman';
 let currentUser = null;
 let livePeminjaman = [];
 let liveRequestPj = [];
+let livePengembalian = [];
+let apiDashboardStats = null;
 let detailRow = null;
 let rootElement = null;
 let clickHandler = null;
@@ -161,6 +166,17 @@ function getStatusBadge(status) {
 }
 
 function computeStats() {
+  if (apiDashboardStats) {
+    return {
+      disetujui: apiDashboardStats.totalDisetujui ?? 0,
+      ditolak: apiDashboardStats.totalDitolak ?? 0,
+      dikembalikan: apiDashboardStats.totalDikembalikan ?? 0,
+      terlambat: apiDashboardStats.totalTerlambat ?? 0,
+      totalPeminjaman: apiDashboardStats.totalPeminjaman ?? 0,
+      pengajuanPj: apiDashboardStats.totalPengajuanPj ?? 0,
+    };
+  }
+
   const extraLoans = Math.max(0, livePeminjaman.length - 3);
   const extraApproved = livePeminjaman.slice(0, extraLoans).filter((r) => r.status === STATUS_PEMINJAMAN.DISETUJUI).length;
   const extraRejected = livePeminjaman.slice(0, extraLoans).filter((r) => r.status === STATUS_PEMINJAMAN.DITOLAK).length;
@@ -183,6 +199,22 @@ function computeStats() {
 }
 
 function getPeminjamanTableRows() {
+  if (!isMockEnabled() && livePeminjaman.length > 0) {
+    return livePeminjaman.slice(0, 4).map((row, idx) => ({
+      id: String(row.id || row.idPeminjaman || `live-${idx}`),
+      namaBarang: row.inventaris?.namaBarang || row.barang?.namaBarang || row.namaBarang || 'Barang inventaris',
+      organisasi: row.inventaris?.namaOrganisasi || row.barang?.organisasi || row.namaOrganisasi || 'Organisasi',
+      logoUrl: row.inventaris?.logoUrl || row.barang?.logoUrl || row.logoUrl,
+      tanggalDiajukan: row.tanggalPengajuan || row.createdAt || row.startDate,
+      tanggalMulai: row.startDate || row.mulai || row.tanggalMulai,
+      tanggalSelesai: row.endDate || row.selesai || row.tanggalSelesai,
+      jumlahUnit: row.jumlahPinjam ?? 1,
+      status: row.status,
+      keperluan: row.keperluan || '—',
+      alasanPenolakan: row.alasanPenolakan || null,
+    }));
+  }
+
   const extraLoans = Math.max(0, livePeminjaman.length - 3);
   const dynamicMapped = livePeminjaman.slice(0, extraLoans).map((row, idx) => ({
     id: String(row.id || row.idPeminjaman || `live-${idx}`),
@@ -200,6 +232,22 @@ function getPeminjamanTableRows() {
 }
 
 function getPengembalianTableRows() {
+  if (!isMockEnabled() && livePengembalian.length > 0) {
+    return livePengembalian.slice(0, 4).map((row, idx) => ({
+      id: String(row.id || row.idPengembalian || `live-${idx}`),
+      namaBarang: row.namaBarang || 'Barang inventaris',
+      organisasi: row.organisasi || row.namaOrganisasi || 'Organisasi',
+      logoUrl: row.logoUrl,
+      tanggalMulai: row.tanggalMulai,
+      tanggalSelesai: row.tanggalSelesai,
+      tanggalDikembalikan: row.tanggalDikembalikan,
+      jumlahUnit: row.jumlahUnit ?? row.jumlahPinjam ?? 1,
+      status: row.status,
+      keperluan: row.keperluan || '—',
+      alasanPenolakan: row.alasanPenolakan || null,
+    }));
+  }
+
   return DEMO_PENGEMBALIAN_ROWS.slice(0, 4);
 }
 
@@ -318,7 +366,7 @@ function renderTable() {
           <td class="min-w-[180px] px-4 py-3">
             <div class="max-w-[220px] truncate text-xs font-medium text-slate-500" title="${escapeHtml(row.namaBarang)}">${escapeHtml(row.namaBarang)}</div>
             <div class="mt-1 flex items-center gap-1.5 text-[11px] font-medium text-slate-700">
-              <span class="inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full text-[8px] font-bold ${orgBadgeCls}">${escapeHtml(orgInitial)}</span>
+              ${renderOrganisasiLogo(row.organisasi, row.logoUrl, 'h-3.5 w-3.5')}
               <span>${escapeHtml(row.organisasi)}</span>
             </div>
           </td>
@@ -384,7 +432,7 @@ function renderDetailModal() {
         <dl class="mt-5 grid grid-cols-2 gap-x-4 gap-y-4 text-sm">
           <div>
             <dt class="text-xs text-slate-400">Organisasi</dt>
-            <dd class="mt-1 font-medium text-slate-700">${escapeHtml(detailRow.organisasi)}</dd>
+            <dd class="mt-1 font-medium text-slate-700 inline-flex items-center gap-1.5">${renderOrganisasiLogo(detailRow.organisasi, detailRow.logoUrl, 'h-4 w-4')}<span>${escapeHtml(detailRow.organisasi)}</span></dd>
           </div>
           <div>
             <dt class="text-xs text-slate-400">Status</dt>
@@ -531,12 +579,21 @@ export async function mount(root, ctx = {}) {
   detailRow = null;
 
   try {
-    const [loans, pjRequests] = await Promise.all([getPeminjaman(), getRequestPj()]);
+    const [loans, pjRequests, returns, dashStats] = await Promise.all([
+      getPeminjaman(),
+      getRequestPj(),
+      !isMockEnabled() ? getPengembalian().catch(() => []) : [],
+      !isMockEnabled() ? apiFetch('/api/dashboard').catch(() => null) : null,
+    ]);
     livePeminjaman = Array.isArray(loans) ? loans : [];
     liveRequestPj = Array.isArray(pjRequests) ? pjRequests : [];
+    livePengembalian = Array.isArray(returns) ? returns : [];
+    apiDashboardStats = dashStats;
   } catch {
     livePeminjaman = [];
     liveRequestPj = [];
+    livePengembalian = [];
+    apiDashboardStats = null;
   }
 
   if (rootElement) {

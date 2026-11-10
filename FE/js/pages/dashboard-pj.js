@@ -15,6 +15,7 @@ import { renderStatusChip } from '../ui/status-chip.js';
 import { renderModal as renderModalComponent } from '../ui/modal.js';
 import { compressImageToDataUrl } from './kelola-inventaris-form.js';
 import { validateFotoFile } from '../lib/inventaris-form.js';
+import { renderOrganisasiLogo } from '../ui/organisasi-badge.js';
 
 const DEMO_PENGEMBALIAN_ROWS = [
   {
@@ -368,7 +369,7 @@ function renderManagementTable() {
       : `${actionButton('management-detail-loan', 'Lihat detail peminjaman', 'Info')}${pending ? `${actionButton('management-approve-loan', 'Setujui pengajuan', 'CircleCheck', 'text-green-600 hover:bg-green-50')}${actionButton('management-reject-loan', 'Tolak pengajuan', 'CircleX', 'text-red-600 hover:bg-red-50')}` : approved ? actionButton('management-pickup', 'Konfirmasi pengambilan', 'HandCoins', 'text-slate-400 hover:bg-slate-100') : ''}`;
     return `<tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50/60">
       <td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400">${index + 1}</td>
-      <td class="min-w-[190px] px-4 py-3"><div class="flex items-center gap-2.5"><span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-xs font-semibold text-white">${escapeHtml(initials)}</span><span class="min-w-0"><span class="block truncate text-xs font-medium text-slate-500">${escapeHtml(row.nama)}</span><span class="mt-1 flex items-center gap-1.5 text-[11px] text-slate-700"><span class="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-100 text-[8px] font-bold text-amber-800">${escapeHtml(String(row.organisasi || 'O').slice(0, 1).toUpperCase())}</span>${escapeHtml(row.organisasi)}</span></span></div></td>
+      <td class="min-w-[190px] px-4 py-3"><div class="flex items-center gap-2.5"><span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-xs font-semibold text-white">${escapeHtml(initials)}</span><span class="min-w-0"><span class="block truncate text-xs font-medium text-slate-500">${escapeHtml(row.nama)}</span><span class="mt-1 flex items-center gap-1.5 text-[11px] text-slate-700">${renderOrganisasiLogo(row.organisasi, row.logoUrl, 'h-3.5 w-3.5')}${escapeHtml(row.organisasi)}</span></span></div></td>
       <td class="min-w-[150px] px-4 py-4 text-xs text-slate-400">${escapeHtml(row.barang)}</td>
       <td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400">${escapeHtml(formatDateEnOrId(row.mulai))}</td>
       ${isReturn ? `<td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400">${escapeHtml(formatDateEnOrId(row.selesai))}</td><td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400">${escapeHtml(formatDateEnOrId(row.tanggalKembali))}</td>` : `<td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400">${escapeHtml(approved || status === String(STATUS_PEMINJAMAN.DIPINJAM).toLowerCase() ? formatDateEnOrId(row.pengambilan) : '—')}</td><td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400">${escapeHtml(formatDateEnOrId(row.selesai))}</td><td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400">${escapeHtml(row.jumlah)}</td>`}
@@ -435,7 +436,7 @@ function renderTable() {
           <td class="min-w-[180px] px-4 py-3">
             <div class="max-w-[220px] truncate text-xs font-medium text-slate-500" title="${escapeHtml(row.namaBarang)}">${escapeHtml(row.namaBarang)}</div>
             <div class="mt-1 flex items-center gap-1.5 text-[11px] font-medium text-slate-700">
-              <span class="inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full text-[8px] font-bold ${orgBadgeCls}">${escapeHtml(orgInitial)}</span>
+              ${renderOrganisasiLogo(row.organisasi, row.logoUrl, 'h-3.5 w-3.5')}
               <span>${escapeHtml(row.organisasi)}</span>
             </div>
           </td>
@@ -501,7 +502,7 @@ function renderDetailModal() {
         <dl class="mt-5 grid grid-cols-2 gap-x-4 gap-y-4 text-sm">
           <div>
             <dt class="text-xs text-slate-400">Organisasi</dt>
-            <dd class="mt-1 font-medium text-slate-700">${escapeHtml(detailRow.organisasi)}</dd>
+            <dd class="mt-1 font-medium text-slate-700 inline-flex items-center gap-1.5">${renderOrganisasiLogo(detailRow.organisasi, detailRow.logoUrl, 'h-4 w-4')}<span>${escapeHtml(detailRow.organisasi)}</span></dd>
           </div>
           <div>
             <dt class="text-xs text-slate-400">Status</dt>
@@ -597,7 +598,7 @@ function renderManagementModal() {
           ${isReturn && row.fotoKondisi ? `<div><p class="mb-2 text-base ${isReturn ? 'font-semibold' : 'font-medium'} text-slate-900">Foto Kondisi Barang Saat Dikembalikan</p><img src="${escapeHtml(row.fotoKondisi)}" alt="Foto kondisi barang saat dikembalikan" class="max-h-48 rounded-xl object-contain"></div>` : ''}
           ${isReturn && row.sanksi ? `<div><p class="mb-2 text-base ${isReturn ? 'font-semibold' : 'font-medium'} text-slate-900">Sanksi</p><div class="rounded-2xl border border-slate-100 bg-white px-5 py-4 text-base text-slate-700">${escapeHtml(row.sanksi)}</div></div>` : ''}
         </div><div class="mt-6 flex justify-end"><button type="button" data-action="management-close" class="rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:brightness-110">Tutup</button></div>
-      </section>${isLate ? `<div id="dashboard-late-tooltip" role="tooltip" class="pointer-events-none whitespace-nowrap rounded-xl bg-white px-4 py-3 text-sm font-medium text-slate-900" style="display:none;position:fixed;z-index:100000;filter:drop-shadow(0 5px 12px rgba(15,23,42,0.22))">Waktu Terlambat: ${escapeHtml(row.waktuTerlambat || 3)} Hari<span aria-hidden="true" style="position:absolute;right:-5px;top:50%;width:10px;height:10px;background:#fff;border-radius:2px;transform:translateY(-50%) rotate(45deg)"></span></div>` : ''}</div>`;
+      </section>${isLate ? `<div id="dashboard-late-tooltip" role="tooltip" class="pointer-events-none whitespace-nowrap rounded-xl bg-white px-4 py-3 text-sm font-medium text-slate-900" style="display:none;position:fixed;z-index:100000;filter:drop-shadow(0 5px 12px rgba(15,23,42,0.22))">Waktu Terlambat: ${escapeHtml(row.waktuTerlambat || 3)} Hari<span aria-hidden="true" style="position:absolute;right:-5px;top:50%;width:10px;height:10px;background:white;border-radius:2px;transform:translateY(-50%) rotate(45deg)"></span></div>` : ''}</div>`;
   }
 
   if (managementModal === 'confirm-approve-loan') return renderModalComponent({ variant: 'approve', title: 'Setujui pengajuan peminjaman?', description: 'Saya yakin ingin menyetujui peminjaman ini', actions: [close, action('Setujui','management-execute-approve-loan','default','w-1/2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700')] });

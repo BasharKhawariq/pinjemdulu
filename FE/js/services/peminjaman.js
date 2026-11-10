@@ -28,9 +28,23 @@ import { dateToISO, isoToDate, formatTanggal } from '../lib/format.js';
 import { normalizeKondisi } from '../lib/kondisi.js';
 import * as store from '../state/store.js';
 import { getCurrentUser } from '../state/session.js';
-import { delay } from './client.js';
+import { isMockEnabled, apiFetch, delay } from './client.js';
 
 const PEMINJAMAN_STORE_KEY = 'data:peminjaman';
+
+function dataUrlToBlob(dataUrl) {
+  if (typeof atob === 'undefined') {
+    return Buffer.from(dataUrl.split(',')[1] || '', 'base64');
+  }
+  const parts = dataUrl.split(',');
+  const mime = parts[0]?.match(/:(.*?);/)?.[1] || 'image/jpeg';
+  const binary = atob(parts[1] || '');
+  const array = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    array[i] = binary.charCodeAt(i);
+  }
+  return new Blob([array], { type: mime });
+}
 
 function shiftDateStr(isoString, offsetDays) {
   const d = isoToDate(isoString);
@@ -82,8 +96,151 @@ export function getSystemToday() {
  * Daftar peminjaman.
  */
 export async function getPeminjaman(params = {}) {
-  await delay(80);
-  return [...mockPeminjaman];
+  if (isMockEnabled()) {
+    await delay(80);
+    return [...mockPeminjaman];
+  }
+
+  const queryParams = new URLSearchParams();
+  if (params.status) queryParams.set('status', params.status);
+  if (params.q) queryParams.set('q', params.q);
+  if (params.mulai) queryParams.set('mulai', params.mulai);
+  if (params.selesai) queryParams.set('selesai', params.selesai);
+  if (params.page) queryParams.set('page', params.page);
+  if (params.limit) queryParams.set('limit', params.limit);
+  const qs = queryParams.toString() ? `?${queryParams.toString()}` : '';
+
+  const res = await apiFetch(`/api/pengajuan-saya/peminjaman${qs}`);
+  const list = Array.isArray(res) ? res : res?.data || [];
+  return list.map((item) => ({
+    ...item,
+    id: item.idPeminjaman || item.id,
+    idPeminjaman: item.idPeminjaman || item.id,
+    startDate: item.tglMulai,
+    endDate: item.tglSelesai,
+    mulai: item.tglMulai,
+    selesai: item.tglSelesai,
+    tanggalMulai: item.tglMulai,
+    tanggalSelesai: item.tglSelesai,
+    namaOrganisasi: item.okiPemilik || 'Organisasi',
+    logoUrl: item.logoPemilikUrl,
+    tanggalPengajuan: item.tanggalPengajuan || item.createdAt,
+    inventaris: {
+      idInventaris: item.idInventaris,
+      namaBarang: item.namaBarang,
+      namaOrganisasi: item.okiPemilik,
+      logoUrl: item.logoPemilikUrl,
+    },
+    barang: {
+      id: item.idInventaris,
+      idInventaris: item.idInventaris,
+      nama: item.namaBarang,
+      namaBarang: item.namaBarang,
+      organisasi: item.okiPemilik,
+      namaOrganisasi: item.okiPemilik,
+      logoUrl: item.logoPemilikUrl,
+    },
+  }));
+}
+
+/**
+ * Detail peminjaman berdasarkan ID.
+ */
+export async function getPeminjamanDetail(id) {
+  if (!isMockEnabled()) {
+    return await apiFetch(`/api/pengajuan-saya/peminjaman/${id}`);
+  }
+  return mockPeminjaman.find((item) => String(item.id) === String(id) || String(item.idPeminjaman) === String(id)) || null;
+}
+
+/**
+ * Statistik ringkasan untuk dashboard PJ.
+ * @returns {Promise<object>}
+ */
+export async function getDashboardPjStats() {
+  if (isMockEnabled()) {
+    return null;
+  }
+  return await apiFetch('/api/dashboard-pj');
+}
+
+/**
+ * Daftar peminjaman yang dikelola PJ untuk barang milik OKI-nya.
+ * @param {object} params
+ * @returns {Promise<Array<object>>}
+ */
+export async function getKelolaPeminjaman(params = {}) {
+  if (isMockEnabled()) {
+    await delay(80);
+    return [...mockPeminjaman];
+  }
+
+  const queryParams = new URLSearchParams();
+  if (params.status && params.status !== 'all') queryParams.set('status', params.status);
+  if (params.q || params.cari) queryParams.set('q', params.q || params.cari);
+  if (params.mulai || params.dari) queryParams.set('dari', params.mulai || params.dari);
+  if (params.selesai || params.sampai) queryParams.set('sampai', params.selesai || params.sampai);
+  if (params.page) queryParams.set('page', params.page);
+  if (params.limit || params.perPage) queryParams.set('limit', params.limit || params.perPage);
+  const qs = queryParams.toString() ? `?${queryParams.toString()}` : '';
+
+  const res = await apiFetch(`/api/kelola-peminjaman${qs}`);
+  const list = Array.isArray(res) ? res : res?.data || [];
+  return list.map((item) => ({
+    ...item,
+    id: item.idPeminjaman || item.id,
+    idPeminjaman: item.idPeminjaman || item.id,
+    nama: item.namaPeminjam || item.nama || 'Peminjam',
+    namaPeminjam: item.namaPeminjam || item.nama || 'Peminjam',
+    nim: item.nimPeminjam || item.nim || '',
+    nimPeminjam: item.nimPeminjam || item.nim || '',
+    barang: item.namaBarang || item.barang || 'Barang',
+    namaBarang: item.namaBarang || item.barang || 'Barang',
+    idInventaris: item.idInventaris,
+    organisasi: item.okiPeminjam || item.organisasi || 'Organisasi',
+    okiPeminjam: item.okiPeminjam || item.organisasi || 'Organisasi',
+    jumlahUnit: item.jumlahPinjam ?? item.jumlahUnit ?? 1,
+    jumlahPinjam: item.jumlahPinjam ?? item.jumlahUnit ?? 1,
+    startDate: item.tglMulai,
+    endDate: item.tglSelesai,
+    mulai: item.tglMulai,
+    selesai: item.tglSelesai,
+    tanggalMulai: item.tglMulai,
+    tanggalSelesai: item.tglSelesai,
+    tanggalPengambilan: item.tanggalPengambilan,
+    tanggalPengajuan: item.tanggalPengajuan || item.createdAt,
+    keperluan: item.keperluan || '—',
+    status: item.status,
+    alasanPenolakan: item.alasanPenolakan,
+    namaPemroses: item.namaPemroses,
+    logoUrl: item.logoPemilikUrl || item.logoPeminjamUrl || null,
+    suratUrl: item.suratUrl || null,
+    peminjam: {
+      nama: item.namaPeminjam,
+      nim: item.nimPeminjam,
+      organisasi: item.okiPeminjam,
+    },
+    inventaris: {
+      idInventaris: item.idInventaris,
+      namaBarang: item.namaBarang,
+      namaOrganisasi: item.okiPemilik,
+      logoUrl: item.logoPemilikUrl,
+    },
+  }));
+}
+
+/**
+ * Detail peminjaman khusus kelola PJ.
+ * @param {string|number} id
+ * @returns {Promise<object>}
+ */
+export async function getKelolaPeminjamanDetail(id) {
+  if (isMockEnabled()) {
+    await delay(50);
+    return mockPeminjaman.find((item) => String(item.id) === String(id) || String(item.idPeminjaman) === String(id)) || null;
+  }
+  const cleanId = String(id).replace(/\D/g, '') || id;
+  return await apiFetch(`/api/kelola-peminjaman/${cleanId}`);
 }
 
 /**
@@ -109,6 +266,30 @@ export async function createPeminjaman({
   jumlahPinjam,
   keperluan,
 }) {
+  if (!isMockEnabled()) {
+    const payload = {
+      idInventaris: Number(idInventaris),
+      jumlahPinjam: Number(jumlahPinjam),
+      tglMulai: startDate,
+      tglSelesai: endDate,
+      keperluan: (keperluan || '').trim(),
+    };
+    const res = await apiFetch('/api/peminjaman', {
+      method: 'POST',
+      body: payload,
+    });
+    return {
+      ...res,
+      id: res?.idPeminjaman,
+      idPeminjaman: res?.idPeminjaman,
+      startDate,
+      endDate,
+      jumlahPinjam: payload.jumlahPinjam,
+      keperluan: payload.keperluan,
+      status: STATUS_PEMINJAMAN.DIAJUKAN,
+    };
+  }
+
   // 0. Autentikasi: wajib login
   const user = getActiveUser();
   if (!user) {
@@ -377,6 +558,21 @@ export async function createPeminjaman({
  * @param {string} status
  */
 export async function updateMockPeminjamanStatus(id, status, extra = {}) {
+  if (!isMockEnabled()) {
+    const cleanId = String(id).replace(/\D/g, '') || id;
+    const isApprove = status === STATUS_PEMINJAMAN.DISETUJUI || String(status).toLowerCase() === 'disetujui';
+    if (isApprove) {
+      return await apiFetch(`/api/kelola-peminjaman/${cleanId}/setujui`, {
+        method: 'POST',
+      });
+    } else {
+      return await apiFetch(`/api/kelola-peminjaman/${cleanId}/tolak`, {
+        method: 'POST',
+        body: { alasan: extra.alasanPenolakan || extra.alasan || 'Ditolak oleh PJ' },
+      });
+    }
+  }
+
   await delay(80);
   const allowed = [STATUS_PEMINJAMAN.DISETUJUI, STATUS_PEMINJAMAN.DITOLAK];
   if (!allowed.includes(status)) throw new Error('Status tujuan tidak didukung.');
@@ -399,7 +595,28 @@ export async function updateMockPeminjamanStatus(id, status, extra = {}) {
   return row;
 }
 
-export async function updateMockPeminjamanPickup(id, { tanggalPengambilan, fotoPengambilan } = {}) {
+export async function updateMockPeminjamanPickup(id, { tanggalPengambilan, fotoPengambilan, fotoFile } = {}) {
+  if (!isMockEnabled()) {
+    const cleanId = String(id).replace(/\D/g, '') || id;
+    const tgl = String(tanggalPengambilan).slice(0, 10);
+    const formData = new FormData();
+    formData.set('tanggal', tgl);
+
+    const hasFile = (typeof File !== 'undefined' && fotoFile instanceof File) || (typeof File !== 'undefined' && fotoPengambilan instanceof File);
+    const hasDataUrl = typeof fotoPengambilan === 'string' && fotoPengambilan.startsWith('data:');
+
+    if (hasFile) {
+      formData.set('foto', fotoFile || fotoPengambilan);
+    } else if (hasDataUrl) {
+      formData.set('foto', dataUrlToBlob(fotoPengambilan), 'pengambilan.jpg');
+    }
+
+    return await apiFetch(`/api/kelola-peminjaman/${cleanId}/pengambilan`, {
+      method: 'POST',
+      body: formData,
+    });
+  }
+
   await delay(80);
   if (!tanggalPengambilan) throw new Error('Tanggal pengambilan wajib diisi.');
   const row = mockPeminjaman.find((item) => String(item.id) === String(id) || String(item.idPeminjaman) === String(id));

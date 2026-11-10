@@ -112,7 +112,7 @@ export function renderJadwalItem(item, idx) {
             <span class="text-zinc-400">${renderIcon('Building2', 'h-4 w-4')}</span>
             <div>
               <dt class="text-[11px] uppercase tracking-wide text-zinc-500">OKI Peminjam</dt>
-              <dd class="text-sm font-medium text-zinc-900">${item.namaOrganisasi}</dd>
+              <dd class="text-sm font-medium text-zinc-900">${renderOrganisasiBadge(item.namaOrganisasi, item.logoUrl)}</dd>
             </div>
           </div>
 
@@ -352,7 +352,7 @@ export function renderDetailContent(vm, hrefKatalog = '#/inventaris') {
 
               <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between text-xs sm:text-sm">
                 <span class="font-medium text-zinc-500 uppercase tracking-wide text-[11px]">Pemilik Inventaris</span>
-                <div>${renderOrganisasiBadge(vm.namaOrganisasi)}</div>
+                <div>${renderOrganisasiBadge(vm.namaOrganisasi, vm.logoUrl)}</div>
               </div>
             </div>
 

@@ -13,6 +13,7 @@ import { escapeHtml } from '../ui/html.js';
 import { renderSearchInput } from '../ui/search-input.js';
 import { renderStatusChip } from '../ui/status-chip.js';
 import { renderModal } from '../ui/modal.js';
+import { renderOrganisasiLogo } from '../ui/organisasi-badge.js';
 
 const TABS = [
   { key: 'diajukan', label: 'Diajukan', statuses: [STATUS_PEMINJAMAN.DIAJUKAN, 'diajukan'] },
@@ -149,8 +150,8 @@ function renderRows() {
         <td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-500">${start + index + 1}</td>
         <td class="min-w-[180px] px-4 py-3">
           <div class="max-w-[220px] truncate text-xs font-medium text-slate-500" title="${escapeHtml(name)}">${escapeHtml(name)}</div>
-          <div class="mt-1.5 flex items-center gap-2 text-xs font-medium text-slate-700">
-            <span class="inline-block h-3.5 w-3.5 shrink-0 rounded-full ${orgDotClass(org)}" aria-hidden="true"></span>
+          <div class="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-slate-700">
+            ${renderOrganisasiLogo(org, item.logoUrl || row.logoUrl, 'h-3.5 w-3.5')}
             <span>${escapeHtml(org)}</span>
           </div>
         </td>
@@ -238,7 +239,7 @@ function renderDetail(row) {
             <div class="text-right">
               <p class="text-base font-medium text-slate-800">${escapeHtml(name)}</p>
               <p class="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-slate-600">
-                <span class="inline-block h-3.5 w-3.5 rounded-full ${orgDotClass(org)}" aria-hidden="true"></span>${escapeHtml(org)}
+                ${renderOrganisasiLogo(org, item.logoUrl || row.logoUrl, 'h-4 w-4')}<span>${escapeHtml(org)}</span>
               </p>
             </div>
           </div>
@@ -327,7 +328,8 @@ async function submitReturn() {
   showDialog({ ...dialog, submitting: true, error: '' });
   try {
     const updated = await ajukanPengembalian(row.id || row.idPeminjaman);
-    row.status = updated?.status ?? row.status;
+    row.status = updated?.status ?? STATUS_PEMINJAMAN.MENUNGGU_KONFIRMASI_PENGEMBALIAN;
+    row.bisaAjukanPengembalian = false;
     lastTrigger = null;
     renderTableContent();
     showDialog({ type: 'sukses' });
@@ -384,7 +386,7 @@ export async function mount(root, ctx = {}) {
     const nim = user?.nim || user?.pengguna?.nim || null;
     pageRows = all.filter((row) => {
       if (!nim) return true;
-      const ownerNim = row.pengguna?.nim || row.peminjam?.nim || row.nim || null;
+      const ownerNim = row.pengguna?.nim || row.peminjam?.nim || row.nim || row.nimPeminjam || null;
       return !ownerNim || String(ownerNim) === String(nim);
     });
     if (!pageRows.length && all.length) {

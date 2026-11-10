@@ -23,7 +23,14 @@ import { validateInventarisInput } from '../lib/inventaris-form-validation.js';
 import { isDeskripsiKosong } from '../lib/deskripsi.js';
 import { normalizeKondisi } from '../lib/kondisi.js';
 import { getCurrentUser } from '../state/session.js';
-import { delay } from './client.js';
+import { delay, isMockEnabled } from './client.js';
+import {
+  getInventarisKelola as getInventarisKelolaBase,
+  getInventarisKelolaDetail as getInventarisKelolaDetailBase,
+  createInventaris as createInventarisBase,
+  updateInventaris as updateInventarisBase,
+  deleteInventaris as deleteInventarisBase,
+} from './inventaris.js';
 
 let _mockCurrentUserOverride = null;
 
@@ -64,6 +71,10 @@ const DEFAULT_KELOLA = Object.freeze({
  * Ambil daftar inventaris MILIK OKI user yang sedang login.
  */
 export async function getInventarisKelola(params = {}) {
+  if (!isMockEnabled()) {
+    return await getInventarisKelolaBase(getActiveUser(), params);
+  }
+
   await delay(100);
   const user = getActiveUser();
   const myOki = ambilIdOrganisasiUser(user);
@@ -97,6 +108,10 @@ export async function getInventarisKelola(params = {}) {
  * Ambil detail inventaris untuk diedit oleh PJ.
  */
 export async function getInventarisDetailKelola(idInventaris) {
+  if (!isMockEnabled()) {
+    return await getInventarisKelolaDetailBase(idInventaris);
+  }
+
   await delay(80);
   const user = getActiveUser();
   const myOki = ambilIdOrganisasiUser(user);
@@ -138,6 +153,10 @@ export async function getInventarisDetailKelola(idInventaris) {
  * Tambah inventaris baru.
  */
 export async function createInventaris(payload) {
+  if (!isMockEnabled()) {
+    return await createInventarisBase(getActiveUser(), payload);
+  }
+
   const val = validateInventarisInput(payload);
   if (!val.isValid) {
     throwError({
@@ -183,6 +202,10 @@ export async function createInventaris(payload) {
  * Perbarui data inventaris.
  */
 export async function updateInventaris(idInventaris, payload) {
+  if (!isMockEnabled()) {
+    return await updateInventarisBase(getActiveUser(), idInventaris, payload);
+  }
+
   await delay(100);
   const user = getActiveUser();
   const myOki = ambilIdOrganisasiUser(user);
@@ -257,6 +280,10 @@ export async function updateInventaris(idInventaris, payload) {
  * Hapus inventaris (hanya bila milik OKI sendiri dan tidak sedang dipinjam).
  */
 export async function deleteInventaris(idInventaris) {
+  if (!isMockEnabled()) {
+    return await deleteInventarisBase(getActiveUser(), idInventaris);
+  }
+
   await delay(100);
   const user = getActiveUser();
   const myOki = ambilIdOrganisasiUser(user);

@@ -84,9 +84,9 @@ export function mapServiceErrorsToForm(serviceErrors = {}) {
   if (serviceErrors.keperluan) {
     formErrors.keperluan = serviceErrors.keperluan;
   }
-  if (serviceErrors.tanggal || serviceErrors.startDate || serviceErrors.endDate) {
+  if (serviceErrors.tanggal || serviceErrors.startDate || serviceErrors.endDate || serviceErrors.tglMulai || serviceErrors.tglSelesai) {
     formErrors.tanggal =
-      serviceErrors.tanggal || serviceErrors.startDate || serviceErrors.endDate;
+      serviceErrors.tanggal || serviceErrors.startDate || serviceErrors.endDate || serviceErrors.tglMulai || serviceErrors.tglSelesai;
   }
   return formErrors;
 }
