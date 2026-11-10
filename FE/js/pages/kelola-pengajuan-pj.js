@@ -41,7 +41,7 @@ function visibleRows() {
   const q = searchTerm.trim().toLowerCase();
   return rows.filter((row) => {
     const name = personName(row);
-    const organization = row.organisasi?.namaOrganisasi || row.pemohon?.organisasi?.namaOrganisasi || '';
+    const organization = (typeof row.organisasi === 'string' ? row.organisasi : row.organisasi?.namaOrganisasi) || row.okiPemohon || row.pemohon?.organisasi?.namaOrganisasi || row.pemohon?.displayOrganization || '';
     return String(row.status).toLowerCase() === activeTab && (!q || `${name} ${organization} ${row.pemohon?.nim || ''}`.toLowerCase().includes(q));
   });
 }
@@ -136,7 +136,7 @@ function renderModal() {
   if (!modalRow) return '';
   const row = modalRow;
   const status = statusInfo(row.status);
-  const organization = row.organisasi?.namaOrganisasi || row.pemohon?.organisasi?.namaOrganisasi || '—';
+  const organization = (typeof row.organisasi === 'string' ? row.organisasi : row.organisasi?.namaOrganisasi) || row.okiPemohon || row.pemohon?.organisasi?.namaOrganisasi || row.pemohon?.displayOrganization || '—';
   const nim = row.pemohon?.nim || '—';
   const attachment = row.lampiran?.nama || row.lampiran?.name || '';
   const statusClass = status.label === 'Menunggu' ? 'bg-amber-50 text-amber-600' : status.label === 'Disetujui' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600';

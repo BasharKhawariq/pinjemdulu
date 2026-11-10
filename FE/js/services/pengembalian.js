@@ -96,7 +96,7 @@ export async function getPengembalianDetail(id) {
 export async function getKelolaPengembalian(params = {}) {
   if (isMockEnabled()) {
     await delay(50);
-    return mockPengembalian;
+    return mockPeminjaman;
   }
 
   const queryParams = new URLSearchParams();
@@ -163,7 +163,8 @@ export async function getKelolaPengembalian(params = {}) {
 export async function getKelolaPengembalianDetail(id) {
   if (isMockEnabled()) {
     await delay(50);
-    return mockPengembalian.find((item) => String(item.id) === String(id) || String(item.idPengembalian) === String(id)) || null;
+    return mockPeminjaman.find((item) => String(item.id) === String(id) || String(item.idPeminjaman) === String(id)) ||
+      mockPengembalian.find((item) => String(item.id) === String(id) || String(item.idPengembalian) === String(id)) || null;
   }
   const cleanId = String(id).replace(/\D/g, '') || id;
   return await apiFetch(`/api/kelola-pengembalian/${cleanId}`);

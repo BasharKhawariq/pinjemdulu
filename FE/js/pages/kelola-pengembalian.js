@@ -1,6 +1,5 @@
 /** Halaman Pengelolaan > Kelola Pengembalian. */
-import { getPeminjaman } from '../services/peminjaman.js';
-import { updateMockPengembalianStatus } from '../services/pengembalian.js';
+import { getKelolaPengembalian, updateMockPengembalianStatus } from '../services/pengembalian.js';
 import { STATUS_PEMINJAMAN } from '../lib/constants.js';
 import { formatTanggal } from '../lib/format.js';
 import { renderIcon } from '../ui/icons.js';
@@ -526,7 +525,7 @@ function renderModal() {
     const showError = rejectionValidationCount > 0;
     return `<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4" data-modal-backdrop>
       <section role="dialog" aria-modal="true" aria-labelledby="return-reject-title" class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
-        <h2 id="return-reject-title" class="text-xl font-bold tracking-tight text-slate-900">Permohonan Ditolak</h2>
+        <h2 id="return-reject-title" class="text-xl font-bold tracking-tight text-slate-900">Pengembalian Ditolak</h2>
         <div class="mt-5 space-y-2">
           <label for="form-alasan-penolakan" class="block text-sm font-semibold text-slate-900">Alasan Penolakan</label>
           <textarea id="form-alasan-penolakan" rows="3" placeholder="Masukkan alasan penolakan" style="resize: none" class="w-full resize-none rounded-xl border ${showError ? 'border-red-300' : 'border-slate-200'} bg-white px-4 py-3 text-sm text-slate-800 outline-none placeholder:text-slate-400 focus:border-slate-300 focus:ring-2 focus:ring-slate-100">${escapeHtml(formData.alasanPenolakan)}</textarea>
@@ -558,7 +557,7 @@ function renderModal() {
 }
 
 async function loadRows() {
-  const all = await getPeminjaman();
+  const all = await getKelolaPengembalian();
   return all.filter((row) => [
     STATUS_PEMINJAMAN.MENUNGGU_KONFIRMASI_PENGEMBALIAN,
     STATUS_PEMINJAMAN.TERLAMBAT,
@@ -805,7 +804,7 @@ export async function mount(root) {
       formData.kondisiPengembalian = 'baik';
       formData.fotoKondisi = '';
       formData.fotoError = '';
-      activeDialog = 'form-approve';
+      activeDialog = 'confirm-approve';
       refresh();
       return;
     }
@@ -882,7 +881,7 @@ export async function mount(root) {
       modalRow = rows.find((row) => String(row.id || row.idPeminjaman) === String(id)) || null;
       formData.alasanPenolakan = '';
       rejectionValidationCount = 0;
-      activeDialog = 'form-reject';
+      activeDialog = 'confirm-reject';
       refresh();
       return;
     }
@@ -1045,7 +1044,9 @@ export async function mount(root) {
   rootElement.addEventListener('pointerout', pointerOutHandler);
   // Capture diperlukan karena event scroll dari elemen modal tidak bubbling.
   rootElement.addEventListener('scroll', tooltipScrollHandler, true);
-  window.addEventListener('resize', tooltipScrollHandler);
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', tooltipScrollHandler);
+  }
 }
 
 export function unmount() {

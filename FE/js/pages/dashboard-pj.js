@@ -3,8 +3,8 @@
  * Mempertahankan gaya dashboard peminjam dan menambahkan tabel Pengelolaan.
  */
 
-import { getPeminjaman, updateMockPeminjamanStatus, updateMockPeminjamanPickup } from '../services/peminjaman.js';
-import { updateMockPengembalianStatus } from '../services/pengembalian.js';
+import { getPeminjaman, getKelolaPeminjaman, getDashboardPjStats, updateMockPeminjamanStatus, updateMockPeminjamanPickup } from '../services/peminjaman.js';
+import { getKelolaPengembalian, updateMockPengembalianStatus } from '../services/pengembalian.js';
 import { getRequestPj } from '../services/request-pj.js';
 import { STATUS_PEMINJAMAN } from '../lib/constants.js';
 import { formatTanggal } from '../lib/format.js';
@@ -116,8 +116,10 @@ let activeTab = 'peminjaman';
 let managementTab = 'peminjaman';
 let currentUser = null;
 let livePeminjaman = [];
+let livePengembalian = [];
 let liveRequestPj = [];
 let liveInventaris = [];
+let liveStats = null;
 let detailRow = null;
 let rootElement = null;
 let clickHandler = null;
@@ -289,10 +291,10 @@ function getPengembalianTableRows() {
 }
 
 function renderSummaryCards() {
-  const applications = livePeminjaman.filter((row) => String(row.status || '').toLowerCase() === 'diajukan').length || 2;
-  const damaged = liveInventaris.filter((row) => String(row.kondisi || '').toLowerCase() === 'rusak').length || 3;
-  const available = liveInventaris.filter((row) => Number(row.sisaHariIni ?? row.totalBarang ?? 0) > 0 && String(row.kondisi || '').toLowerCase() !== 'rusak').length || 4;
-  const late = livePeminjaman.filter((row) => String(row.status || '').toLowerCase() === 'terlambat').length;
+  const applications = liveStats?.pengajuan ?? (livePeminjaman.filter((row) => String(row.status || '').toLowerCase() === 'diajukan').length || 2);
+  const damaged = liveStats?.rusak ?? (liveInventaris.filter((row) => String(row.kondisi || '').toLowerCase() === 'rusak').length || 3);
+  const available = liveStats?.tersedia ?? (liveInventaris.filter((row) => Number(row.sisaHariIni ?? row.totalBarang ?? 0) > 0 && String(row.kondisi || '').toLowerCase() !== 'rusak').length || 4);
+  const late = liveStats?.terlambat ?? livePeminjaman.filter((row) => String(row.status || '').toLowerCase() === 'terlambat').length;
   const cards = [
     { label: 'Pengajuan', value: applications, icon: 'Inbox', iconBoxClass: 'bg-blue-50 text-blue-600' },
     { label: 'Rusak', value: damaged, icon: 'CircleX', iconBoxClass: 'bg-rose-50 text-rose-600' },
@@ -310,8 +312,8 @@ function renderSummaryCards() {
 }
 
 function renderRightBannerCards() {
-  const totalUnits = liveInventaris.reduce((sum, item) => sum + Number(item.totalBarang || 0), 0) || 9;
-  const approvals = livePeminjaman.filter((row) => String(row.status || '').toLowerCase() === 'diajukan').length || 1;
+  const totalUnits = liveStats?.totalUnit ?? (liveInventaris.reduce((sum, item) => sum + Number(item.totalBarang || 0), 0) || 9);
+  const approvals = liveStats?.persetujuanPj ?? (livePeminjaman.filter((row) => String(row.status || '').toLowerCase() === 'diajukan').length || 1);
   return `
     <div class="flex flex-col gap-3">
       <div class="relative flex min-h-[96px] flex-col items-center justify-between overflow-hidden rounded-2xl bg-primary px-5 py-3 text-white shadow-sm">
@@ -332,15 +334,16 @@ function renderRightBannerCards() {
 function renderManagementTable() {
   const isReturn = managementTab === 'pengembalian';
   const targetRoute = isReturn ? '#/kelola/pengembalian' : '#/kelola/peminjaman';
-  const allRows = livePeminjaman.map((row, index) => ({
-    id: String(row.id || row.idPeminjaman || index),
-    nama: row.peminjam?.nama || row.pengguna?.nama || row.namaPeminjam || 'Peminjam',
-    organisasi: row.inventaris?.namaOrganisasi || row.barang?.namaOrganisasi || row.barang?.organisasi || row.inventaris?.organisasi || '—',
-    barang: row.inventaris?.namaBarang || row.barang?.namaBarang || row.namaBarang || 'Barang inventaris',
+  const sourceRows = isReturn && livePengembalian.length ? livePengembalian : livePeminjaman;
+  const allRows = sourceRows.map((row, index) => ({
+    id: String(row.id || row.idPengembalian || row.idPeminjaman || index),
+    nama: row.peminjam?.nama || row.pengguna?.nama || row.namaPeminjam || row.nama || 'Peminjam',
+    organisasi: row.peminjam?.organisasi || row.okiPeminjam || row.inventaris?.namaOrganisasi || row.barang?.namaOrganisasi || row.barang?.organisasi || row.inventaris?.organisasi || row.organisasi || '—',
+    barang: row.inventaris?.namaBarang || row.barang?.namaBarang || row.barang?.nama || row.namaBarang || row.barang || 'Barang inventaris',
     mulai: row.startDate || row.mulai || row.tanggalMulai,
     pengambilan: row.tanggalPengambilan,
     selesai: row.endDate || row.selesai || row.tanggalSelesai,
-    tanggalKembali: row.tanggalPengembalian,
+    tanggalKembali: row.tanggalPengembalian || row.tanggalDikembalikan,
     jumlah: row.jumlahPinjam ?? row.jumlahUnit ?? 1,
     status: row.status || 'diajukan',
   }));
@@ -769,16 +772,30 @@ export async function mount(root, ctx = {}) {
   managementReturnSanksi = '';
   managementReturnPhotoError = '';
 
-  try {
-    const [loans, pjRequests, inventoryResult] = await Promise.all([getPeminjaman(), getRequestPj(), getInventarisKelola()]);
-    livePeminjaman = Array.isArray(loans) ? loans : [];
-    liveRequestPj = Array.isArray(pjRequests) ? pjRequests : [];
-    liveInventaris = Array.isArray(inventoryResult?.data) ? inventoryResult.data : [];
-  } catch {
-    livePeminjaman = [];
-    liveRequestPj = [];
-    liveInventaris = [];
-  }
+  const reloadData = async () => {
+    try {
+      const [loans, returns, pjRequests, inventoryResult, stats] = await Promise.all([
+        getKelolaPeminjaman().catch(() => getPeminjaman()),
+        getKelolaPengembalian().catch(() => []),
+        getRequestPj().catch(() => []),
+        getInventarisKelola().catch(() => ({ data: [] })),
+        getDashboardPjStats().catch(() => null),
+      ]);
+      livePeminjaman = Array.isArray(loans) ? loans : [];
+      livePengembalian = Array.isArray(returns) ? returns : [];
+      liveRequestPj = Array.isArray(pjRequests) ? pjRequests : [];
+      liveInventaris = Array.isArray(inventoryResult?.data) ? inventoryResult.data : [];
+      liveStats = stats;
+    } catch {
+      livePeminjaman = [];
+      livePengembalian = [];
+      liveRequestPj = [];
+      liveInventaris = [];
+      liveStats = null;
+    }
+  };
+
+  await reloadData();
 
   if (rootElement) {
     rootElement.innerHTML = renderDashboardContent(ctx);
@@ -799,7 +816,9 @@ export async function mount(root, ctx = {}) {
       try { dateInput?.showPicker?.(); } catch { dateInput?.focus(); }
       return;
     }
-    const findManagementRow = (id) => livePeminjaman.find((row) => String(row.id || row.idPeminjaman) === String(id)) || null;
+    const findManagementRow = (id) =>
+      livePeminjaman.find((row) => String(row.id || row.idPeminjaman) === String(id)) ||
+      livePengembalian.find((row) => String(row.id || row.idPengembalian || row.idPeminjaman) === String(id)) || null;
     const setManagementModal = (name, id = actionEl.dataset.id) => {
       managementModalRow = findManagementRow(id);
       managementModal = managementModalRow ? name : null;
@@ -828,7 +847,8 @@ export async function mount(root, ctx = {}) {
       const id = managementModalRow?.id || managementModalRow?.idPeminjaman;
       try {
         await updateMockPeminjamanStatus(id, action === 'management-execute-approve-loan' ? STATUS_PEMINJAMAN.DISETUJUI : STATUS_PEMINJAMAN.DITOLAK, action === 'management-execute-reject-loan' ? { alasanPenolakan: managementRejectReason } : {});
-        livePeminjaman = await getPeminjaman(); managementNotice = action === 'management-execute-approve-loan' ? 'Pengajuan berhasil disetujui.' : 'Pengajuan berhasil ditolak.';
+        await reloadData();
+        managementNotice = action === 'management-execute-approve-loan' ? 'Pengajuan berhasil disetujui.' : 'Pengajuan berhasil ditolak.';
         managementModal = action === 'management-execute-approve-loan' ? 'success-approve-loan' : 'success-reject-loan'; managementError = ''; refreshDashboard();
       } catch (error) { managementError = error?.message || 'Status pengajuan gagal diperbarui.'; refreshDashboard(); }
       return;
@@ -837,7 +857,7 @@ export async function mount(root, ctx = {}) {
     if (action === 'management-submit-pickup') {
       managementPickupDate = rootElement.querySelector('#dashboard-pickup-date')?.value || '';
       if (!managementPickupDate) { managementError = 'Tanggal pengambilan wajib diisi.'; refreshDashboard(); return; }
-      try { await updateMockPeminjamanPickup(managementModalRow?.id || managementModalRow?.idPeminjaman, { tanggalPengambilan: managementPickupDate, fotoPengambilan: managementPickupPhoto }); livePeminjaman = await getPeminjaman(); managementModal = null; managementModalRow = null; managementError = ''; refreshDashboard(); }
+      try { await updateMockPeminjamanPickup(managementModalRow?.id || managementModalRow?.idPeminjaman, { tanggalPengambilan: managementPickupDate, fotoPengambilan: managementPickupPhoto }); await reloadData(); managementModal = null; managementModalRow = null; managementError = ''; refreshDashboard(); }
       catch (error) { managementError = error?.message || 'Pengambilan gagal dikonfirmasi.'; refreshDashboard(); }
       return;
     }
@@ -859,8 +879,9 @@ export async function mount(root, ctx = {}) {
     if (action === 'management-choose-pickup-photo') { rootElement.querySelector('#dashboard-pickup-photo')?.click(); return; }
     if (action === 'management-execute-approve-return') {
       try {
-        await updateMockPengembalianStatus(managementModalRow?.id || managementModalRow?.idPeminjaman, STATUS_PEMINJAMAN.DIKEMBALIKAN, { tanggalPengembalian: managementReturnDate, sanksi: managementReturnSanksi, kondisiPengembalian: managementReturnCondition, fotoKondisi: managementReturnPhoto });
-        livePeminjaman = await getPeminjaman(); managementModal = 'success-approve-return'; managementError = '';
+        await updateMockPengembalianStatus(managementModalRow?.id || managementModalRow?.idPengembalian || managementModalRow?.idPeminjaman, STATUS_PEMINJAMAN.DIKEMBALIKAN, { tanggalPengembalian: managementReturnDate, sanksi: managementReturnSanksi, kondisiPengembalian: managementReturnCondition, fotoKondisi: managementReturnPhoto });
+        await reloadData();
+        managementModal = 'success-approve-return'; managementError = '';
         refreshDashboard();
       } catch (error) { managementError = error?.message || 'Pengembalian gagal dikonfirmasi.'; managementModal = 'form-approve-return'; refreshDashboard(); }
       return;
@@ -877,7 +898,7 @@ export async function mount(root, ctx = {}) {
     }
     if (action === 'management-back-reject-return') { managementModal = 'reject-return'; managementError = ''; refreshDashboard(); return; }
     if (action === 'management-execute-reject-return') {
-      try { await updateMockPengembalianStatus(managementModalRow?.id || managementModalRow?.idPeminjaman, STATUS_PEMINJAMAN.DITOLAK, { alasanPenolakan: managementReturnReason }); livePeminjaman = await getPeminjaman(); managementModal = 'success-reject-return'; managementError = ''; refreshDashboard(); }
+      try { await updateMockPengembalianStatus(managementModalRow?.id || managementModalRow?.idPengembalian || managementModalRow?.idPeminjaman, STATUS_PEMINJAMAN.DITOLAK, { alasanPenolakan: managementReturnReason }); await reloadData(); managementModal = 'success-reject-return'; managementError = ''; refreshDashboard(); }
       catch (error) { managementError = error?.message || 'Pengembalian gagal ditolak.'; managementModal = 'confirm-reject-return'; refreshDashboard(); }
       return;
     }

@@ -177,8 +177,9 @@ export function renderModal({
       `
     : useGif && gifSrc
       ? (plainGif
-          ? html`<img src="${gifSrc}" alt="${title || 'Animasi'}" class="mb-4 h-24 w-24 object-contain select-none pointer-events-none" loading="eager" />`
+          ? html`<span class="sr-only ${badgeClass}">${variant}</span><img src="${gifSrc}" alt="${title || 'Animasi'}" class="mb-4 h-24 w-24 object-contain select-none pointer-events-none" loading="eager" />`
           : html`
+              <span class="sr-only ${badgeClass}">${variant}</span>
               <div class="mb-4 inline-flex h-24 w-24 items-center justify-center p-0">
                 <img
                   src="${gifSrc}"

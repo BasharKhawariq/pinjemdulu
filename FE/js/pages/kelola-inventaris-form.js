@@ -34,6 +34,7 @@ import {
 } from '../lib/inventaris-form.js';
 import { normalizeKondisi } from '../lib/kondisi.js';
 import { KONDISI_BARANG } from '../lib/constants.js';
+import { renderOrganisasiLogo } from '../ui/organisasi-badge.js';
 
 export const HANDLED_FORM_ACTIONS = [
   'back-to-list',
@@ -297,6 +298,7 @@ export function renderFormPageContent(state = {}) {
     kategoriQuery = '',
     isKategoriDropdownOpen = false,
     isSubmitting = false,
+    namaOrganisasi = 'OKI Anda',
     loading = false,
     notFound = false,
     forbidden = false,
@@ -391,6 +393,18 @@ export function renderFormPageContent(state = {}) {
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <!-- Kolom Kiri: Input Data Utama (7 cols) -->
             <div class="lg:col-span-7 space-y-6">
+              <!-- Organisasi Pengelola -->
+              <div class="space-y-2">
+                <label class="${labelClass()}">Organisasi Pengelola</label>
+                <div class="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-700">
+                  <div class="flex items-center gap-2.5">
+                    ${raw(renderOrganisasiLogo(namaOrganisasi, null, 'h-5 w-5'))}
+                    <span class="font-medium text-slate-800">${namaOrganisasi}</span>
+                  </div>
+                  ${renderIcon('Lock', 'h-4 w-4 text-slate-400')}
+                </div>
+              </div>
+
               <!-- Field 1: Nama Barang -->
               <div class="space-y-2">
                 <div class="flex items-center justify-between">

@@ -131,6 +131,7 @@ export function renderFormModal({ dialog, editItem, inputNama = '', inputError =
         <div class="mt-4 space-y-2">
           <div class="flex items-center justify-between">
             <label for="input-kategori-nama" class="${labelClass()}">Nama Kategori</label>
+            <span id="kategori-char-count" class="text-xs text-muted-foreground">${charCount}/${MAKS_PANJANG_KATEGORI}</span>
           </div>
           <input
             id="input-kategori-nama"
@@ -253,8 +254,8 @@ export function renderDeleteModal(deleteItem, isSubmitting = false) {
           <img src="assets/animations/modal-delete.gif" alt="Hapus" class="h-full w-full object-contain select-none pointer-events-none drop-shadow-sm" loading="eager" />
         </div>
 
-        <h2 id="dialog-delete-kategori-title" class="text-lg font-bold text-foreground">Hapus Kategori</h2>
-        <p class="mt-1.5 text-sm text-muted-foreground">Apakah anda yakin ingin menghapus kategori?</p>
+        <h2 id="dialog-delete-kategori-title" class="text-lg font-bold text-foreground">Hapus kategori?</h2>
+        <p class="mt-1.5 text-sm text-muted-foreground">Apakah anda yakin ingin menghapus kategori ${nama ? html`<strong class="text-foreground">${nama}</strong>` : ''}?</p>
 
         <div class="mt-6 flex w-full items-center justify-center gap-3">
           <button
@@ -452,18 +453,34 @@ export function renderKategoriTableContent({
                         ${renderIcon('Pencil', 'h-4 w-4')}
                       </button>
 
-                      <button
-                        type="button"
-                        data-action="open-delete-dialog"
-                        data-id="${kat.idKategori}"
-                        data-nama="${kat.namaKategori}"
-                        data-count="${totalBarang}"
-                        aria-label="Hapus kategori ${kat.namaKategori}"
-                        title="Hapus ${kat.namaKategori}"
-                        class="inline-flex h-8 w-8 items-center justify-center rounded-xl text-red-600 transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      >
-                        ${renderIcon('Trash2', 'h-4 w-4')}
-                      </button>
+                      ${isDipakai
+                        ? html`
+                            <span class="sr-only">Dipakai ${totalBarang} barang</span>
+                            <button
+                              type="button"
+                              disabled
+                              aria-disabled="true"
+                              aria-label="Hapus kategori ${kat.namaKategori} nonaktif karena masih digunakan (Dipakai ${totalBarang} barang)"
+                              title="Dipakai ${totalBarang} barang"
+                              class="inline-flex h-8 w-8 items-center justify-center rounded-xl text-slate-300 cursor-not-allowed opacity-50"
+                            >
+                              ${renderIcon('Trash2', 'h-4 w-4')}
+                            </button>
+                          `
+                        : html`
+                            <button
+                              type="button"
+                              data-action="open-delete-dialog"
+                              data-id="${kat.idKategori}"
+                              data-nama="${kat.namaKategori}"
+                              data-count="${totalBarang}"
+                              aria-label="Hapus kategori ${kat.namaKategori}"
+                              title="Hapus ${kat.namaKategori}"
+                              class="inline-flex h-8 w-8 items-center justify-center rounded-xl text-red-600 transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            >
+                              ${renderIcon('Trash2', 'h-4 w-4')}
+                            </button>
+                          `}
                     </div>
                   </td>
                 </tr>
