@@ -20,10 +20,6 @@ import { renderEmptyState } from '../ui/empty-state.js';
 import { renderPagination as renderSharedPagination } from '../ui/pagination.js';
 import { formatTanggal } from '../lib/format.js';
 
-const DEMO_ORDER = [
-  'Bintang Putra', 'Berbinar Neira', 'Gama Punta', 'Gentala Arka', 'Hanin Maizah',
-  'Jingga Pratama', 'Maitri Sakti', 'Maria Khalda', 'Rion Ardian', 'Tiara Ayudya',
-];
 const PAGE_SIZE = 10;
 const ORGANISASI_LIST = ['BEM', 'HMTI', 'HME', 'HIMANIA', 'RISPOL', 'HMS', 'THEATRISIC', 'PP'];
 
@@ -132,12 +128,7 @@ function visibleUsers() {
           .toLowerCase()
           .includes(q)
     )
-    .sort((a, b) => {
-      const ai = DEMO_ORDER.indexOf(a.nama);
-      const bi = DEMO_ORDER.indexOf(b.nama);
-      if (ai !== -1 || bi !== -1) return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
-      return String(a.nama).localeCompare(String(b.nama));
-    });
+    .sort((a, b) => String(a.nama || '').localeCompare(String(b.nama || '')));
 }
 
 function renderUserRows() {
