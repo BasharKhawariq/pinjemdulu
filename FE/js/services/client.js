@@ -32,7 +32,7 @@ export function setMockEnabled(value) {
  * @returns {string}
  */
 export function getApiBaseUrl() {
-  return ENV.API_BASE_URL || 'http://localhost:8000';
+  return typeof ENV.API_BASE_URL === 'string' ? ENV.API_BASE_URL : 'http://localhost:8000';
 }
 
 /**

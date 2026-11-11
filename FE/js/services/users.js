@@ -124,3 +124,75 @@ export async function addMockUser(data = {}) {
   mockUsers.push(user);
   return { ...user };
 }
+
+/**
+ * Dapatkan daftar request password untuk PJ.
+ * @param {{ page?: number, limit?: number, q?: string, status?: string }} [params]
+ */
+export async function getRequestPasswordList(params = {}) {
+  if (!isMockEnabled()) {
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.set('page', params.page);
+    if (params.limit) queryParams.set('limit', params.limit);
+    if (params.status && params.status !== 'all') queryParams.set('status', params.status);
+    if (params.q) queryParams.set('q', params.q);
+    const qs = queryParams.toString() ? `?${queryParams.toString()}` : '';
+    const res = await apiFetch(`/api/kelola-pengguna/request-password${qs}`);
+    return res || { data: [], meta: { page: 1, limit: 10, total: 0, totalPages: 1 } };
+  }
+
+  await delay(50);
+  return { data: [], meta: { page: 1, limit: 10, total: 0, totalPages: 1 } };
+}
+
+/**
+ * Dapatkan detail satu request password.
+ * @param {number|string} id
+ */
+export async function getRequestPasswordDetail(id) {
+  if (!isMockEnabled()) {
+    return await apiFetch(`/api/kelola-pengguna/request-password/${id}`);
+  }
+  await delay(50);
+  return null;
+}
+
+/**
+ * Proses request password: buat token reset (24 jam) & respons memuat tautan serta pesan WA.
+ * @param {number|string} id
+ */
+export async function prosesRequestPassword(id) {
+  if (!isMockEnabled()) {
+    return await apiFetch(`/api/kelola-pengguna/request-password/${id}/proses`, {
+      method: 'POST',
+    });
+  }
+
+  await delay(50);
+  const tautan = `${window.location.origin}${window.location.pathname}#/reset-password?token=mock-token-${Date.now()}`;
+  return {
+    message: 'Tautan reset password dibuat',
+    tautanReset: tautan,
+    pesan: `Halo, ini tautan untuk mengatur ulang password akun PinjemDulu kamu:\n${tautan}`,
+    waUrl: `https://wa.me/?text=${encodeURIComponent(tautan)}`,
+    berlakuSampai: new Date(Date.now() + 86400000).toISOString(),
+  };
+}
+
+/**
+ * Konfirmasi bahwa tautan reset password sudah dikirim ke peminjam.
+ * @param {number|string} id
+ * @param {string} pesan
+ */
+export async function konfirmasiRequestPassword(id, pesan) {
+  if (!isMockEnabled()) {
+    return await apiFetch(`/api/kelola-pengguna/request-password/${id}/konfirmasi`, {
+      method: 'POST',
+      body: { pesan },
+    });
+  }
+
+  await delay(50);
+  return { message: 'Request password dikonfirmasi' };
+}
+

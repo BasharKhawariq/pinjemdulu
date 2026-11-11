@@ -6,7 +6,7 @@
 const isBrowser = typeof window !== 'undefined';
 
 function resolveApiBaseUrl() {
-  if (isBrowser && window.__ENV__?.API_BASE_URL) {
+  if (isBrowser && typeof window.__ENV__?.API_BASE_URL === 'string') {
     return window.__ENV__.API_BASE_URL;
   }
   if (typeof process !== 'undefined' && process.env?.API_BASE_URL) {

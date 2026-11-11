@@ -150,7 +150,7 @@ function h_rp_proses(array $p): void
         'SELECT sp_proses_request_password(CAST(:id AS integer), CAST(:nim AS varchar))',
         ['id' => $id, 'nim' => me()['nim']]
     );
-    $tautan = rtrim((string) env('FRONTEND_URL', 'http://localhost:5173'), '/') . '/reset-password?token=' . $token;
+    $tautan = rtrim((string) env('FRONTEND_URL', 'http://localhost:5173'), '/') . '/#/reset-password?token=' . $token;
     $pesan = "Halo {$req['nama_pengguna']}, ini tautan untuk mengatur ulang password akun PinjemDulu kamu "
         . "(berlaku 24 jam dan hanya bisa dipakai sekali):\n$tautan";
     json_out([
