@@ -915,21 +915,15 @@ export function renderTableSection(state = {}) {
               </tr>
             ` : items.length === 0 ? html`
               <tr class="border-b border-slate-100 last:border-0">
-                <td colspan="7" class="px-4 py-12 text-center">
-                  <div class="flex flex-col items-center justify-center gap-2">
-                    <span class="text-base font-semibold text-foreground">
-                      ${adaFilter ? 'Tidak ada hasil yang cocok' : 'Belum ada inventaris'}
-                    </span>
-                    <p class="text-xs text-muted-foreground max-w-sm">
-                      ${adaFilter
-                        ? 'Coba ubah kata kunci pencarian atau setel ulang filter.'
-                        : "Anda belum memiliki barang inventaris. Klik 'Tambah Inventaris' untuk mulai."}
-                    </p>
+                <td colspan="7" class="px-4 py-10 text-center">
+                  <div class="flex flex-col items-center justify-center">
+                    <img src="assets/animations/empty-state.gif" alt="Belum ada data" class="mx-auto h-32 w-32 sm:h-36 sm:w-36 object-contain select-none pointer-events-none" />
+                    <p class="mt-4 text-sm font-medium text-slate-600 sm:text-base">${adaFilter ? 'Tidak ada hasil yang cocok' : 'Belum ada data untuk ditampilkan'}</p>
                     ${adaFilter ? html`
                       <button
                         type="button"
                         data-action="reset-filter-direct"
-                        class="${buttonClass({ variant: 'outline', size: 'sm', className: 'mt-2' })}"
+                        class="${buttonClass({ variant: 'outline', size: 'sm', className: 'mt-3' })}"
                       >
                         Setel Ulang Filter
                       </button>

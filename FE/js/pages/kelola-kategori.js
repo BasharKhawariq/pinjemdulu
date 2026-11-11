@@ -368,11 +368,9 @@ export function renderKategoriTableContent({
   if (items.length === 0) {
     if (adaCari) {
       return html`
-        <div class="flex flex-col items-center justify-center p-12 text-center border border-dashed border-border rounded-2xl bg-card">
-          <div class="h-12 w-12 rounded-2xl bg-muted/50 flex items-center justify-center text-muted-foreground mb-3">
-            ${renderIcon('Search', 'h-6 w-6')}
-          </div>
-          <h3 class="text-base font-semibold text-foreground">Tidak ada kategori ditemukan</h3>
+        <div class="flex flex-col items-center justify-center p-10 text-center border border-dashed border-border rounded-2xl bg-card">
+          <img src="assets/animations/empty-state.gif" alt="Belum ada data" class="mx-auto h-32 w-32 sm:h-36 sm:w-36 object-contain select-none pointer-events-none" />
+          <h3 class="mt-4 text-base font-semibold text-foreground">Tidak ada kategori ditemukan</h3>
           <p class="text-xs text-muted-foreground mt-1 max-w-sm">
             Tidak ditemukan kategori dengan kata kunci <strong>"${cari}"</strong>.
           </p>
@@ -388,14 +386,9 @@ export function renderKategoriTableContent({
     }
 
     return html`
-      <div class="flex flex-col items-center justify-center p-12 text-center border border-dashed border-border rounded-2xl bg-card">
-        <div class="h-12 w-12 rounded-2xl bg-muted/50 flex items-center justify-center text-muted-foreground mb-3">
-          ${renderIcon('FolderTree', 'h-6 w-6')}
-        </div>
-        <h3 class="text-base font-semibold text-foreground">Belum ada kategori</h3>
-        <p class="text-xs text-muted-foreground mt-1 max-w-sm">
-          Mulai dengan menambahkan kategori baru untuk barang inventaris Anda.
-        </p>
+      <div class="flex flex-col items-center justify-center p-10 text-center border border-dashed border-border rounded-2xl bg-card">
+        <img src="assets/animations/empty-state.gif" alt="Belum ada data" class="mx-auto h-32 w-32 sm:h-36 sm:w-36 object-contain select-none pointer-events-none" />
+        <p class="mt-4 text-sm font-medium text-slate-600 sm:text-base">Belum ada data untuk ditampilkan</p>
         <button
           type="button"
           data-action="open-tambah-dialog"

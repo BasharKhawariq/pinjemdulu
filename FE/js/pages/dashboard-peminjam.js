@@ -13,102 +13,8 @@ import { formatTanggal } from '../lib/format.js';
 import { renderIcon } from '../ui/icons.js';
 import { escapeHtml } from '../ui/html.js';
 import { renderOrganisasiLogo } from '../ui/organisasi-badge.js';
+import { renderEmptyState } from '../ui/empty-state.js';
 import * as PlaceholderPage from './placeholder.js';
-
-const DEMO_PENGEMBALIAN_ROWS = [
-  {
-    id: 'dash-ret-1',
-    namaBarang: 'Proyektor Epson',
-    organisasi: 'HMTI',
-    tanggalMulai: '2026-10-20',
-    tanggalSelesai: '2026-10-25',
-    tanggalDikembalikan: null,
-    jumlahUnit: 1,
-    status: 'menunggu',
-    keperluan: 'Seminar Nasional HMTI',
-  },
-  {
-    id: 'dash-ret-2',
-    namaBarang: 'Kabel HDMI',
-    organisasi: 'HME',
-    tanggalMulai: '2026-08-15',
-    tanggalSelesai: '2026-08-20',
-    tanggalDikembalikan: null,
-    jumlahUnit: 1,
-    status: 'dikembalikan',
-    keperluan: 'Workshop Elektronika',
-  },
-  {
-    id: 'dash-ret-3',
-    namaBarang: 'Camera Canon 700D',
-    organisasi: 'HMS',
-    tanggalMulai: '2026-07-07',
-    tanggalSelesai: '2026-07-12',
-    tanggalDikembalikan: null,
-    jumlahUnit: 1,
-    status: 'terlambat',
-    keperluan: 'Dokumentasi Proyek Lapangan',
-  },
-  {
-    id: 'dash-ret-4',
-    namaBarang: 'Speaker Portable',
-    organisasi: 'HIMANIA',
-    tanggalMulai: '2026-04-26',
-    tanggalSelesai: '2026-04-30',
-    tanggalDikembalikan: null,
-    jumlahUnit: 1,
-    status: 'dikembalikan',
-    keperluan: 'Rapat Anggota Tahunan',
-  },
-];
-
-const DEMO_PEMINJAMAN_ROWS = [
-  {
-    id: 'dash-pinjam-1',
-    namaBarang: 'Proyektor Epson',
-    organisasi: 'HMTI',
-    tanggalDiajukan: '2026-10-15',
-    tanggalMulai: '2026-10-20',
-    tanggalSelesai: '2026-10-25',
-    jumlahUnit: 1,
-    status: 'diajukan',
-    keperluan: 'Seminar Nasional HMTI',
-  },
-  {
-    id: 'dash-pinjam-2',
-    namaBarang: 'Kabel HDMI',
-    organisasi: 'HME',
-    tanggalDiajukan: '2026-08-10',
-    tanggalMulai: '2026-08-15',
-    tanggalSelesai: '2026-08-20',
-    jumlahUnit: 1,
-    status: 'disetujui',
-    keperluan: 'Workshop Elektronika',
-  },
-  {
-    id: 'dash-pinjam-3',
-    namaBarang: 'Camera Canon 700D',
-    organisasi: 'HMS',
-    tanggalDiajukan: '2026-07-01',
-    tanggalMulai: '2026-07-07',
-    tanggalSelesai: '2026-07-12',
-    jumlahUnit: 1,
-    status: 'dipinjam',
-    keperluan: 'Dokumentasi Proyek Lapangan',
-  },
-  {
-    id: 'dash-pinjam-4',
-    namaBarang: 'Speaker Portable',
-    organisasi: 'HIMANIA',
-    tanggalDiajukan: '2026-04-20',
-    tanggalMulai: '2026-04-26',
-    tanggalSelesai: '2026-04-30',
-    jumlahUnit: 1,
-    status: 'ditolak',
-    keperluan: 'Rapat Anggota Tahunan',
-    alasanPenolakan: 'Jadwal bentrok dengan kegiatan internal organisasi.',
-  },
-];
 
 let activeTab = 'peminjaman';
 let currentUser = null;
@@ -177,29 +83,23 @@ function computeStats() {
     };
   }
 
-  const extraLoans = Math.max(0, livePeminjaman.length - 3);
-  const extraApproved = livePeminjaman.slice(0, extraLoans).filter((r) => r.status === STATUS_PEMINJAMAN.DISETUJUI).length;
-  const extraRejected = livePeminjaman.slice(0, extraLoans).filter((r) => r.status === STATUS_PEMINJAMAN.DITOLAK).length;
-  const extraReturned = livePeminjaman.slice(0, extraLoans).filter((r) => r.status === STATUS_PEMINJAMAN.DIKEMBALIKAN).length;
-  const extraLate = livePeminjaman.slice(0, extraLoans).filter((r) => r.status === STATUS_PEMINJAMAN.TERLAMBAT).length;
-
   const nim = currentUser?.nim || null;
   const pjCount = nim
-    ? liveRequestPj.filter((item) => String(item.pemohon?.nim) === String(nim)).length || 1
-    : 1;
+    ? liveRequestPj.filter((item) => String(item.pemohon?.nim) === String(nim)).length
+    : 0;
 
   return {
-    disetujui: 2 + extraApproved,
-    ditolak: 3 + extraRejected,
-    dikembalikan: 4 + extraReturned,
-    terlambat: 0 + extraLate,
-    totalPeminjaman: 9 + extraLoans,
+    disetujui: livePeminjaman.filter((r) => r.status === STATUS_PEMINJAMAN.DISETUJUI || String(r.status).toLowerCase() === 'disetujui').length,
+    ditolak: livePeminjaman.filter((r) => r.status === STATUS_PEMINJAMAN.DITOLAK || String(r.status).toLowerCase() === 'ditolak').length,
+    dikembalikan: livePeminjaman.filter((r) => r.status === STATUS_PEMINJAMAN.DIKEMBALIKAN || String(r.status).toLowerCase() === 'dikembalikan').length,
+    terlambat: livePeminjaman.filter((r) => r.status === STATUS_PEMINJAMAN.TERLAMBAT || String(r.status).toLowerCase() === 'terlambat').length,
+    totalPeminjaman: livePeminjaman.length,
     pengajuanPj: pjCount,
   };
 }
 
 function getPeminjamanTableRows() {
-  if (!isMockEnabled() && livePeminjaman.length > 0) {
+  if (livePeminjaman.length > 0) {
     return livePeminjaman.slice(0, 4).map((row, idx) => ({
       id: String(row.id || row.idPeminjaman || `live-${idx}`),
       namaBarang: row.inventaris?.namaBarang || row.barang?.namaBarang || row.namaBarang || 'Barang inventaris',
@@ -214,25 +114,11 @@ function getPeminjamanTableRows() {
       alasanPenolakan: row.alasanPenolakan || null,
     }));
   }
-
-  const extraLoans = Math.max(0, livePeminjaman.length - 3);
-  const dynamicMapped = livePeminjaman.slice(0, extraLoans).map((row, idx) => ({
-    id: String(row.id || row.idPeminjaman || `live-${idx}`),
-    namaBarang: row.inventaris?.namaBarang || row.barang?.namaBarang || 'Barang inventaris',
-    organisasi: row.inventaris?.namaOrganisasi || row.barang?.organisasi || 'BEM',
-    tanggalDiajukan: row.tanggalPengajuan || row.startDate,
-    tanggalMulai: row.startDate || row.mulai,
-    tanggalSelesai: row.endDate || row.selesai,
-    jumlahUnit: row.jumlahPinjam ?? 1,
-    status: row.status,
-    keperluan: row.keperluan || '—',
-    alasanPenolakan: row.alasanPenolakan || null,
-  }));
-  return [...dynamicMapped, ...DEMO_PEMINJAMAN_ROWS].slice(0, 4);
+  return [];
 }
 
 function getPengembalianTableRows() {
-  if (!isMockEnabled() && livePengembalian.length > 0) {
+  if (livePengembalian.length > 0) {
     return livePengembalian.slice(0, 4).map((row, idx) => ({
       id: String(row.id || row.idPengembalian || `live-${idx}`),
       namaBarang: row.namaBarang || 'Barang inventaris',
@@ -247,8 +133,7 @@ function getPengembalianTableRows() {
       alasanPenolakan: row.alasanPenolakan || null,
     }));
   }
-
-  return DEMO_PENGEMBALIAN_ROWS.slice(0, 4);
+  return [];
 }
 
 function renderSummaryCards() {
@@ -342,7 +227,7 @@ function renderTable() {
     )
     .join('');
 
-  const bodyHtml = rows
+  const bodyHtml = rows.length ? rows
     .map((row, index) => {
       const badge = getStatusBadge(row.status);
       const orgBadgeCls = getOrgBadgeClass(row.organisasi);
@@ -392,7 +277,7 @@ function renderTable() {
         </tr>
       `;
     })
-    .join('');
+    .join('') : renderEmptyState({ colspan: 8 });
 
   return `
     <div class="overflow-x-auto">

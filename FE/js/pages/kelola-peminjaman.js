@@ -20,6 +20,7 @@ import { selectClass, inputClass } from "../ui/classes.js";
 import { validateFotoFile } from "../lib/inventaris-form.js";
 import { compressImageToDataUrl } from "./kelola-inventaris-form.js";
 import { renderOrganisasiLogo } from "../ui/organisasi-badge.js";
+import { renderEmptyState } from "../ui/empty-state.js";
 
 const OKI_LIST = [
   "BEM",
@@ -234,7 +235,7 @@ function renderTableRows() {
   const start = (currentPage - 1) * PAGE_SIZE;
   const pageRows = filtered.slice(start, start + PAGE_SIZE);
   if (!pageRows.length)
-    return `<tr><td colspan="9" class="px-6 py-16 text-center text-sm text-slate-400">${renderIcon("Search", "mr-2 inline h-4 w-4")}Tidak ada pengajuan peminjaman yang cocok.</td></tr>`;
+    return renderEmptyState({ colspan: 9 });
   return pageRows
     .map((row, index) => {
       const id = String(row.id || row.idPeminjaman);
@@ -451,41 +452,7 @@ function renderModal() {
 
 async function loadRows() {
   const all = await getKelolaPeminjaman();
-  const active = all.filter(
-    (row) =>
-      row.status !== STATUS_PEMINJAMAN.DIKEMBALIKAN &&
-      String(row.status).toLowerCase() !== "selesai",
-  );
-  const pending = active.filter(
-    (row) =>
-      row.status === STATUS_PEMINJAMAN.DIAJUKAN ||
-      String(row.status).toLowerCase() === "diajukan" ||
-      String(row.status).toLowerCase() === "menunggu_persetujuan",
-  );
-  const borrowed = active.find(
-    (row) =>
-      row.status === STATUS_PEMINJAMAN.DIPINJAM ||
-      String(row.status).toLowerCase() === "sedang_dipinjam" ||
-      String(row.status).toLowerCase() === "dipinjam",
-  );
-  const rejected = active.find(
-    (row) =>
-      row.status === STATUS_PEMINJAMAN.DITOLAK ||
-      String(row.status).toLowerCase() === "ditolak",
-  );
-  const approved = active.find(
-    (row) =>
-      row.status === STATUS_PEMINJAMAN.DISETUJUI ||
-      String(row.status).toLowerCase() === "disetujui",
-  );
-  const initialFive = [
-    ...pending.slice(0, 2),
-    borrowed,
-    rejected,
-    approved,
-  ].filter(Boolean);
-  const rest = active.filter((r) => !initialFive.includes(r));
-  return [...initialFive, ...rest];
+  return all || [];
 }
 
 function renderContent() {

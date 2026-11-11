@@ -21,6 +21,7 @@ import { renderModal } from '../ui/modal.js';
 import { renderPagination as renderSharedPagination } from '../ui/pagination.js';
 import { mockUsers } from '../data/users.js';
 import { renderOrganisasiLogo } from '../ui/organisasi-badge.js';
+import { renderEmptyState } from '../ui/empty-state.js';
 
 const PAGE_SIZE = 5;
 
@@ -88,10 +89,7 @@ function renderRows() {
   const visible = filtered.slice(start, start + PAGE_SIZE);
 
   if (!visible.length) {
-    return `<tr><td colspan="5" class="px-5 py-14 text-center text-sm text-zinc-500">
-      <div class="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 text-zinc-400">${renderIcon('Search', 'h-5 w-5')}</div>
-      Tidak ada pengajuan PJ pada kategori ini.
-    </td></tr>`;
+    return renderEmptyState({ colspan: 5 });
   }
 
   return visible.map((row, index) => {

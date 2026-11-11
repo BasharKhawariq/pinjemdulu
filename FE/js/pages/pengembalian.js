@@ -9,6 +9,7 @@ import { renderSearchInput } from '../ui/search-input.js';
 import { renderStatusChip } from '../ui/status-chip.js';
 import { renderModal as renderGlobalModal } from '../ui/modal.js';
 import { renderOrganisasiLogo } from '../ui/organisasi-badge.js';
+import { renderEmptyState } from '../ui/empty-state.js';
 
 const TABS = [
   { key: 'menunggu', label: 'Menunggu' },
@@ -17,17 +18,7 @@ const TABS = [
   { key: 'ditolak', label: 'Ditolak' },
 ];
 
-// Data contoh untuk menyamakan tampilan awal dengan desain Figma.
-// Ganti dengan data dari service/backend ketika integrasi API dilakukan.
-const DEMO_ROWS = [
-  { id: 'ret-1', namaBarang: 'Proyektor Epson', organisasi: 'HMTI', tanggalMulai: '2026-10-20', tanggalSelesai: '2026-10-17', tanggalDikembalikan: null, jumlahUnit: 1, status: 'menunggu', keperluan: 'Seminar BEM' },
-  { id: 'ret-2', namaBarang: 'Kabel HDMI', organisasi: 'HME', tanggalMulai: '2026-08-15', tanggalSelesai: '2026-08-20', tanggalDikembalikan: null, jumlahUnit: 1, status: 'menunggu', keperluan: 'Workshop HME' },
-  { id: 'ret-3', namaBarang: 'Camera Canon 700D', organisasi: 'HMS', tanggalMulai: '2026-07-07', tanggalSelesai: '2026-07-12', tanggalDikembalikan: null, jumlahUnit: 1, status: 'menunggu', keperluan: 'Dokumentasi kegiatan' },
-  { id: 'ret-4', namaBarang: 'Speaker Portable', organisasi: 'HIMANIA', tanggalMulai: '2026-04-26', tanggalSelesai: '2026-04-30', tanggalDikembalikan: null, jumlahUnit: 1, status: 'menunggu', keperluan: 'Pentas seni' },
-  { id: 'ret-5', namaBarang: 'Proyektor Epson', organisasi: 'HMTI', tanggalMulai: '2026-10-20', tanggalSelesai: '2026-10-17', tanggalDikembalikan: '2026-10-25', jumlahUnit: 1, status: 'dikembalikan', diprosesOleh: 'Hanin Maizah', keperluan: 'Seminar BEM' },
-  { id: 'ret-6', namaBarang: 'Kabel HDMI', organisasi: 'HME', tanggalMulai: '2026-10-20', tanggalSelesai: '2026-10-17', tanggalDikembalikan: '2026-10-25', jumlahUnit: 1, status: 'terlambat', diprosesOleh: 'Hanin Maizah', waktuTerlambat: 3, keperluan: 'Seminar BEM' },
-  { id: 'ret-7', namaBarang: 'Kabel HDMI', organisasi: 'HME', tanggalMulai: '2026-10-20', tanggalSelesai: '2026-10-17', tanggalDikembalikan: null, jumlahUnit: 1, status: 'ditolak', diprosesOleh: 'Hanin Maizah', alasanPenolakan: 'Jumlah barang yang dikembalikan kurang lengkap', keperluan: 'Seminar BEM' },
-];
+const DEMO_ROWS = [];
 
 let activeTab = 'menunggu';
 let searchTerm = '';
@@ -63,7 +54,7 @@ function renderRows() {
   const start = (currentPage - 1) * PAGE_SIZE;
   const visible = rows.slice(start, start + PAGE_SIZE);
   if (!visible.length) {
-    return `<tr><td colspan="8" class="px-5 py-14 text-center text-sm text-slate-400">Tidak ada data pengembalian pada kategori ini.</td></tr>`;
+    return renderEmptyState({ colspan: 8 });
   }
   return visible.map((row, index) => `
     <tr class="border-b border-zinc-100 last:border-0 hover:bg-zinc-50/60">
@@ -287,12 +278,12 @@ export async function mount(root, ctx = {}) {
         waktuTerlambat: p.waktuTerlambat,
       };
     });
+    DEMO_ROWS.length = 0;
     if (mapped.length) {
-      DEMO_ROWS.length = 0;
       DEMO_ROWS.push(...mapped);
     }
   } catch {
-    // pertahankan demo rows
+    DEMO_ROWS.length = 0;
   }
   refreshTable();
   onClickHandler = async (event) => {

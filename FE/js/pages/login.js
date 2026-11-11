@@ -84,72 +84,6 @@ function renderForgotPasswordPage() {
   `.toString();
 }
 
-const REAL_DEMO_USERS = [
-  {
-    nama: 'Rizky Pratama',
-    nim: '2441720001',
-    role: 'penanggung_jawab',
-    organisasi: { nama: 'HMTI', singkatan: 'HMTI' },
-    statusAkun: 'aktif',
-  },
-  {
-    nama: 'Fajar Nugroho',
-    nim: '2441720011',
-    role: 'peminjam',
-    organisasi: { nama: 'HMTI', singkatan: 'HMTI' },
-    statusAkun: 'aktif',
-  },
-  {
-    nama: 'Nadia Putri',
-    nim: '2441720002',
-    role: 'penanggung_jawab',
-    organisasi: { nama: 'BEM', singkatan: 'BEM' },
-    statusAkun: 'aktif',
-  },
-  {
-    nama: 'Andi Setiawan',
-    nim: '2441720013',
-    role: 'peminjam',
-    organisasi: { nama: 'BEM', singkatan: 'BEM' },
-    statusAkun: 'aktif',
-  },
-  {
-    nama: 'Dimas Saputra',
-    nim: '2441720003',
-    role: 'penanggung_jawab',
-    organisasi: { nama: 'THEATRISIC', singkatan: 'THEATRISIC' },
-    statusAkun: 'aktif',
-  },
-  {
-    nama: 'Putri Ayu',
-    nim: '2441720014',
-    role: 'peminjam',
-    organisasi: { nama: 'THEATRISIC', singkatan: 'THEATRISIC' },
-    statusAkun: 'aktif',
-  },
-  {
-    nama: 'Salsa Maharani',
-    nim: '2441720004',
-    role: 'penanggung_jawab',
-    organisasi: { nama: 'HME', singkatan: 'HME' },
-    statusAkun: 'aktif',
-  },
-  {
-    nama: 'Rendra Mahendra',
-    nim: '2441720015',
-    role: 'peminjam',
-    organisasi: { nama: 'HME', singkatan: 'HME' },
-    statusAkun: 'aktif',
-  },
-];
-
-function getInitials(name = '') {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (!parts.length) return 'U';
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
-
 /**
  * Render halaman login tanpa shell (full-screen dua kolom).
  * @param {object} [ctx]
@@ -163,60 +97,6 @@ export function render(ctx = {}) {
   if (authView === 'forgot') {
     return renderForgotPasswordPage();
   }
-
-  const demoList = isMockEnabled() ? mockUsers : REAL_DEMO_USERS;
-  const quickUsers = demoList.map((u) => {
-    const isNonaktif = (u.statusAkun || u.status_akun) !== 'aktif';
-    const isPj = u.role === 'penanggung_jawab';
-    const roleName = isPj ? 'PJ' : 'Peminjam';
-    const roleFullName = isPj ? 'PJ Inventaris' : 'Peminjam';
-    const orgName =
-      typeof u.organisasi === 'object' && u.organisasi
-        ? u.organisasi.namaOrganisasi || u.organisasi.nama || u.organisasi.singkatan || 'OKI'
-        : String(u.organisasi || 'OKI');
-    const initials = getInitials(u.nama);
-
-    return html`
-      <button
-        type="button"
-        data-action="quick-login"
-        data-role="${u.role}"
-        data-nim="${u.nim || ''}"
-        data-password="${u.nim || ''}"
-        data-email="${u.email || ''}"
-        class="group flex items-center justify-between gap-2.5 rounded-xl border border-zinc-200/90 bg-white p-2.5 text-left transition hover:border-primary/40 hover:bg-zinc-50 hover:shadow-xs focus:outline-none focus:ring-2 focus:ring-primary/20"
-      >
-        <div class="flex min-w-0 items-center gap-2.5">
-          <span
-            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${isPj
-              ? 'bg-amber-100 text-amber-800'
-              : 'bg-blue-100 text-blue-700'} text-xs font-bold"
-          >
-            ${initials}
-          </span>
-          <div class="min-w-0 flex-1">
-            <div class="flex items-center gap-1.5">
-              <p class="truncate text-xs font-semibold text-zinc-900">${u.nama}</p>
-              ${isNonaktif
-                ? raw(
-                    '<span class="shrink-0 rounded bg-rose-100 px-1 py-0.2 text-[9px] font-bold uppercase tracking-wider text-rose-700">Nonaktif</span>'
-                  )
-                : raw(
-                    `<span class="shrink-0 rounded ${
-                      isPj ? 'bg-amber-50 text-amber-800' : 'bg-blue-50 text-blue-700'
-                    } px-1.5 py-0.2 text-[9px] font-medium">${roleName}</span>`
-                  )}
-            </div>
-            <p class="truncate text-[11px] font-mono text-zinc-500">NIM: ${u.nim || '—'}</p>
-            <p class="flex items-center gap-1 truncate text-[10px] text-zinc-400"><span>${roleFullName} ·</span> <span class="inline-flex items-center gap-1">${raw(renderOrganisasiLogo(orgName, u.logoUrl || u.organisasi?.logoUrl, 'h-3.5 w-3.5'))}<span>${orgName}</span></span></p>
-          </div>
-        </div>
-        <span class="shrink-0 text-zinc-300 transition-transform group-hover:translate-x-0.5 group-hover:text-primary">
-          ${renderIcon('ChevronRight', 'h-4 w-4')}
-        </span>
-      </button>
-    `;
-  });
 
   return html`
     <main class="min-h-screen w-full overflow-x-hidden bg-white text-zinc-900">
@@ -359,69 +239,6 @@ export function render(ctx = {}) {
                 <span>Masuk</span>
               </button>
             </form>
-
-            <!-- Panel Masuk Cepat (Mock) -->
-            <div class="mt-8 rounded-2xl border border-zinc-200 bg-zinc-50/80 p-3.5 sm:p-4 shadow-xs">
-              <div class="mb-3 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <div class="flex items-center gap-1.5">
-                    <span class="inline-flex h-5 w-5 items-center justify-center rounded-md bg-primary/10 text-primary">
-                      ${renderIcon('Sparkles', 'h-3.5 w-3.5')}
-                    </span>
-                    <p class="text-xs font-bold uppercase tracking-wider text-zinc-900">
-                      Pilih Akun Demo (Mock)
-                    </p>
-                    <span class="rounded-full bg-emerald-100 px-2 py-0.2 text-[9px] font-bold uppercase tracking-wider text-emerald-800">
-                      8 Akun
-                    </span>
-                  </div>
-                  <p class="mt-0.5 text-[11px] text-zinc-500">
-                    Klik akun untuk masuk instan tanpa perlu password & captcha.
-                  </p>
-                </div>
-
-                <!-- Filter Role Tab -->
-                <div class="flex items-center gap-1 rounded-lg bg-zinc-200/70 p-1 self-start sm:self-auto" role="tablist" aria-label="Filter Akun Mock">
-                  <button
-                    type="button"
-                    data-action="filter-mock-role"
-                    data-role="all"
-                    class="rounded-md bg-white px-2.5 py-1 text-[11px] font-semibold text-zinc-900 shadow-xs transition"
-                  >
-                    Semua
-                  </button>
-                  <button
-                    type="button"
-                    data-action="filter-mock-role"
-                    data-role="peminjam"
-                    class="rounded-md px-2.5 py-1 text-[11px] font-medium text-zinc-600 hover:text-zinc-900 transition"
-                  >
-                    Peminjam
-                  </button>
-                  <button
-                    type="button"
-                    data-action="filter-mock-role"
-                    data-role="penanggung_jawab"
-                    class="rounded-md px-2.5 py-1 text-[11px] font-medium text-zinc-600 hover:text-zinc-900 transition"
-                  >
-                    PJ OKI
-                  </button>
-                </div>
-              </div>
-
-              <!-- List Grid Terbatas (Max Height + Scrollable) -->
-              <div
-                id="mock-users-grid"
-                class="grid grid-cols-1 gap-2 sm:grid-cols-2 max-h-[210px] overflow-y-auto pr-1"
-              >
-                ${quickUsers}
-              </div>
-
-              <div class="mt-2.5 flex items-center justify-between border-t border-zinc-200/60 pt-2 text-[11px] text-zinc-400">
-                <span>Gunakan scroll untuk melihat akun lainnya</span>
-                <span id="mock-count-info" class="font-medium text-zinc-500">8 dari 8 akun</span>
-              </div>
-            </div>
 
             <!-- Footer Hak Cipta -->
             <footer class="mt-12 py-4 text-center text-xs text-zinc-400">
@@ -666,54 +483,6 @@ export function mount(root) {
   // Tombol refresh captcha
   root.querySelector('[data-action="refresh-captcha"]')?.addEventListener('click', () => {
     refreshCaptcha();
-  });
-
-  // Masuk Cepat
-  root.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-action="quick-login"]');
-    if (!btn || submitting) return;
-    const nim = btn.getAttribute('data-nim');
-    const email = btn.getAttribute('data-email');
-    const password = btn.getAttribute('data-password') || (isMockEnabled() ? '' : nim);
-    if (nim || email) {
-      performLogin({
-        nim,
-        email,
-        password,
-        captchaId: 'MOCK-QUICKLOGIN',
-        captchaAnswer: '',
-      });
-    }
-  });
-
-  // Filter Tab Akun Mock
-  const filterBtns = root.querySelectorAll('[data-action="filter-mock-role"]');
-  const userCards = root.querySelectorAll('[data-action="quick-login"]');
-  const countInfo = root.querySelector('#mock-count-info');
-
-  filterBtns.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const targetRole = btn.getAttribute('data-role');
-
-      filterBtns.forEach((b) => {
-        b.className =
-          b === btn
-            ? 'rounded-md bg-white px-2.5 py-1 text-[11px] font-semibold text-zinc-900 shadow-xs transition'
-            : 'rounded-md px-2.5 py-1 text-[11px] font-medium text-zinc-600 hover:text-zinc-900 transition';
-      });
-
-      let visibleCount = 0;
-      userCards.forEach((card) => {
-        const role = card.getAttribute('data-role');
-        const match = targetRole === 'all' || role === targetRole;
-        card.classList.toggle('hidden', !match);
-        if (match) visibleCount++;
-      });
-
-      if (countInfo) {
-        countInfo.textContent = `${visibleCount} dari ${userCards.length} akun`;
-      }
-    });
   });
 
   // Submit Formulir Utama

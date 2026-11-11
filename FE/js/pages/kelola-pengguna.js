@@ -8,6 +8,7 @@ import { renderModal as renderModalComponent } from '../ui/modal.js';
 import { renderFilterButton, renderFilterModal } from '../ui/filter.js';
 import { selectClass } from '../ui/classes.js';
 import { renderOrganisasiLogo } from '../ui/organisasi-badge.js';
+import { renderEmptyState } from '../ui/empty-state.js';
 
 const DEMO_ORDER = ['Bintang Putra', 'Berbinar Neira', 'Gama Punta', 'Gentala Arka', 'Hanin Maizah', 'Jingga Pratama', 'Maitri Sakti', 'Maria Khalda', 'Rion Ardian', 'Tiara Ayudya'];
 const PAGE_SIZE = 10;
@@ -85,7 +86,7 @@ function renderRows() {
   currentPage = Math.min(currentPage, pages);
   const start = (currentPage - 1) * PAGE_SIZE;
   const pageRows = filtered.slice(start, start + PAGE_SIZE);
-  if (!pageRows.length) return `<tr><td colspan="6" class="px-5 py-16 text-center text-sm text-slate-400">${renderIcon('Search', 'mr-2 inline h-4 w-4')}Pengguna tidak ditemukan.</td></tr>`;
+  if (!pageRows.length) return renderEmptyState({ colspan: 6 });
   return pageRows.map((user, index) => {
     const active = isActive(user);
     const roleClass = user.role === ROLES.PENANGGUNG_JAWAB ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-700';

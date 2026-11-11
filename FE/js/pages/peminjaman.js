@@ -14,6 +14,7 @@ import { renderSearchInput } from '../ui/search-input.js';
 import { renderStatusChip } from '../ui/status-chip.js';
 import { renderModal } from '../ui/modal.js';
 import { renderOrganisasiLogo } from '../ui/organisasi-badge.js';
+import { renderEmptyState } from '../ui/empty-state.js';
 
 const TABS = [
   { key: 'diajukan', label: 'Diajukan', statuses: [STATUS_PEMINJAMAN.DIAJUKAN, 'diajukan'] },
@@ -130,10 +131,7 @@ function renderRows() {
   const visible = filtered.slice(start, start + PAGE_SIZE);
 
   if (!visible.length) {
-    return `<tr><td colspan="${activeTab === 'dipinjam' ? 9 : 8}" class="px-5 py-14 text-center text-sm text-zinc-500">
-      <div class="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 text-zinc-400">${renderIcon('Search', 'h-5 w-5')}</div>
-      Tidak ada data peminjaman pada kategori ini.
-    </td></tr>`;
+    return renderEmptyState({ colspan: activeTab === 'dipinjam' ? 9 : 8 });
   }
 
   return visible.map((row, index) => {

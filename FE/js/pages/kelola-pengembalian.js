@@ -13,6 +13,7 @@ import { renderModal as renderGlobalModal } from '../ui/modal.js';
 import { compressImageToDataUrl } from './kelola-inventaris-form.js';
 import { validateFotoFile } from '../lib/inventaris-form.js';
 import { renderOrganisasiLogo } from '../ui/organisasi-badge.js';
+import { renderEmptyState } from '../ui/empty-state.js';
 
 function renderReturnStatusChip(status) {
   const isRejected = String(status || '').toLowerCase().trim() === 'ditolak';
@@ -239,7 +240,7 @@ function renderTableRows() {
   currentPage = Math.min(currentPage, pages);
   const start = (currentPage - 1) * PAGE_SIZE;
   const pageRows = filtered.slice(start, start + PAGE_SIZE);
-  if (!pageRows.length) return `<tr><td colspan="8" class="px-6 py-16 text-center text-sm text-slate-400">${renderIcon('Search', 'mr-2 inline h-4 w-4')}Tidak ada data pengembalian yang cocok.</td></tr>`;
+  if (!pageRows.length) return renderEmptyState({ colspan: 8 });
   return pageRows.map((row, index) => {
     const id = String(row.id || row.idPeminjaman);
     const name = personName(row);

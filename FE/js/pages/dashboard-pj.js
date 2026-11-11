@@ -16,101 +16,7 @@ import { renderModal as renderModalComponent } from '../ui/modal.js';
 import { compressImageToDataUrl } from './kelola-inventaris-form.js';
 import { validateFotoFile } from '../lib/inventaris-form.js';
 import { renderOrganisasiLogo } from '../ui/organisasi-badge.js';
-
-const DEMO_PENGEMBALIAN_ROWS = [
-  {
-    id: 'dash-ret-1',
-    namaBarang: 'Proyektor Epson',
-    organisasi: 'HMTI',
-    tanggalMulai: '2026-10-20',
-    tanggalSelesai: '2026-10-25',
-    tanggalDikembalikan: null,
-    jumlahUnit: 1,
-    status: 'menunggu',
-    keperluan: 'Seminar Nasional HMTI',
-  },
-  {
-    id: 'dash-ret-2',
-    namaBarang: 'Kabel HDMI',
-    organisasi: 'HME',
-    tanggalMulai: '2026-08-15',
-    tanggalSelesai: '2026-08-20',
-    tanggalDikembalikan: null,
-    jumlahUnit: 1,
-    status: 'dikembalikan',
-    keperluan: 'Workshop Elektronika',
-  },
-  {
-    id: 'dash-ret-3',
-    namaBarang: 'Camera Canon 700D',
-    organisasi: 'HMS',
-    tanggalMulai: '2026-07-07',
-    tanggalSelesai: '2026-07-12',
-    tanggalDikembalikan: null,
-    jumlahUnit: 1,
-    status: 'terlambat',
-    keperluan: 'Dokumentasi Proyek Lapangan',
-  },
-  {
-    id: 'dash-ret-4',
-    namaBarang: 'Speaker Portable',
-    organisasi: 'HIMANIA',
-    tanggalMulai: '2026-04-26',
-    tanggalSelesai: '2026-04-30',
-    tanggalDikembalikan: null,
-    jumlahUnit: 1,
-    status: 'dikembalikan',
-    keperluan: 'Rapat Anggota Tahunan',
-  },
-];
-
-const DEMO_PEMINJAMAN_ROWS = [
-  {
-    id: 'dash-pinjam-1',
-    namaBarang: 'Proyektor Epson',
-    organisasi: 'HMTI',
-    tanggalDiajukan: '2026-10-15',
-    tanggalMulai: '2026-10-20',
-    tanggalSelesai: '2026-10-25',
-    jumlahUnit: 1,
-    status: 'diajukan',
-    keperluan: 'Seminar Nasional HMTI',
-  },
-  {
-    id: 'dash-pinjam-2',
-    namaBarang: 'Kabel HDMI',
-    organisasi: 'HME',
-    tanggalDiajukan: '2026-08-10',
-    tanggalMulai: '2026-08-15',
-    tanggalSelesai: '2026-08-20',
-    jumlahUnit: 1,
-    status: 'disetujui',
-    keperluan: 'Workshop Elektronika',
-  },
-  {
-    id: 'dash-pinjam-3',
-    namaBarang: 'Camera Canon 700D',
-    organisasi: 'HMS',
-    tanggalDiajukan: '2026-07-01',
-    tanggalMulai: '2026-07-07',
-    tanggalSelesai: '2026-07-12',
-    jumlahUnit: 1,
-    status: 'dipinjam',
-    keperluan: 'Dokumentasi Proyek Lapangan',
-  },
-  {
-    id: 'dash-pinjam-4',
-    namaBarang: 'Speaker Portable',
-    organisasi: 'HIMANIA',
-    tanggalDiajukan: '2026-04-20',
-    tanggalMulai: '2026-04-26',
-    tanggalSelesai: '2026-04-30',
-    jumlahUnit: 1,
-    status: 'ditolak',
-    keperluan: 'Rapat Anggota Tahunan',
-    alasanPenolakan: 'Jadwal bentrok dengan kegiatan internal organisasi.',
-  },
-];
+import { renderEmptyState } from '../ui/empty-state.js';
 
 let activeTab = 'peminjaman';
 let managementTab = 'peminjaman';
@@ -248,52 +154,62 @@ function getStatusBadge(status, isReturn = false) {
 }
 
 function computeStats() {
-  const extraLoans = Math.max(0, livePeminjaman.length - 3);
-  const extraApproved = livePeminjaman.slice(0, extraLoans).filter((r) => r.status === STATUS_PEMINJAMAN.DISETUJUI).length;
-  const extraRejected = livePeminjaman.slice(0, extraLoans).filter((r) => r.status === STATUS_PEMINJAMAN.DITOLAK).length;
-  const extraReturned = livePeminjaman.slice(0, extraLoans).filter((r) => r.status === STATUS_PEMINJAMAN.DIKEMBALIKAN).length;
-  const extraLate = livePeminjaman.slice(0, extraLoans).filter((r) => r.status === STATUS_PEMINJAMAN.TERLAMBAT).length;
-
   const nim = currentUser?.nim || null;
   const pjCount = nim
-    ? liveRequestPj.filter((item) => String(item.pemohon?.nim) === String(nim)).length || 1
-    : 1;
+    ? liveRequestPj.filter((item) => String(item.pemohon?.nim) === String(nim)).length
+    : 0;
 
   return {
-    disetujui: 2 + extraApproved,
-    ditolak: 3 + extraRejected,
-    dikembalikan: 4 + extraReturned,
-    terlambat: 0 + extraLate,
-    totalPeminjaman: 9 + extraLoans,
+    disetujui: livePeminjaman.filter((r) => r.status === STATUS_PEMINJAMAN.DISETUJUI || String(r.status).toLowerCase() === 'disetujui').length,
+    ditolak: livePeminjaman.filter((r) => r.status === STATUS_PEMINJAMAN.DITOLAK || String(r.status).toLowerCase() === 'ditolak').length,
+    dikembalikan: livePeminjaman.filter((r) => r.status === STATUS_PEMINJAMAN.DIKEMBALIKAN || String(r.status).toLowerCase() === 'dikembalikan').length,
+    terlambat: livePeminjaman.filter((r) => r.status === STATUS_PEMINJAMAN.TERLAMBAT || String(r.status).toLowerCase() === 'terlambat').length,
+    totalPeminjaman: livePeminjaman.length,
     pengajuanPj: pjCount,
   };
 }
 
 function getPeminjamanTableRows() {
-  const extraLoans = Math.max(0, livePeminjaman.length - 3);
-  const dynamicMapped = livePeminjaman.slice(0, extraLoans).map((row, idx) => ({
-    id: String(row.id || row.idPeminjaman || `live-${idx}`),
-    namaBarang: row.inventaris?.namaBarang || row.barang?.namaBarang || 'Barang inventaris',
-    organisasi: row.inventaris?.namaOrganisasi || row.barang?.organisasi || 'BEM',
-    tanggalDiajukan: row.tanggalPengajuan || row.startDate,
-    tanggalMulai: row.startDate || row.mulai,
-    tanggalSelesai: row.endDate || row.selesai,
-    jumlahUnit: row.jumlahPinjam ?? 1,
-    status: row.status,
-    keperluan: row.keperluan || '—',
-    alasanPenolakan: row.alasanPenolakan || null,
-  }));
-  return [...dynamicMapped, ...DEMO_PEMINJAMAN_ROWS].slice(0, 4);
+  if (livePeminjaman.length > 0) {
+    return livePeminjaman.slice(0, 4).map((row, idx) => ({
+      id: String(row.id || row.idPeminjaman || `live-${idx}`),
+      namaBarang: row.inventaris?.namaBarang || row.barang?.namaBarang || 'Barang inventaris',
+      organisasi: row.inventaris?.namaOrganisasi || row.barang?.organisasi || 'BEM',
+      tanggalDiajukan: row.tanggalPengajuan || row.startDate,
+      tanggalMulai: row.startDate || row.mulai,
+      tanggalSelesai: row.endDate || row.selesai,
+      jumlahUnit: row.jumlahPinjam ?? 1,
+      status: row.status,
+      keperluan: row.keperluan || '—',
+      alasanPenolakan: row.alasanPenolakan || null,
+    }));
+  }
+  return [];
 }
 
 function getPengembalianTableRows() {
-  return DEMO_PENGEMBALIAN_ROWS.slice(0, 4);
+  if (livePengembalian.length > 0) {
+    return livePengembalian.slice(0, 4).map((row, idx) => ({
+      id: String(row.id || row.idPengembalian || `live-${idx}`),
+      namaBarang: row.namaBarang || 'Barang inventaris',
+      organisasi: row.organisasi || row.namaOrganisasi || 'Organisasi',
+      logoUrl: row.logoUrl,
+      tanggalMulai: row.tanggalMulai,
+      tanggalSelesai: row.tanggalSelesai,
+      tanggalDikembalikan: row.tanggalDikembalikan,
+      jumlahUnit: row.jumlahUnit ?? row.jumlahPinjam ?? 1,
+      status: row.status,
+      keperluan: row.keperluan || '—',
+      alasanPenolakan: row.alasanPenolakan || null,
+    }));
+  }
+  return [];
 }
 
 function renderSummaryCards() {
-  const applications = liveStats?.pengajuan ?? (livePeminjaman.filter((row) => String(row.status || '').toLowerCase() === 'diajukan').length || 2);
-  const damaged = liveStats?.rusak ?? (liveInventaris.filter((row) => String(row.kondisi || '').toLowerCase() === 'rusak').length || 3);
-  const available = liveStats?.tersedia ?? (liveInventaris.filter((row) => Number(row.sisaHariIni ?? row.totalBarang ?? 0) > 0 && String(row.kondisi || '').toLowerCase() !== 'rusak').length || 4);
+  const applications = liveStats?.pengajuan ?? livePeminjaman.filter((row) => String(row.status || '').toLowerCase() === 'diajukan').length;
+  const damaged = liveStats?.rusak ?? liveInventaris.filter((row) => String(row.kondisi || '').toLowerCase() === 'rusak').length;
+  const available = liveStats?.tersedia ?? liveInventaris.filter((row) => Number(row.sisaHariIni ?? row.totalBarang ?? 0) > 0 && String(row.kondisi || '').toLowerCase() !== 'rusak').length;
   const late = liveStats?.terlambat ?? livePeminjaman.filter((row) => String(row.status || '').toLowerCase() === 'terlambat').length;
   const cards = [
     { label: 'Pengajuan', value: applications, icon: 'Inbox', iconBoxClass: 'bg-blue-50 text-blue-600' },
@@ -312,8 +228,8 @@ function renderSummaryCards() {
 }
 
 function renderRightBannerCards() {
-  const totalUnits = liveStats?.totalUnit ?? (liveInventaris.reduce((sum, item) => sum + Number(item.totalBarang || 0), 0) || 9);
-  const approvals = liveStats?.persetujuanPj ?? (livePeminjaman.filter((row) => String(row.status || '').toLowerCase() === 'diajukan').length || 1);
+  const totalUnits = liveStats?.totalUnit ?? liveInventaris.reduce((sum, item) => sum + Number(item.totalBarang || 0), 0);
+  const approvals = liveStats?.persetujuanPj ?? livePeminjaman.filter((row) => String(row.status || '').toLowerCase() === 'diajukan').length;
   return `
     <div class="flex flex-col gap-3">
       <div class="relative flex min-h-[96px] flex-col items-center justify-between overflow-hidden rounded-2xl bg-primary px-5 py-3 text-white shadow-sm">
@@ -379,7 +295,7 @@ function renderManagementTable() {
       ${isReturn ? `<td class="whitespace-nowrap px-4 py-4 text-center">${renderStatusChip({ status: row.status, className: String(row.status || '').toLowerCase() === 'ditolak' ? 'status-chip-return-rejected' : '' })}</td>` : `<td class="whitespace-nowrap px-4 py-4 text-center">${renderStatusChip({ status: row.status })}</td>`}
       <td class="whitespace-nowrap px-1 py-4"><div class="flex items-center justify-center gap-0">${actionButtons}</div></td>
     </tr>`;
-  }).join('') : `<tr><td colspan="${isReturn ? 8 : 9}" class="px-6 py-16 text-center text-sm text-slate-400">${renderIcon('Search', 'mr-2 inline h-4 w-4')}Tidak ada data ${isReturn ? 'pengembalian' : 'peminjaman'}.</td></tr>`;
+  }).join('') : renderEmptyState({ colspan: isReturn ? 8 : 9 });
 
   const headers = isReturn
     ? '<th class="px-4 py-4 text-center font-semibold">No</th><th class="px-4 py-4 font-semibold">Nama Peminjam</th><th class="px-4 py-4 font-semibold">Barang Dipinjam</th><th class="px-4 py-4 text-center font-semibold">Tanggal Mulai</th><th class="px-4 py-4 text-center font-semibold">Tanggal Selesai</th><th class="px-4 py-4 text-center font-semibold">Tanggal Pengembalian</th><th class="px-4 py-4 text-center font-semibold">Status</th><th class="px-4 py-4 text-center font-semibold">Aksi</th>'
@@ -415,7 +331,7 @@ function renderTable() {
     )
     .join('');
 
-  const bodyHtml = rows
+  const bodyHtml = rows.length ? rows
     .map((row, index) => {
       const badge = getStatusBadge(row.status, isPengembalian);
       const orgBadgeCls = getOrgBadgeClass(row.organisasi);
@@ -465,7 +381,7 @@ function renderTable() {
         </tr>
       `;
     })
-    .join('');
+    .join('') : renderEmptyState({ colspan: 8 });
 
   return `
     <div class="overflow-x-auto">
