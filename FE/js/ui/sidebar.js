@@ -157,7 +157,7 @@ function renderSidebarNav(items, collapsed, currentHash, role = '', idPrefix = '
                   <span class="inline-block size-2 shrink-0 rounded-full ${
                     childActive ? 'bg-zinc-900' : 'bg-zinc-600 group-hover:bg-zinc-800'
                   }"></span>
-                  <span class="leading-tight">${escapeHtml(child.label)}</span>
+                  <span class="leading-tight ${child.key === 'nav-kelola-pengembalian' ? 'whitespace-nowrap text-[14px]' : ''}">${escapeHtml(child.label)}</span>
                   ${childBadge}
                 </a>
               </li>

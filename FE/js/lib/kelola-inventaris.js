@@ -56,17 +56,15 @@ export function filterKelolaInventaris(items = [], options = {}) {
   const catSet = catList.length > 0 ? new Set(catList) : null;
 
   // Kondisi
-  const normalizedKondisi = normalizeKondisi(kondisi);
-  const isKondisiInvalid = typeof kondisi === 'string' && kondisi.trim().length > 0 && !normalizedKondisi;
+  const kondisiList = (Array.isArray(kondisi) ? kondisi : [kondisi]).filter(Boolean).map((value) => normalizeKondisi(value)).filter(Boolean);
+  const kondisiSet = kondisiList.length ? new Set(kondisiList) : null;
 
-  // Status
-  const statusClean = typeof status === 'string' && (status === 'tersedia' || status === 'dipinjam')
-    ? status
-    : null;
+  // Status dapat memilih satu atau beberapa opsi sekaligus.
+  const statusList = (Array.isArray(status) ? status : [status]).filter((value) => value === 'tersedia' || value === 'dipinjam');
+  const statusSet = statusList.length ? new Set(statusList) : null;
 
   return items.filter((item) => {
     if (!item) return false;
-    if (isKondisiInvalid) return false;
 
     // 1. Cari Nama Barang
     if (keyword) {
@@ -84,18 +82,13 @@ export function filterKelolaInventaris(items = [], options = {}) {
     }
 
     // 3. Kondisi (baik / rusak)
-    if (normalizedKondisi) {
-      if (normalizeKondisi(item.kondisi) !== normalizedKondisi) {
-        return false;
-      }
-    }
+    if (kondisiSet && !kondisiSet.has(normalizeKondisi(item.kondisi))) return false;
 
     // 4. Status (tersedia / dipinjam)
-    if (statusClean) {
+    if (statusSet) {
       const sisa = Number(item.sisaHariIni ?? item.totalBarang ?? 0) || 0;
-      const sekarangTersedia = sisa > 0;
-      if (statusClean === 'tersedia' && !sekarangTersedia) return false;
-      if (statusClean === 'dipinjam' && sekarangTersedia) return false;
+      const statusItem = sisa > 0 ? 'tersedia' : 'dipinjam';
+      if (!statusSet.has(statusItem)) return false;
     }
 
     return true;
@@ -116,8 +109,8 @@ export function countActiveFilters({ kategori, kategoriIds, kondisi, status } = 
     (typeof kategori === 'string' && kategori.trim().length > 0);
   if (hasCat) count++;
 
-  if (typeof kondisi === 'string' && kondisi.trim().length > 0) count++;
-  if (typeof status === 'string' && status.trim().length > 0) count++;
+  if ((Array.isArray(kondisi) && kondisi.length > 0) || (typeof kondisi === 'string' && kondisi.trim().length > 0)) count++;
+  if ((Array.isArray(status) && status.length > 0) || (typeof status === 'string' && status.trim().length > 0)) count++;
 
   return count;
 }

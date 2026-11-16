@@ -149,7 +149,7 @@ export function render(ctx = {}) {
             type="button" 
             data-action="open-password-modal" 
             class="inline-flex h-10 items-center justify-center justify-self-start rounded-xl bg-primary px-5 text-sm font-semibold text-white shadow-sm transition-colors hover:brightness-110 sm:justify-self-end" 
-            style="transform: translate(38px, 28px)">Ubah Password
+            style="transform: translate(38px, 29px)">Ubah Password
           </button>
       </div>
       <article class="mt-9 rounded-2xl bg-white p-7 shadow-sm transition-shadow duration-200 hover:shadow-md sm:p-8">

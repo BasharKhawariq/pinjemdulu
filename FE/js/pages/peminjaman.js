@@ -1,3 +1,4 @@
+import { markNotificationsRead } from '../lib/navigation.js';
 /**
  * Halaman Pengajuan Saya > Peminjaman.
  * Menampilkan transaksi peminjaman milik pengguna yang sedang login.
@@ -399,6 +400,10 @@ export async function mount(root, ctx = {}) {
     const tabButton = event.target.closest('[data-tab]');
     if (tabButton) {
       activeTab = tabButton.dataset.tab;
+      const openedTab = TABS.find((tab) => tab.key === activeTab);
+      if (openedTab && ['disetujui', 'dipinjam', 'ditolak'].includes(activeTab)) {
+        markNotificationsRead('peminjaman-saya', openedTab.statuses);
+      }
       currentPage = 1;
       const title = rootElement.querySelector('[data-list-title]');
       if (title) title.textContent = `List Barang ${TABS.find((tab) => tab.key === activeTab)?.label || 'Peminjaman'}`;

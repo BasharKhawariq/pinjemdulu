@@ -130,7 +130,7 @@ test('getPageTitle: mengembalikan judul dan icon yang sesuai', () => {
 
   const kelola = getPageTitle('#/kelola/inventaris');
   assert.equal(kelola.title, 'Kelola Inventaris');
-  assert.equal(kelola.icon, 'Sliders');
+  assert.equal(kelola.icon, 'Inbox');
 
   const kategori = getPageTitle('#/kelola/kategori');
   assert.equal(kategori.title, 'Kelola Kategori');

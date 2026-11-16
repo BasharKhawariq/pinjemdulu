@@ -5,6 +5,12 @@ import * as store from '../state/store.js';
 import { getCurrentUser } from '../state/session.js';
 import { isMockEnabled, apiFetch, delay } from './client.js';
 
+function notifyPeminjamanChanged() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('pd:peminjaman-changed'));
+  }
+}
+
 function dataUrlToBlob(dataUrl) {
   if (typeof atob === 'undefined') {
     return Buffer.from(dataUrl.split(',')[1] || '', 'base64');
@@ -208,7 +214,7 @@ export async function ajukanPengembalian(id) {
   if (!row.tanggalPengembalian) {
     row.tanggalPengembalian = new Date().toISOString().slice(0, 10);
   }
-  try { store.save('data:peminjaman', mockPeminjaman); } catch (error) { if (!store.isQuotaExceededError(error)) throw error; }
+  try { store.save('data:peminjaman', mockPeminjaman); notifyPeminjamanChanged(); } catch (error) { if (!store.isQuotaExceededError(error)) throw error; }
   return row;
 }
 
@@ -271,7 +277,7 @@ export async function updateMockPengembalianStatus(id, status, extra = {}) {
   if (status === STATUS_PEMINJAMAN.DITOLAK || status === 'ditolak') {
     if (extra.alasanPenolakan) row.alasanPenolakan = extra.alasanPenolakan;
   }
-  try { store.save('data:peminjaman', mockPeminjaman); } catch (error) { if (!store.isQuotaExceededError(error)) throw error; }
+  try { store.save('data:peminjaman', mockPeminjaman); notifyPeminjamanChanged(); } catch (error) { if (!store.isQuotaExceededError(error)) throw error; }
   return row;
 }
 

@@ -1,4 +1,4 @@
-﻿CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
 
 CREATE TYPE role_pengguna            AS ENUM ('Peminjam', 'Penanggung Jawab');
 CREATE TYPE kondisi_barang           AS ENUM ('Baik', 'Rusak');
@@ -169,7 +169,7 @@ CREATE INDEX idx_inventaris_kategori   ON inventaris (id_kategori);
 CREATE INDEX idx_peminjaman_nim_status ON peminjaman (nim, status);
 -- dipakai fn_kalender_ketersediaan: hanya peminjaman yang menahan kuota
 CREATE INDEX idx_peminjaman_kuota ON peminjaman (id_inventaris, tgl_blok_mulai, tgl_blok_selesai)
-  WHERE status IN ('Diajukan', 'Disetujui', 'Dipinjam', 'Pengembalian');
+  WHERE status IN ('Disetujui', 'Dipinjam', 'Pengembalian');
 CREATE INDEX idx_peminjaman_inventaris ON peminjaman (id_inventaris, status);
 CREATE INDEX idx_request_pj_nim        ON request_pj (nim);
 CREATE INDEX idx_request_password_nim  ON request_password (nim);
@@ -197,7 +197,7 @@ LANGUAGE sql STABLE SET search_path = public AS $$
     FROM hari h
     LEFT JOIN peminjaman p
            ON p.id_inventaris = p_id_inventaris
-          AND p.status IN ('Diajukan', 'Disetujui', 'Dipinjam', 'Pengembalian')
+          AND p.status IN ('Disetujui', 'Dipinjam', 'Pengembalian')
           AND (p_kecuali IS NULL OR p.id_peminjaman <> p_kecuali)
           AND h.tgl >= p.tgl_blok_mulai
           -- barang terlambat tetap menahan kuota sampai dikembalikan
@@ -229,7 +229,7 @@ RETURNS boolean LANGUAGE sql STABLE SET search_path = public AS $$
   SELECT EXISTS (
     SELECT 1 FROM peminjaman p
     WHERE p.id_inventaris = p_id_inventaris
-      AND p.status IN ('Diajukan', 'Disetujui', 'Dipinjam', 'Pengembalian')
+      AND p.status IN ('Disetujui', 'Dipinjam', 'Pengembalian')
       AND p.tgl_blok_mulai <= p_selesai + 1
       AND p.tgl_blok_selesai >= p_mulai - 1)
 $$;
@@ -281,7 +281,7 @@ CREATE VIEW v_jadwal_peminjaman WITH (security_invoker = true) AS
 SELECT p.id_inventaris, p.id_peminjaman, p.tgl_mulai, p.tgl_selesai, p.keperluan, p.jumlah_pinjam,
        CASE WHEN p.status = 'Pengembalian' THEN 'Dipinjam' ELSE p.status::text END AS status
 FROM peminjaman p
-WHERE p.status IN ('Diajukan', 'Disetujui', 'Dipinjam', 'Pengembalian');
+WHERE p.status IN ('Disetujui', 'Dipinjam', 'Pengembalian');
 
 -- 5.4 Detail peminjaman: dipakai Peminjam (filter nim_peminjam) dan PJ (filter id_organisasi_pemilik)
 CREATE VIEW v_peminjaman_detail WITH (security_invoker = true) AS
@@ -746,9 +746,16 @@ END $$;
 -- p_aksi: 'Setujui' | 'Tolak'
 CREATE FUNCTION sp_proses_peminjaman(p_id_peminjaman integer, p_pj_nim varchar, p_aksi text, p_alasan text DEFAULT NULL)
 RETURNS void LANGUAGE plpgsql SET search_path = public AS $$
-DECLARE v_org integer; v_status status_peminjaman;
+DECLARE
+  v_org integer;
+  v_status status_peminjaman;
+  v_inv integer;
+  v_jumlah integer;
+  v_tgl_mulai date;
+  v_tgl_selesai date;
 BEGIN
-  SELECT i.id_organisasi, p.status INTO v_org, v_status
+  SELECT i.id_organisasi, p.status, p.id_inventaris, p.jumlah_pinjam, p.tgl_mulai, p.tgl_selesai
+  INTO v_org, v_status, v_inv, v_jumlah, v_tgl_mulai, v_tgl_selesai
   FROM peminjaman p JOIN inventaris i ON i.id_inventaris = p.id_inventaris
   WHERE p.id_peminjaman = p_id_peminjaman FOR UPDATE OF p;
   IF NOT FOUND THEN RAISE EXCEPTION 'Peminjaman tidak ditemukan'; END IF;
@@ -756,6 +763,14 @@ BEGIN
   IF v_status <> 'Diajukan' THEN RAISE EXCEPTION 'Pengajuan sudah diproses'; END IF;
 
   IF lower(p_aksi) = 'setujui' THEN
+    -- Validasi kuota saat disetujui (Pendekatan B): pastikan unit mencukupi
+    IF EXISTS (
+      SELECT 1 FROM fn_kalender_ketersediaan(v_inv, v_tgl_mulai - 1, v_tgl_selesai + 1, p_id_peminjaman) k
+      WHERE k.sisa_unit < v_jumlah
+    ) THEN
+      RAISE EXCEPTION 'Kuota unit tidak mencukupi untuk menyetujui peminjaman ini pada rentang tanggal tersebut';
+    END IF;
+
     UPDATE peminjaman SET status = 'Disetujui', diproses_oleh = p_pj_nim WHERE id_peminjaman = p_id_peminjaman;
   ELSIF lower(p_aksi) = 'tolak' THEN
     IF btrim(COALESCE(p_alasan, '')) = '' THEN RAISE EXCEPTION 'Alasan penolakan wajib diisi'; END IF;

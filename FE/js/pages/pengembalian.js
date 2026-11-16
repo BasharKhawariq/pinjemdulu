@@ -1,3 +1,4 @@
+import { markNotificationsRead } from '../lib/navigation.js';
 import { getPeminjaman } from '../services/peminjaman.js';
 import { ajukanPengembalian, getPengembalian, ajukanUlangPengembalian } from '../services/pengembalian.js';
 import { isMockEnabled } from '../services/client.js';
@@ -288,7 +289,16 @@ export async function mount(root, ctx = {}) {
   refreshTable();
   onClickHandler = async (event) => {
     const tab = event.target.closest('[data-tab]');
-    if (tab) { activeTab = tab.dataset.tab; currentPage = 1; refreshTable(); return; }
+    if (tab) {
+      activeTab = tab.dataset.tab;
+      const statusByTab = {
+        dikembalikan: [STATUS_PEMINJAMAN.DIKEMBALIKAN, 'dikembalikan', 'selesai'],
+        terlambat: [STATUS_PEMINJAMAN.TERLAMBAT, 'terlambat'],
+        ditolak: [STATUS_PEMINJAMAN.DITOLAK, 'ditolak'],
+      };
+      if (statusByTab[activeTab]) markNotificationsRead('pengembalian-saya', statusByTab[activeTab]);
+      currentPage = 1; refreshTable(); return;
+    }
     const returnAgain = event.target.closest('[data-return-again]');
     if (returnAgain) {
       actionDialog = { type: 'confirm', id: returnAgain.dataset.returnAgain };

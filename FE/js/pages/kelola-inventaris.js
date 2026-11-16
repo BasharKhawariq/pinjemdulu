@@ -17,7 +17,7 @@ import {
 import { renderIcon } from '../ui/icons.js';
 import { renderSearchInput } from '../ui/search-input.js';
 import { renderModal } from '../ui/modal.js';
-import { renderFilterButton, renderFilterModal as renderBaseFilterModal } from '../ui/filter.js';
+import { renderFilterButton } from '../ui/filter.js';
 import {
   getInventarisKelola,
   createInventaris,
@@ -251,24 +251,55 @@ export function renderPagination(page, totalPages) {
  */
 export function renderFilterModal({ filters = {}, kategoriList = [], countActive = 0 } = {}) {
   const curKat = filters.kategori || '';
-  const curKondisi = filters.kondisi || '';
-  const curStatus = filters.status || '';
+  const curKondisi = Array.isArray(filters.kondisi)
+    ? filters.kondisi
+    : (filters.kondisi ? [filters.kondisi] : []);
+  const curStatus = Array.isArray(filters.status)
+    ? filters.status
+    : (filters.status ? [filters.status] : []);
 
   const katOptions = [
     html`<option value="" ${curKat === '' ? raw('selected') : ''}>Pilih kategori</option>`,
-    ...kategoriList.map(
-      (k) =>
-        html`<option value="${k.idKategori}" ${curKat === k.idKategori ? raw('selected') : ''}>${k.namaKategori}</option>`
-    ),
+    ...kategoriList.map((kategori) => html`
+      <option value="${escapeHtml(String(kategori.idKategori))}" ${curKat === String(kategori.idKategori) ? raw('selected') : ''}>
+        ${escapeHtml(kategori.namaKategori)}
+      </option>
+    `),
   ];
 
+  // Salinan struktur indikator Role di Edit Pengguna; setiap kelompok hanya boleh memilih satu opsi.
+  const checkboxOption = (name, value, label, checked) => html`
+    <label class="flex cursor-pointer items-center gap-3" data-filter-option>
+      <input
+        type="checkbox"
+        name="${name}"
+        value="${value}"
+        data-filter-checkbox
+        ${checked ? raw('checked') : raw('')}
+        class="sr-only"
+      />
+      <span
+        data-filter-indicator
+        class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${checked ? 'border-primary bg-primary text-white' : 'border-slate-300 bg-white text-transparent'}"
+      >
+        <svg data-filter-check class="h-3 w-3 stroke-[3] ${checked ? 'block' : 'hidden'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+      </span>
+      <span class="text-sm font-medium text-slate-800">${label}</span>
+    </label>
+  `;
+
   const bodyContent = html`
-    <!-- Kategori -->
     <div class="space-y-1.5">
-      <label for="filter-kategori-select" class="text-sm font-medium text-foreground">Kategori</label>
+      <label for="filter-kategori-select" class="block text-sm font-semibold text-foreground">Kategori</label>
       <div class="relative">
-        <select id="filter-kategori-select" name="kategori" class="${selectClass('appearance-none pr-10 cursor-pointer')}">
-          ${raw(katOptions.map((o) => o.toString()).join(''))}
+        <select
+          id="filter-kategori-select"
+          name="kategori"
+          class="${selectClass('appearance-none pr-10 cursor-pointer')}"
+        >
+          ${raw(katOptions.map((option) => option.toString()).join(''))}
         </select>
         <span class="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground flex items-center">
           ${renderIcon('ChevronDown', 'h-4 w-4')}
@@ -276,71 +307,47 @@ export function renderFilterModal({ filters = {}, kategoriList = [], countActive
       </div>
     </div>
 
-    <!-- Kondisi -->
-    <fieldset class="space-y-2">
-      <legend class="text-sm font-medium text-foreground">Kondisi</legend>
-      <div class="space-y-2">
-        <label class="flex items-center gap-2.5 rounded-xl border border-border bg-background px-3 py-2 text-sm cursor-pointer transition hover:bg-muted/40">
-          <input
-            type="radio"
-            name="kondisi"
-            value="baik"
-            ${curKondisi === 'baik' ? raw('checked') : ''}
-            class="size-4 accent-primary"
-          />
-          <span>Baik</span>
-        </label>
-        <label class="flex items-center gap-2.5 rounded-xl border border-border bg-background px-3 py-2 text-sm cursor-pointer transition hover:bg-muted/40">
-          <input
-            type="radio"
-            name="kondisi"
-            value="rusak"
-            ${curKondisi === 'rusak' ? raw('checked') : ''}
-            class="size-4 accent-primary"
-          />
-          <span>Rusak</span>
-        </label>
+    <div>
+      <span class="mb-3 block text-sm font-semibold text-slate-900">Kondisi</span>
+      <div class="space-y-3">
+        ${checkboxOption('kondisi', 'baik', 'Baik', curKondisi.includes('baik'))}
+        ${checkboxOption('kondisi', 'rusak', 'Rusak', curKondisi.includes('rusak'))}
       </div>
-    </fieldset>
+    </div>
 
-    <!-- Status -->
-    <fieldset class="space-y-2">
-      <legend class="text-sm font-medium text-foreground">Status</legend>
-      <div class="space-y-2">
-        <label class="flex items-center gap-2.5 rounded-xl border border-border bg-background px-3 py-2 text-sm cursor-pointer transition hover:bg-muted/40">
-          <input
-            type="radio"
-            name="status"
-            value="tersedia"
-            ${curStatus === 'tersedia' ? raw('checked') : ''}
-            class="size-4 accent-primary"
-          />
-          <span>Tersedia</span>
-        </label>
-        <label class="flex items-center gap-2.5 rounded-xl border border-border bg-background px-3 py-2 text-sm cursor-pointer transition hover:bg-muted/40">
-          <input
-            type="radio"
-            name="status"
-            value="dipinjam"
-            ${curStatus === 'dipinjam' ? raw('checked') : ''}
-            class="size-4 accent-primary"
-          />
-          <span>Dipinjam</span>
-        </label>
+    <div>
+      <span class="mb-3 block text-sm font-semibold text-slate-900">Status</span>
+      <div class="space-y-3">
+        ${checkboxOption('status', 'tersedia', 'Tersedia', curStatus.includes('tersedia'))}
+        ${checkboxOption('status', 'dipinjam', 'Dipinjam', curStatus.includes('dipinjam'))}
       </div>
-    </fieldset>
+    </div>
   `;
 
-  return renderBaseFilterModal({
-    id: 'dialog-filter-kelola',
-    title: 'Filter Barang Inventaris',
-    countActive,
-    closeAction: 'close-filter-dialog',
-    resetAction: 'reset-filter-dialog',
-    applyAction: 'apply-filter-dialog',
-    formId: 'form-filter-kelola',
-    bodyContent,
-  });
+  return html`
+    <dialog id="dialog-filter-kelola" aria-labelledby="filter-kelola-title" style="width: min(512px, calc(100vw - 2rem)); max-width: none;" class="fixed left-1/2 top-1/2 m-0 -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-white p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm">
+      <div class="flex flex-col p-5 sm:p-6">
+        <div class="flex items-center justify-between border-b border-border pb-3">
+          <div class="flex min-w-0 items-center gap-2">
+            <h2 id="filter-kelola-title" class="text-base font-semibold leading-tight text-foreground">Filter Barang Inventaris</h2>
+            ${countActive > 0 ? html`<span id="filter-dialog-badge" class="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">${countActive}</span>` : raw('')}
+          </div>
+          <button type="button" data-action="close-filter-dialog" aria-label="Tutup filter" class="ml-2 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground">
+            ${renderIcon('X', 'h-4 w-4')}
+          </button>
+        </div>
+
+        <form id="form-filter-kelola" class="mt-4 space-y-4">
+          ${raw(bodyContent.toString())}
+        </form>
+
+        <div class="mt-5 flex items-center justify-end gap-3">
+          <button type="button" data-action="reset-filter-dialog" class="filter-reset-link px-2 py-2.5 text-sm font-semibold text-slate-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">Reset</button>
+          <button type="button" data-action="apply-filter-dialog" class="rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">Terapkan</button>
+        </div>
+      </div>
+    </dialog>
+  `;
 }
 
 /**
@@ -956,7 +963,7 @@ export function renderKelolaContent(state = {}) {
     loading = false,
     error = null,
     cari = '',
-    filters = { kategori: null, kondisi: null, status: null },
+    filters = { kategori: null, kondisi: [], status: [] },
     nAktif = 0,
     kategoriList = [],
     detailItem = null,
@@ -1053,7 +1060,7 @@ let pageState = {
   loading: true,
   error: null,
   cari: '',
-  filters: { kategori: null, kondisi: null, status: null },
+  filters: { kategori: null, kondisi: [], status: [] },
   nAktif: 0,
   kategoriList: [],
   detailItem: null,
@@ -1183,6 +1190,42 @@ function handleDocumentInput(e) {
   if (e.target && e.target.id === 'kelola-search-input') {
     handleSearchInput(e);
   }
+}
+
+function handleDocumentChange(e) {
+  if (e.target && e.target.id === 'form-foto-input') {
+    handleFileInputChange(e);
+    return;
+  }
+
+  const checkbox = e.target;
+  if (!checkbox || !checkbox.matches('input[data-filter-checkbox]')) return;
+
+  const option = checkbox.closest('[data-filter-option]');
+  const indicator = option?.querySelector('[data-filter-indicator]');
+  const check = option?.querySelector('[data-filter-check]');
+  // Checkbox dibuat eksklusif per kelompok: satu opsi dapat aktif, opsi lain otomatis mati.
+  // Karena tetap checkbox, opsi yang sedang aktif juga bisa diklik lagi untuk membatalkan pilihan.
+  if (checkbox.checked) {
+    const groupName = checkbox.name;
+    document.querySelectorAll(`input[data-filter-checkbox][name="${groupName}"]`).forEach((peer) => {
+      if (peer !== checkbox) peer.checked = false;
+    });
+  }
+
+  document.querySelectorAll(`input[data-filter-checkbox][name="${checkbox.name}"]`).forEach((input) => {
+    const optionEl = input.closest('[data-filter-option]');
+    const optionIndicator = optionEl?.querySelector('[data-filter-indicator]');
+    const optionCheck = optionEl?.querySelector('[data-filter-check]');
+    const isChecked = input.checked;
+    if (optionIndicator) {
+      optionIndicator.className = `flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${isChecked ? 'border-primary bg-primary text-white' : 'border-slate-300 bg-white text-transparent'}`;
+    }
+    if (optionCheck) {
+      optionCheck.classList.toggle('block', isChecked);
+      optionCheck.classList.toggle('hidden', !isChecked);
+    }
+  });
 }
 
 function openFilterDialog() {
@@ -1377,6 +1420,7 @@ async function handleDocumentClick(e) {
   }
 
   const action = actionEl.getAttribute('data-action');
+  if (['open-filter-dialog', 'close-filter-dialog', 'reset-filter-dialog', 'apply-filter-dialog'].includes(action)) e.preventDefault();
 
   if (action === 'open-filter-dialog') {
     lastTriggerEl = actionEl;
@@ -1384,29 +1428,45 @@ async function handleDocumentClick(e) {
   } else if (action === 'close-filter-dialog') {
     closeFilterDialog();
   } else if (action === 'reset-filter-dialog') {
+    e.preventDefault();
     const form = document.getElementById('form-filter-kelola');
     if (form) {
       const sel = form.querySelector('#filter-kategori-select');
       if (sel) sel.value = '';
-      const radios = form.querySelectorAll('input[type="radio"]');
-      radios.forEach((r) => { r.checked = false; });
-    }
-    const dlgBadge = document.getElementById('filter-dialog-badge');
-    if (dlgBadge) {
-      dlgBadge.classList.add('hidden');
-      dlgBadge.textContent = '0';
+
+      // Reset mengembalikan semua pilihan ke keadaan awal (belum dipilih)
+      // tanpa menutup popup. Kategori kembali ke placeholder.
+      form.querySelectorAll('input[data-filter-checkbox]').forEach((checkbox) => {
+        checkbox.checked = false;
+      });
+
+      form.querySelectorAll('input[data-filter-checkbox]').forEach((input) => {
+        const option = input.closest('[data-filter-option]');
+        const indicator = option?.querySelector('[data-filter-indicator]');
+        const check = option?.querySelector('[data-filter-check]');
+        if (indicator) {
+          indicator.className = `flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${input.checked ? 'border-primary bg-primary text-white' : 'border-slate-300 bg-white text-transparent'}`;
+        }
+        if (check) {
+          check.classList.toggle('block', input.checked);
+          check.classList.toggle('hidden', !input.checked);
+        }
+      });
     }
   } else if (action === 'apply-filter-dialog') {
+    e.preventDefault();
     const form = document.getElementById('form-filter-kelola');
     if (form) {
       const formData = new FormData(form);
       const kat = formData.get('kategori') || null;
-      const kon = formData.get('kondisi') || null;
-      const st = formData.get('status') || null;
+      const konValue = formData.get('kondisi');
+      const statusValue = formData.get('status');
+      const kon = konValue ? [konValue] : [];
+      const st = statusValue ? [statusValue] : [];
       pageState.filters = {
         kategori: kat && kat.length > 0 ? kat : null,
-        kondisi: kon && kon.length > 0 ? kon : null,
-        status: st && st.length > 0 ? st : null,
+        kondisi: kon,
+        status: st,
       };
       pageState.meta.page = 1;
     }
@@ -1414,7 +1474,7 @@ async function handleDocumentClick(e) {
     loadData();
   } else if (action === 'reset-filter-direct') {
     pageState.cari = '';
-    pageState.filters = { kategori: null, kondisi: null, status: null };
+    pageState.filters = { kategori: null, kondisi: [], status: [] };
     const inp = document.getElementById('kelola-search-input');
     if (inp) inp.value = '';
     const clearBtn = document.querySelector('[data-action="clear-search"]');
@@ -1555,8 +1615,8 @@ export async function mount(container, ctx = {}) {
     cari: ctx.query?.q || '',
     filters: {
       kategori: ctx.query?.kategori || null,
-      kondisi: ctx.query?.kondisi || null,
-      status: ctx.query?.status || null,
+      kondisi: ctx.query?.kondisi ? [ctx.query.kondisi] : [],
+      status: ctx.query?.status ? [ctx.query.status] : [],
     },
     nAktif: 0,
     kategoriList: [],
@@ -1593,11 +1653,7 @@ export async function mount(container, ctx = {}) {
   document.addEventListener('keydown', handleDocumentKeyDown);
   document.addEventListener('input', handleDocumentInput);
 
-  document.addEventListener('change', (e) => {
-    if (e.target && e.target.id === 'form-foto-input') {
-      handleFileInputChange(e);
-    }
-  });
+  document.addEventListener('change', handleDocumentChange);
 
   await loadData();
 }
@@ -1609,6 +1665,7 @@ export function unmount() {
   document.removeEventListener('click', handleDocumentClick);
   document.removeEventListener('keydown', handleDocumentKeyDown);
   document.removeEventListener('input', handleDocumentInput);
+  document.removeEventListener('change', handleDocumentChange);
 
   if (searchDebounceTimer) {
     clearTimeout(searchDebounceTimer);

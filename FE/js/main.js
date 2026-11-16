@@ -10,9 +10,84 @@ import { renderNavbar } from './ui/navbar.js';
 import { renderFooter } from './ui/footer.js';
 import { handleRouteChange, navigate } from './router.js';
 import { getPageTitle } from './lib/navigation.js';
+import { refreshBadges, resetLiveBadgeCounts } from './services/badge.js';
 
 function initApp() {
   if (typeof document === 'undefined') return;
+
+  // Kunci scroll pada viewport tanpa mengubah posisi atau ukuran body.
+  // Ini menjaga navbar sticky dan konten tetap pada posisi scroll semula.
+  function setupModalScrollLock() {
+    const htmlElement = document.documentElement;
+    if (!htmlElement) return;
+
+    const saved = {
+      overflow: null,
+      scrollbarGutter: null,
+      overscrollBehavior: null,
+      locked: false,
+    };
+
+    const snapshotProperty = (element, property) => ({
+      value: element.style.getPropertyValue(property),
+      priority: element.style.getPropertyPriority(property),
+    });
+    const restoreProperty = (element, property, snapshot) => {
+      if (snapshot.value) {
+        element.style.setProperty(property, snapshot.value, snapshot.priority);
+      } else {
+        element.style.removeProperty(property);
+      }
+    };
+
+    const hasActivePopup = () => Boolean(document.querySelector(
+      'dialog[open], [data-modal-backdrop], [data-modal-overlay], [data-management-modal-backdrop], #mobile-drawer-backdrop.opacity-100'
+    ));
+
+    const lockPageScroll = () => {
+      if (saved.locked) return;
+      saved.locked = true;
+
+      saved.overflow = snapshotProperty(htmlElement, 'overflow');
+      saved.scrollbarGutter = snapshotProperty(htmlElement, 'scrollbar-gutter');
+      saved.overscrollBehavior = snapshotProperty(htmlElement, 'overscroll-behavior');
+
+      // Kunci scroll viewport saja. Jangan mengubah body menjadi fixed/hidden,
+      // karena body adalah induk navbar sticky dan perubahan itu menggeser shell.
+      htmlElement.style.setProperty('overflow', 'hidden');
+      htmlElement.style.setProperty('scrollbar-gutter', 'stable');
+      htmlElement.style.setProperty('overscroll-behavior', 'none');
+    };
+
+    const unlockPageScroll = () => {
+      if (!saved.locked) return;
+      saved.locked = false;
+
+      restoreProperty(htmlElement, 'overflow', saved.overflow);
+      restoreProperty(htmlElement, 'scrollbar-gutter', saved.scrollbarGutter);
+      restoreProperty(htmlElement, 'overscroll-behavior', saved.overscrollBehavior);
+    };
+
+    const syncScrollLock = () => {
+      if (hasActivePopup()) lockPageScroll();
+      else unlockPageScroll();
+    };
+
+    const observer = new MutationObserver(syncScrollLock);
+    observer.observe(document.documentElement, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ['open', 'class', 'style', 'aria-hidden'],
+    });
+
+    // Menangani dialog native yang ditutup melalui method close().
+    document.addEventListener('close', syncScrollLock, true);
+    document.addEventListener('toggle', syncScrollLock, true);
+    syncScrollLock();
+  }
+
+  setupModalScrollLock();
 
   const shellRoot = document.getElementById('shell-root');
   const sidebarContainer = document.getElementById('sidebar-container');
@@ -105,6 +180,9 @@ function initApp() {
     }
     renderShell();
     const user = getUser();
+    if (user) {
+      refreshBadges().catch(() => {});
+    }
     await handleRouteChange(mainEl, { user });
     renderShell();
   }
@@ -180,11 +258,30 @@ function initApp() {
     route();
   });
 
-  window.addEventListener('pd:session-change', () => {
+  window.addEventListener('pd:session-change', (e) => {
+    if (!e?.detail) {
+      resetLiveBadgeCounts();
+    } else {
+      refreshBadges().catch(() => {});
+    }
     route();
   });
 
-  checkSession().catch(() => {});
+  // Perbarui badge sidebar setiap data peminjaman berubah (buat pengajuan,
+  // persetujuan/penolakan, konfirmasi pengambilan, dan proses pengembalian).
+  window.addEventListener('pd:peminjaman-changed', () => {
+    refreshBadges().catch(() => {});
+    renderShell();
+  });
+
+  // Perbarui badge saat notifikasi pada tab/page ditandai sudah dibaca.
+  window.addEventListener('pd:notifications-changed', () => {
+    renderShell();
+  });
+
+  checkSession().then((u) => {
+    if (u) refreshBadges().catch(() => {});
+  }).catch(() => {});
   route();
 }
 

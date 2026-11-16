@@ -1,3 +1,4 @@
+import { markNotificationsRead } from '../lib/navigation.js';
 /** Halaman Pengelolaan > Kelola Pengembalian. */
 import { getKelolaPengembalian, updateMockPengembalianStatus } from '../services/pengembalian.js';
 import { STATUS_PEMINJAMAN } from '../lib/constants.js';
@@ -5,10 +6,10 @@ import { formatTanggal } from '../lib/format.js';
 import { renderIcon } from '../ui/icons.js';
 import { escapeHtml } from '../ui/html.js';
 import { renderSearchInput } from '../ui/search-input.js';
-import { renderFilterButton, renderFilterModal } from '../ui/filter.js';
+import { renderFilterButton } from '../ui/filter.js';
 import { renderPagination as renderSharedPagination } from '../ui/pagination.js';
 import { statusChipClass, renderStatusChip } from '../ui/status-chip.js';
-import { selectClass, inputClass } from '../ui/classes.js';
+import { selectClass } from '../ui/classes.js';
 import { renderModal as renderGlobalModal } from '../ui/modal.js';
 import { compressImageToDataUrl } from './kelola-inventaris-form.js';
 import { validateFotoFile } from '../lib/inventaris-form.js';
@@ -622,67 +623,66 @@ function renderContent() {
     </div>
   </section>
   ${renderModal()}
-  ${renderFilterModal({
-    id: 'dialog-filter-pengembalian',
-    title: 'Filter Kelola Pengembalian',
-    countActive: nAktif,
-    closeAction: 'close-filter-dialog',
-    resetAction: 'reset-filter-dialog',
-    applyAction: 'apply-filter-dialog',
-    formId: 'form-filter-pengembalian',
-    bodyContent: `
-      <div class="space-y-4">
-        <!-- OKI Peminjam -->
-        <div class="space-y-1.5">
-          <label for="filter-pengembalian-oki" class="text-sm font-medium text-foreground">OKI Peminjam</label>
-          <div class="relative">
-            <select id="filter-pengembalian-oki" name="oki" class="${selectClass('appearance-none pr-10 cursor-pointer')}">
-              <option value="all" ${okiFilter === 'all' ? 'selected' : ''}>Pilih OKI</option>
-              ${OKI_LIST.map((oki) => `<option value="${escapeHtml(oki)}" ${okiFilter === oki ? 'selected' : ''}>${escapeHtml(oki)}</option>`).join('')}
-            </select>
-            <span class="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground flex items-center">
-              ${renderIcon('ChevronDown', 'h-4 w-4')}
-            </span>
-          </div>
+  <dialog id="dialog-filter-pengembalian" aria-labelledby="filter-pengembalian-title" style="width: min(512px, calc(100vw - 2rem)); max-width: none;" class="fixed left-1/2 top-1/2 m-0 -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-white p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm">
+    <div class="flex flex-col p-5 sm:p-6">
+      <div class="flex items-center justify-between border-b border-border pb-3">
+        <div class="flex min-w-0 items-center gap-2">
+          <h2 id="filter-pengembalian-title" class="text-base font-semibold leading-tight text-foreground">Filter Kelola Pengembalian</h2>
+          ${nAktif > 0 ? `<span class="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">${nAktif}</span>` : ""}
         </div>
-
-        <!-- Tanggal Peminjaman -->
-        <div class="space-y-1.5">
-          <label for="filter-pengembalian-tanggal" class="text-sm font-medium text-foreground">Tanggal Peminjaman</label>
-          <div class="relative">
-            <input
-              type="date"
-              id="filter-pengembalian-tanggal"
-              name="tanggal"
-              value="${escapeHtml(tanggalFilter)}"
-              placeholder="Pilih Tanggal"
-              class="${inputClass('appearance-none pr-10 cursor-pointer text-slate-700 w-full')}"
-            />
-            <span class="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground flex items-center">
-              ${renderIcon('CalendarDays', 'h-4 w-4')}
-            </span>
-          </div>
-        </div>
-
-        <!-- Status -->
-        <div class="space-y-1.5">
-          <label for="filter-pengembalian-status" class="text-sm font-medium text-foreground">Status</label>
-          <div class="relative">
-            <select id="filter-pengembalian-status" name="status" class="${selectClass('appearance-none pr-10 cursor-pointer')}">
-              <option value="all" ${statusFilter === 'all' ? 'selected' : ''}>Pilih status</option>
-              <option value="${STATUS_PEMINJAMAN.MENUNGGU_KONFIRMASI_PENGEMBALIAN}" ${statusFilter === STATUS_PEMINJAMAN.MENUNGGU_KONFIRMASI_PENGEMBALIAN ? 'selected' : ''}>Menunggu Konfirmasi</option>
-              <option value="${STATUS_PEMINJAMAN.TERLAMBAT}" ${statusFilter === STATUS_PEMINJAMAN.TERLAMBAT ? 'selected' : ''}>Terlambat</option>
-              <option value="${STATUS_PEMINJAMAN.DIKEMBALIKAN}" ${statusFilter === STATUS_PEMINJAMAN.DIKEMBALIKAN ? 'selected' : ''}>Dikembalikan</option>
-              <option value="${STATUS_PEMINJAMAN.DITOLAK}" ${statusFilter === STATUS_PEMINJAMAN.DITOLAK ? 'selected' : ''}>Ditolak</option>
-            </select>
-            <span class="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground flex items-center">
-              ${renderIcon('ChevronDown', 'h-4 w-4')}
-            </span>
-          </div>
-        </div>
+        <button type="button" data-action="close-filter-dialog" aria-label="Tutup filter" class="ml-2 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground">
+          ${renderIcon('X', 'h-4 w-4')}
+        </button>
       </div>
-    `,
-  })}`;
+
+      <form id="form-filter-pengembalian" class="mt-4 space-y-4">
+        <div class="space-y-1.5">
+          <label for="filter-pengembalian-oki" class="block text-sm font-semibold text-foreground">OKI Peminjam</label>
+          <div class="relative">
+            <select id="filter-pengembalian-oki" name="oki" style="color: ${okiFilter === 'all' ? 'var(--muted-foreground)' : 'var(--foreground)'};" class="${selectClass('appearance-none pr-10 cursor-pointer')}">
+              <option value="" disabled hidden style="color: var(--muted-foreground)" ${okiFilter === 'all' ? 'selected' : ''}>Pilih OKI</option>
+              ${OKI_LIST.map((oki) => `<option value="${escapeHtml(oki)}" style="color: var(--foreground)" ${okiFilter === oki ? 'selected' : ''}>${escapeHtml(oki)}</option>`).join('')}
+            </select>
+            <span class="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground flex items-center">
+              ${renderIcon('ChevronDown', 'h-4 w-4')}
+            </span>
+          </div>
+        </div>
+
+        <div class="space-y-1.5">
+          <label for="filter-pengembalian-tanggal" class="block text-sm font-semibold text-foreground">Tanggal Peminjaman</label>
+          <div class="relative">
+            <button type="button" data-action="open-filter-pengembalian-date" aria-label="Pilih tanggal peminjaman" class="${selectClass('justify-between gap-3 text-left font-normal')}" >
+              <span id="filter-pengembalian-date-display" class="pointer-events-none flex-1 text-sm ${tanggalFilter ? 'text-foreground' : 'text-muted-foreground'}">${tanggalFilter ? escapeHtml(dateLabel(tanggalFilter)) : 'Pilih Tanggal'}</span>
+              <span class="pointer-events-none flex shrink-0 items-center text-muted-foreground">${renderIcon('CalendarDays', 'h-5 w-5')}</span>
+            </button>
+            <input type="date" id="filter-pengembalian-tanggal" name="tanggal" aria-label="Pilih tanggal peminjaman" value="${escapeHtml(tanggalFilter)}" tabindex="-1" aria-hidden="true" class="pointer-events-none absolute left-0 top-0 h-px w-px opacity-0" style="color-scheme:light;appearance:none;-webkit-appearance:none" />
+          </div>
+        </div>
+
+        <div class="space-y-1.5">
+          <label for="filter-pengembalian-status" class="block text-sm font-semibold text-foreground">Status</label>
+          <div class="relative">
+            <select id="filter-pengembalian-status" name="status" style="color: ${statusFilter === 'all' ? 'var(--muted-foreground)' : 'var(--foreground)'};" class="${selectClass('appearance-none pr-10 cursor-pointer')}">
+              <option value="" disabled hidden style="color: var(--muted-foreground)" ${statusFilter === 'all' ? 'selected' : ''}>Pilih status</option>
+              <option style="color: var(--foreground)" value="${STATUS_PEMINJAMAN.MENUNGGU_KONFIRMASI_PENGEMBALIAN}" ${statusFilter === STATUS_PEMINJAMAN.MENUNGGU_KONFIRMASI_PENGEMBALIAN ? 'selected' : ''}>Menunggu</option>
+              <option style="color: var(--foreground)" value="${STATUS_PEMINJAMAN.DIKEMBALIKAN}" ${statusFilter === STATUS_PEMINJAMAN.DIKEMBALIKAN ? 'selected' : ''}>Dikembalikan</option>
+              <option style="color: var(--foreground)" value="${STATUS_PEMINJAMAN.TERLAMBAT}" ${statusFilter === STATUS_PEMINJAMAN.TERLAMBAT ? 'selected' : ''}>Terlambat</option>
+              <option style="color: var(--foreground)" value="${STATUS_PEMINJAMAN.DITOLAK}" ${statusFilter === STATUS_PEMINJAMAN.DITOLAK ? 'selected' : ''}>Ditolak</option>
+            </select>
+            <span class="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground flex items-center">
+              ${renderIcon('ChevronDown', 'h-4 w-4')}
+            </span>
+          </div>
+        </div>
+      </form>
+
+      <div class="mt-5 flex items-center justify-end gap-3">
+        <button type="button" data-action="reset-filter-dialog" class="filter-reset-link px-2 py-2.5 text-sm font-semibold text-slate-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">Reset</button>
+        <button type="button" data-action="apply-filter-dialog" class="rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">Terapkan</button>
+      </div>
+    </div>
+  </dialog>`;
 }
 
 function refresh() { if (rootElement) rootElement.innerHTML = renderContent(); }
@@ -708,6 +708,7 @@ export async function mount(root) {
   tanggalFilter = '';
   statusFilter = 'all';
   rows = await loadRows();
+  markNotificationsRead('kelola-pengembalian', [STATUS_PEMINJAMAN.MENUNGGU_KONFIRMASI_PENGEMBALIAN], rows);
   rootElement.innerHTML = renderContent();
 
   clickHandler = async (event) => {
@@ -771,18 +772,46 @@ export async function mount(root) {
       return;
     }
 
+    if (action === 'open-filter-pengembalian-date') {
+      const dateInput = rootElement.querySelector('#filter-pengembalian-tanggal');
+      try {
+        if (typeof dateInput?.showPicker === 'function') dateInput.showPicker();
+        else dateInput?.click();
+      } catch {
+        dateInput?.click();
+      }
+      return;
+    }
+
     if (action === 'close-filter-dialog') {
       rootElement.querySelector('#dialog-filter-pengembalian')?.close();
       return;
     }
 
     if (action === 'reset-filter-dialog') {
-      okiFilter = 'all';
-      tanggalFilter = '';
-      statusFilter = 'all';
-      currentPage = 1;
-      rootElement.querySelector('#dialog-filter-pengembalian')?.close();
-      refresh();
+      // Reset hanya mengembalikan isian popup ke placeholder awal.
+      // Popup tetap terbuka dan filter aktif baru berubah setelah Terapkan diklik.
+      const form = rootElement.querySelector('#form-filter-pengembalian');
+      const okiSelect = form?.querySelector('#filter-pengembalian-oki');
+      const statusSelect = form?.querySelector('#filter-pengembalian-status');
+      const dateInput = form?.querySelector('#filter-pengembalian-tanggal');
+      const dateDisplay = form?.querySelector('#filter-pengembalian-date-display');
+      if (okiSelect) {
+        okiSelect.value = '';
+        okiSelect.classList.add('!text-muted-foreground');
+        okiSelect.style.color = 'var(--muted-foreground)';
+      }
+      if (statusSelect) {
+        statusSelect.value = '';
+        statusSelect.classList.add('!text-muted-foreground');
+        statusSelect.style.color = 'var(--muted-foreground)';
+      }
+      if (dateInput) dateInput.value = '';
+      if (dateDisplay) {
+        dateDisplay.textContent = 'Pilih Tanggal';
+        dateDisplay.classList.remove('text-foreground');
+        dateDisplay.classList.add('text-muted-foreground');
+      }
       return;
     }
 
@@ -947,6 +976,16 @@ export async function mount(root) {
   };
 
   inputHandler = (event) => {
+    if (event.target.id === 'filter-pengembalian-tanggal') {
+      const selectedDate = event.target.value || '';
+      const dateDisplay = rootElement.querySelector('#filter-pengembalian-date-display');
+      if (dateDisplay) {
+        dateDisplay.textContent = selectedDate ? dateLabel(selectedDate) : 'Pilih Tanggal';
+        dateDisplay.classList.toggle('text-muted-foreground', !selectedDate);
+        dateDisplay.classList.toggle('text-foreground', Boolean(selectedDate));
+      }
+      return;
+    }
     if (event.target.id === 'form-tanggal-pengembalian') {
       formData.tanggalPengembalian = event.target.value;
       const dateDisplay = rootElement.querySelector('#return-date-display');
@@ -995,6 +1034,11 @@ export async function mount(root) {
   };
 
   changeHandler = async (event) => {
+    if (['filter-pengembalian-oki', 'filter-pengembalian-status'].includes(event.target.id)) {
+      event.target.classList.toggle('!text-muted-foreground', !event.target.value);
+      event.target.style.color = event.target.value ? 'var(--foreground)' : 'var(--muted-foreground)';
+      return;
+    }
     if (event.target.name === 'kondisi-pengembalian') {
       formData.kondisiPengembalian = event.target.value;
       return;

@@ -90,3 +90,10 @@
   50% { background-color: rgb(254 202 202); box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.18); }
 }
 .validation-blink { animation: validation-blink 0.45s ease-in-out 1; }
+
+/* Reset khusus popup Filter Barang Inventaris: hitam dan bergaris bawah saat hover. */
+.filter-reset-link:hover:not(:disabled) {
+  color: #000000 !important;
+  text-decoration: underline !important;
+  text-underline-offset: 4px;
+}

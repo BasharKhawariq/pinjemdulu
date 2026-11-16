@@ -1,3 +1,4 @@
+import { markNotificationsRead } from '../lib/navigation.js';
 /** Halaman Pengelolaan > List Pengajuan Penanggung Jawab. */
 import { getRequestPj, updateMockRequestPjStatus } from '../services/request-pj.js';
 import { STATUS_REQUEST_PJ } from '../lib/constants.js';
@@ -221,6 +222,7 @@ export async function mount(root) {
   rejectionReason = '';
   rejectionValidationCount = 0;
   rows = await getRequestPj();
+  markNotificationsRead('request-pj', [STATUS_REQUEST_PJ.MENUNGGU], rows);
   rootElement.innerHTML = renderContent();
   clickHandler = async (event) => {
     const button = event.target.closest('[data-action]');
@@ -232,7 +234,11 @@ export async function mount(root) {
     const id = button.dataset.id;
     if (action === 'close-modal' || action === 'close-feedback-modal') { modalRow = null; feedbackModal = null; rejectionReason = ''; rejectionValidationCount = 0; refresh(); return; }
     if (action === 'detail') { modalRow = rows.find((row) => String(row.id) === String(id)) || null; feedbackModal = null; refresh(); return; }
-    if (action === 'tab') { activeTab = button.dataset.tab; currentPage = 1; toastMessage = ''; refresh(); return; }
+    if (action === 'tab') {
+      activeTab = button.dataset.tab;
+      if (activeTab === STATUS_REQUEST_PJ.MENUNGGU) markNotificationsRead('request-pj', [STATUS_REQUEST_PJ.MENUNGGU], rows);
+      currentPage = 1; toastMessage = ''; refresh(); return;
+    }
     if (action === 'prev') { currentPage = Math.max(1, currentPage - 1); refresh(); return; }
     if (action === 'next') { currentPage = Math.min(Math.max(1, Math.ceil(visibleRows().length / PAGE_SIZE)), currentPage + 1); refresh(); return; }
     if (action === 'approve') {

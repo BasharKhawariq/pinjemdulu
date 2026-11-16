@@ -32,6 +32,12 @@ import { isMockEnabled, apiFetch, delay } from './client.js';
 
 const PEMINJAMAN_STORE_KEY = 'data:peminjaman';
 
+function notifyPeminjamanChanged() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('pd:peminjaman-changed'));
+  }
+}
+
 function dataUrlToBlob(dataUrl) {
   if (typeof atob === 'undefined') {
     return Buffer.from(dataUrl.split(',')[1] || '', 'base64');
@@ -82,6 +88,7 @@ export function _resetPeminjamanMockState(todayOverride = null) {
   resetMockInventarisAndBookings(todayOverride);
   _mockCurrentUserOverride = null;
   store.save(PEMINJAMAN_STORE_KEY, [...mockPeminjaman]);
+  notifyPeminjamanChanged();
   store.save('data:inventaris', [...mockInventaris]);
 }
 
@@ -536,6 +543,7 @@ export async function createPeminjaman({
 
   try {
     store.save(PEMINJAMAN_STORE_KEY, mockPeminjaman);
+    notifyPeminjamanChanged();
     store.save('data:inventaris', mockInventaris);
   } catch (err) {
     if (store.isQuotaExceededError(err)) {
@@ -588,6 +596,7 @@ export async function updateMockPeminjamanStatus(id, status, extra = {}) {
   }
   try {
     store.save(PEMINJAMAN_STORE_KEY, mockPeminjaman);
+    notifyPeminjamanChanged();
   } catch (error) {
     // Penyimpanan lokal bersifat tambahan untuk demo; perubahan store memory tetap berlaku.
     if (!store.isQuotaExceededError(error)) throw error;
@@ -629,6 +638,7 @@ export async function updateMockPeminjamanPickup(id, { tanggalPengambilan, fotoP
   row.status = STATUS_PEMINJAMAN.DIPINJAM;
   try {
     store.save(PEMINJAMAN_STORE_KEY, mockPeminjaman);
+    notifyPeminjamanChanged();
   } catch (error) {
     if (!store.isQuotaExceededError(error)) throw error;
   }

@@ -87,6 +87,8 @@ export function renderFilterModal({
   formId = '',
   bodyContent = '',
   maxWidth = 'max-w-sm',
+  footerJustify = 'between',
+  resetClass = 'text-sm font-medium text-muted-foreground transition hover:text-foreground',
 } = {}) {
   const titleId = `${id}-title`;
   const fId = formId || `${id}-form`;
@@ -123,11 +125,11 @@ export function renderFilterModal({
         </form>
 
         <!-- Footer -->
-        <div class="flex items-center justify-between border-t border-border px-5 py-3">
+        <div class="flex items-center border-t border-border px-5 py-3 ${footerJustify === 'end' ? 'justify-end gap-5' : 'justify-between'}">
           <button
             type="button"
             data-action="${resetAction}"
-            class="text-sm font-medium text-muted-foreground transition hover:text-foreground"
+            class="${resetClass}"
           >
             Reset
           </button>

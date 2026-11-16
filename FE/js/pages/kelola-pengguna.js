@@ -13,8 +13,8 @@ import { renderIcon } from '../ui/icons.js';
 import { escapeHtml } from '../ui/html.js';
 import { renderSearchInput } from '../ui/search-input.js';
 import { renderModal as renderModalComponent } from '../ui/modal.js';
-import { renderFilterButton, renderFilterModal } from '../ui/filter.js';
-import { selectClass } from '../ui/classes.js';
+import { renderFilterButton } from '../ui/filter.js';
+import { buttonClass, selectClass } from '../ui/classes.js';
 import { renderOrganisasiLogo } from '../ui/organisasi-badge.js';
 import { renderEmptyState } from '../ui/empty-state.js';
 import { renderPagination as renderSharedPagination } from '../ui/pagination.js';
@@ -499,31 +499,17 @@ function renderContent() {
       <p class="mt-1 text-sm text-slate-400">Pantau dan kelola akun pengguna, hak akses, dan perannya dalam sistem.</p>
     </div>
 
-    <div class="rounded-2xl bg-white p-4 shadow-[0_1px_4px_rgba(15,23,42,0.025)] sm:p-6">
-      <!-- Card Header: Tabs & Actions -->
-      <div class="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <!-- Tab Switcher -->
-        <div class="inline-flex items-center gap-1.5 rounded-2xl bg-slate-100/80 p-1 self-start">
-          <button
-            type="button"
-            data-action="switch-tab"
-            data-tab="pengguna"
-            class="rounded-xl px-4 py-2 text-xs sm:text-sm font-semibold transition ${isPenggunaTab ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}"
-          >
-            List Pengguna
-          </button>
-          <button
-            type="button"
-            data-action="switch-tab"
-            data-tab="request-password"
-            class="rounded-xl px-4 py-2 text-xs sm:text-sm font-semibold transition ${!isPenggunaTab ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}"
-          >
-            List Request Password
-          </button>
-        </div>
+    <div class="mb-3 inline-flex items-center gap-1 rounded-xl bg-white p-1.5">
+      <button type="button" data-action="switch-tab" data-tab="pengguna" class="rounded-lg px-4 py-2 text-[11px] font-medium transition ${isPenggunaTab ? 'bg-blue-100 text-slate-900' : 'text-slate-600 hover:bg-slate-50'}">List Pengguna</button>
+      <button type="button" data-action="switch-tab" data-tab="request-password" class="rounded-lg px-4 py-2 text-[11px] font-medium transition ${!isPenggunaTab ? 'bg-blue-100 text-slate-900' : 'text-slate-600 hover:bg-slate-50'}">List Request Password</button>
+    </div>
 
+    <div class="rounded-2xl bg-white p-4 shadow-[0_1px_4px_rgba(15,23,42,0.025)] sm:p-6">
+      <!-- Judul card, sejajar dengan area pencarian seperti halaman List Pengajuan PJ -->
+      <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h2 class="text-lg font-semibold text-slate-900">${isPenggunaTab ? 'List Pengguna' : 'List Request Password'}</h2>
         <!-- Search & Filter Controls -->
-        <div class="flex flex-wrap items-center justify-end gap-2.5">
+        <div class="flex flex-wrap items-center justify-start gap-2.5 sm:justify-end">
           ${renderSearchInput({
             id: isPenggunaTab ? 'search-users' : 'search-rp',
             value: isPenggunaTab ? searchTerm : rpSearchTerm,
@@ -543,7 +529,7 @@ function renderContent() {
             <button
               type="button"
               data-action="add"
-              class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-sm transition hover:brightness-110 shrink-0"
+              class="${buttonClass({ variant: 'default', size: 'default', className: 'h-11 rounded-full px-5 gap-1.5 button-hover-soft-primary shrink-0' })}"
             >
               ${renderIcon('Plus', 'h-4 w-4')}
               <span>Tambah Pengguna</span>
@@ -595,50 +581,66 @@ function renderContent() {
 
   ${renderModal()}
 
-  ${renderFilterModal({
-    id: 'dialog-filter-pengguna',
-    title: isPenggunaTab ? 'Filter Pengguna' : 'Filter Request Password',
-    countActive: nAktif,
-    closeAction: 'close-filter-dialog',
-    resetAction: 'reset-filter-dialog',
-    applyAction: 'apply-filter-dialog',
-    formId: 'form-filter-pengguna',
-    bodyContent: isPenggunaTab
+  <dialog id="dialog-filter-pengguna" aria-labelledby="filter-pengguna-title" style="width: min(512px, calc(100vw - 2rem)); max-width: none;" class="fixed left-1/2 top-1/2 z-50 m-0 -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-white p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm">
+    <div class="flex flex-col p-5 sm:p-6">
+      <div class="flex items-center justify-between border-b border-border pb-3">
+        <div class="flex min-w-0 items-center gap-2">
+          <h2 id="filter-pengguna-title" class="text-base font-semibold leading-tight text-foreground">${isPenggunaTab ? 'Filter Kelola Pengguna' : 'Filter Request Password'}</h2>
+          ${nAktif > 0 ? `<span class="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">${nAktif}</span>` : ''}
+        </div>
+        <button type="button" data-action="close-filter-dialog" aria-label="Tutup filter" class="ml-2 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground">
+          ${renderIcon('X', 'h-4 w-4')}
+        </button>
+      </div>
+      <form id="form-filter-pengguna" class="mt-4 space-y-4">
+        ${isPenggunaTab
       ? `
-      <!-- Role -->
-      <div class="space-y-1.5">
-        <label for="filter-user-role" class="text-sm font-medium text-foreground">Role</label>
-        <div class="relative">
-          <select id="filter-user-role" name="role" class="${selectClass('appearance-none pr-10 cursor-pointer')}">
-            <option value="all" ${roleFilter === 'all' ? 'selected' : ''}>Semua Role</option>
-            <option value="${ROLES.PEMINJAM}" ${roleFilter === ROLES.PEMINJAM ? 'selected' : ''}>Peminjam</option>
-            <option value="${ROLES.PENANGGUNG_JAWAB}" ${roleFilter === ROLES.PENANGGUNG_JAWAB ? 'selected' : ''}>Penanggung Jawab</option>
-          </select>
-          <span class="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground flex items-center">
-            ${renderIcon('ChevronDown', 'h-4 w-4')}
-          </span>
+      <!-- Role: opsi tunggal yang bisa dibatalkan dengan klik ulang -->
+      <div>
+        <span class="mb-3 block text-sm font-semibold text-slate-900">Role</span>
+        <div class="space-y-3">
+          <label class="flex cursor-pointer items-center gap-3" data-filter-option>
+            <input type="checkbox" name="filterRole" value="${ROLES.PEMINJAM}" data-filter-checkbox data-filter-group="role" ${roleFilter === ROLES.PEMINJAM ? 'checked' : ''} class="sr-only" />
+            <span data-filter-indicator class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${roleFilter === ROLES.PEMINJAM ? 'border-primary bg-primary text-white' : 'border-slate-300 bg-white text-transparent'}">
+              <svg data-filter-check class="h-3 w-3 stroke-[3] ${roleFilter === ROLES.PEMINJAM ? 'block' : 'hidden'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
+            </span>
+            <span class="text-sm font-medium text-slate-800">Peminjam</span>
+          </label>
+          <label class="flex cursor-pointer items-center gap-3" data-filter-option>
+            <input type="checkbox" name="filterRole" value="${ROLES.PENANGGUNG_JAWAB}" data-filter-checkbox data-filter-group="role" ${roleFilter === ROLES.PENANGGUNG_JAWAB ? 'checked' : ''} class="sr-only" />
+            <span data-filter-indicator class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${roleFilter === ROLES.PENANGGUNG_JAWAB ? 'border-primary bg-primary text-white' : 'border-slate-300 bg-white text-transparent'}">
+              <svg data-filter-check class="h-3 w-3 stroke-[3] ${roleFilter === ROLES.PENANGGUNG_JAWAB ? 'block' : 'hidden'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
+            </span>
+            <span class="text-sm font-medium text-slate-800">Penanggung Jawab</span>
+          </label>
         </div>
       </div>
 
-      <!-- Status Akun -->
-      <div class="space-y-1.5">
-        <label for="filter-user-status" class="text-sm font-medium text-foreground">Status Akun</label>
-        <div class="relative">
-          <select id="filter-user-status" name="statusAkun" class="${selectClass('appearance-none pr-10 cursor-pointer')}">
-            <option value="all" ${statusFilter === 'all' ? 'selected' : ''}>Semua Status</option>
-            <option value="${STATUS_AKUN.AKTIF}" ${statusFilter === STATUS_AKUN.AKTIF ? 'selected' : ''}>Aktif</option>
-            <option value="${STATUS_AKUN.NONAKTIF}" ${statusFilter === STATUS_AKUN.NONAKTIF ? 'selected' : ''}>Nonaktif</option>
-          </select>
-          <span class="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground flex items-center">
-            ${renderIcon('ChevronDown', 'h-4 w-4')}
-          </span>
+      <!-- Status Akun: opsi tunggal yang bisa dibatalkan dengan klik ulang -->
+      <div>
+        <span class="mb-3 block text-sm font-semibold text-slate-900">Status Akun</span>
+        <div class="space-y-3">
+          <label class="flex cursor-pointer items-center gap-3" data-filter-option>
+            <input type="checkbox" name="filterStatusAkun" value="${STATUS_AKUN.AKTIF}" data-filter-checkbox data-filter-group="statusAkun" ${statusFilter === STATUS_AKUN.AKTIF ? 'checked' : ''} class="sr-only" />
+            <span data-filter-indicator class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${statusFilter === STATUS_AKUN.AKTIF ? 'border-primary bg-primary text-white' : 'border-slate-300 bg-white text-transparent'}">
+              <svg data-filter-check class="h-3 w-3 stroke-[3] ${statusFilter === STATUS_AKUN.AKTIF ? 'block' : 'hidden'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
+            </span>
+            <span class="text-sm font-medium text-slate-800">Aktif</span>
+          </label>
+          <label class="flex cursor-pointer items-center gap-3" data-filter-option>
+            <input type="checkbox" name="filterStatusAkun" value="${STATUS_AKUN.NONAKTIF}" data-filter-checkbox data-filter-group="statusAkun" ${statusFilter === STATUS_AKUN.NONAKTIF ? 'checked' : ''} class="sr-only" />
+            <span data-filter-indicator class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${statusFilter === STATUS_AKUN.NONAKTIF ? 'border-primary bg-primary text-white' : 'border-slate-300 bg-white text-transparent'}">
+              <svg data-filter-check class="h-3 w-3 stroke-[3] ${statusFilter === STATUS_AKUN.NONAKTIF ? 'block' : 'hidden'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
+            </span>
+            <span class="text-sm font-medium text-slate-800">Nonaktif</span>
+          </label>
         </div>
       </div>
     `
       : `
       <!-- Status Request Password -->
       <div class="space-y-1.5">
-        <label for="filter-rp-status" class="text-sm font-medium text-foreground">Status Pengajuan</label>
+        <label for="filter-rp-status" class="block text-sm font-semibold text-foreground">Status Pengajuan</label>
         <div class="relative">
           <select id="filter-rp-status" name="rpStatus" class="${selectClass('appearance-none pr-10 cursor-pointer')}">
             <option value="all" ${rpStatusFilter === 'all' ? 'selected' : ''}>Semua Status</option>
@@ -650,8 +652,14 @@ function renderContent() {
           </span>
         </div>
       </div>
-    `,
-  })}`;
+    `}
+      </form>
+      <div class="mt-5 flex items-center justify-end gap-3">
+        <button type="button" data-action="reset-filter-dialog" class="filter-reset-link px-2 py-2.5 text-sm font-semibold text-slate-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">Reset</button>
+        <button type="button" data-action="apply-filter-dialog" class="rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">Terapkan</button>
+      </div>
+    </div>
+  </dialog>`;
 }
 
 function refresh() {
@@ -785,24 +793,32 @@ export async function mount(root, ctx = {}) {
     }
 
     if (action === 'reset-filter-dialog') {
+      const filterForm = rootElement.querySelector('#form-filter-pengguna');
       if (activeTab === 'pengguna') {
-        roleFilter = 'all';
-        statusFilter = 'all';
-        currentPage = 1;
+        // Reset hanya mengosongkan pilihan di popup; perubahan diterapkan setelah Terapkan.
+        filterForm?.querySelectorAll('input[data-filter-checkbox]').forEach((checkbox) => {
+          checkbox.checked = false;
+          const option = checkbox.closest('[data-filter-option]');
+          const indicator = option?.querySelector('[data-filter-indicator]');
+          const check = option?.querySelector('[data-filter-check]');
+          if (indicator) indicator.className = 'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition border-slate-300 bg-white text-transparent';
+          if (check) {
+            check.classList.remove('block');
+            check.classList.add('hidden');
+          }
+        });
       } else {
-        rpStatusFilter = 'all';
-        rpCurrentPage = 1;
-        await loadRpData();
+        const rpStatusSelect = filterForm?.querySelector('#filter-rp-status');
+        if (rpStatusSelect) rpStatusSelect.value = 'all';
       }
-      rootElement.querySelector('#dialog-filter-pengguna')?.close();
-      refresh();
+      // Popup sengaja tetap terbuka, sama seperti Reset pada Filter Barang Inventaris.
       return;
     }
 
     if (action === 'apply-filter-dialog') {
       if (activeTab === 'pengguna') {
-        roleFilter = rootElement.querySelector('#filter-user-role')?.value || 'all';
-        statusFilter = rootElement.querySelector('#filter-user-status')?.value || 'all';
+        roleFilter = rootElement.querySelector('input[name="filterRole"]:checked')?.value || 'all';
+        statusFilter = rootElement.querySelector('input[name="filterStatusAkun"]:checked')?.value || 'all';
         currentPage = 1;
       } else {
         rpStatusFilter = rootElement.querySelector('#filter-rp-status')?.value || 'all';
@@ -1061,6 +1077,34 @@ export async function mount(root, ctx = {}) {
   };
 
   changeHandler = (event) => {
+    const filterCheckbox = event.target?.matches?.('input[data-filter-checkbox]') ? event.target : null;
+    if (filterCheckbox) {
+      const groupName = filterCheckbox.dataset.filterGroup;
+      const groupSelector = `input[data-filter-checkbox][data-filter-group="${groupName}"]`;
+
+      // Tiap kelompok hanya boleh memilih satu opsi; klik ulang membatalkan pilihan.
+      if (filterCheckbox.checked) {
+        rootElement?.querySelectorAll(groupSelector).forEach((peer) => {
+          if (peer !== filterCheckbox) peer.checked = false;
+        });
+      }
+
+      rootElement?.querySelectorAll(groupSelector).forEach((checkbox) => {
+        const option = checkbox.closest('[data-filter-option]');
+        const indicator = option?.querySelector('[data-filter-indicator]');
+        const check = option?.querySelector('[data-filter-check]');
+        const checked = checkbox.checked;
+        if (indicator) {
+          indicator.className = `flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${checked ? 'border-primary bg-primary text-white' : 'border-slate-300 bg-white text-transparent'}`;
+        }
+        if (check) {
+          check.classList.toggle('block', checked);
+          check.classList.toggle('hidden', !checked);
+        }
+      });
+      return;
+    }
+
     if (event.target && event.target.name === 'role') {
       const group = rootElement?.querySelector('#role-radio-group');
       if (group) {

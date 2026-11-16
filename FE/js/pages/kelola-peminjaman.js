@@ -1,3 +1,4 @@
+import { markNotificationsRead } from '../lib/navigation.js';
 /**
  * Halaman Pengelolaan > Kelola Peminjaman.
  * Data berasal dari service mock frontend, dengan aksi setujui/tolak untuk demo.
@@ -498,67 +499,62 @@ function renderContent() {
     </div>
   </section>
   ${renderModal()}
-  ${renderFilterModal({
-    id: "dialog-filter-peminjaman",
-    title: "Filter Kelola Peminjaman",
-    countActive: nAktif,
-    closeAction: "close-filter-dialog",
-    resetAction: "reset-filter-dialog",
-    applyAction: "apply-filter-dialog",
-    formId: "form-filter-peminjaman",
-    bodyContent: `
-      <div class="space-y-4">
-        <!-- OKI Peminjam -->
-        <div class="space-y-1.5">
-          <label for="filter-peminjaman-oki" class="text-sm font-medium text-foreground">OKI Peminjam</label>
-          <div class="relative">
-            <select id="filter-peminjaman-oki" name="oki" class="${selectClass("appearance-none pr-10 cursor-pointer")}">
-              <option value="all" ${okiFilter === "all" ? "selected" : ""}>Pilih OKI</option>
-              ${OKI_LIST.map((oki) => `<option value="${escapeHtml(oki)}" ${okiFilter === oki ? "selected" : ""}>${escapeHtml(oki)}</option>`).join("")}
-            </select>
-            <span class="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground flex items-center">
-              ${renderIcon("ChevronDown", "h-4 w-4")}
-            </span>
-          </div>
+  <dialog id="dialog-filter-peminjaman" aria-labelledby="filter-peminjaman-title" style="width: min(512px, calc(100vw - 2rem)); max-width: none;" class="fixed left-1/2 top-1/2 m-0 -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-white p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm">
+    <div class="flex flex-col p-5 sm:p-6">
+      <div class="flex items-center justify-between border-b border-border pb-3">
+        <div class="flex min-w-0 items-center gap-2">
+          <h2 id="filter-peminjaman-title" class="text-base font-semibold leading-tight text-foreground">Filter Kelola Peminjaman</h2>
+          ${nAktif > 0 ? `<span class="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">${nAktif}</span>` : ""}
         </div>
-
-        <!-- Tanggal Peminjaman -->
-        <div class="space-y-1.5">
-          <label for="filter-peminjaman-tanggal" class="text-sm font-medium text-foreground">Tanggal Peminjaman</label>
-          <div class="relative">
-            <input
-              type="date"
-              id="filter-peminjaman-tanggal"
-              name="tanggal"
-              value="${escapeHtml(tanggalFilter)}"
-              placeholder="Pilih Tanggal"
-              class="${inputClass("appearance-none pr-10 cursor-pointer text-slate-700 w-full")}"
-            />
-            <span class="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground flex items-center">
-              ${renderIcon("CalendarDays", "h-4 w-4")}
-            </span>
-          </div>
-        </div>
-
-        <!-- Status -->
-        <div class="space-y-1.5">
-          <label for="filter-peminjaman-status" class="text-sm font-medium text-foreground">Status</label>
-          <div class="relative">
-            <select id="filter-peminjaman-status" name="status" class="${selectClass("appearance-none pr-10 cursor-pointer")}">
-              <option value="all" ${statusFilter === "all" ? "selected" : ""}>Pilih status</option>
-              <option value="${STATUS_PEMINJAMAN.DIAJUKAN}" ${statusFilter === STATUS_PEMINJAMAN.DIAJUKAN ? "selected" : ""}>Diajukan</option>
-              <option value="${STATUS_PEMINJAMAN.DISETUJUI}" ${statusFilter === STATUS_PEMINJAMAN.DISETUJUI ? "selected" : ""}>Disetujui</option>
-              <option value="${STATUS_PEMINJAMAN.DIPINJAM}" ${statusFilter === STATUS_PEMINJAMAN.DIPINJAM ? "selected" : ""}>Dipinjam</option>
-              <option value="${STATUS_PEMINJAMAN.DITOLAK}" ${statusFilter === STATUS_PEMINJAMAN.DITOLAK ? "selected" : ""}>Ditolak</option>
-            </select>
-            <span class="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground flex items-center">
-              ${renderIcon("ChevronDown", "h-4 w-4")}
-            </span>
-          </div>
-        </div>
+        <button type="button" data-action="close-filter-dialog" aria-label="Tutup filter" class="ml-2 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground">
+          ${renderIcon("X", "h-4 w-4")}
+        </button>
       </div>
-    `,
-  })}`;
+
+      <form id="form-filter-peminjaman" class="mt-4 space-y-4">
+        <div class="space-y-1.5">
+          <label for="filter-peminjaman-oki" class="block text-sm font-semibold text-foreground">OKI Peminjam</label>
+          <div class="relative">
+            <select id="filter-peminjaman-oki" name="oki" style="color: ${okiFilter === "all" ? "var(--muted-foreground)" : "var(--foreground)"};" class="${selectClass("appearance-none pr-10 cursor-pointer")}">
+              <option value="" disabled hidden style="color: var(--muted-foreground)" ${okiFilter === "all" ? "selected" : ""}>Pilih OKI</option>
+              ${OKI_LIST.map((oki) => `<option value="${escapeHtml(oki)}" style="color: var(--foreground)" ${okiFilter === oki ? "selected" : ""}>${escapeHtml(oki)}</option>`).join("")}
+            </select>
+            <span class="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground flex items-center">${renderIcon("ChevronDown", "h-4 w-4")}</span>
+          </div>
+        </div>
+
+        <div class="space-y-1.5">
+          <label for="filter-peminjaman-tanggal" class="block text-sm font-semibold text-foreground">Tanggal Peminjaman</label>
+          <div class="relative">
+            <button type="button" data-action="open-filter-peminjaman-date" aria-label="Pilih tanggal peminjaman" class="${selectClass("justify-between gap-3 text-left font-normal")}">
+              <span id="filter-peminjaman-date-display" class="pointer-events-none flex-1 text-sm ${tanggalFilter ? "text-foreground" : "text-muted-foreground"}">${tanggalFilter ? escapeHtml(dateLabel(tanggalFilter)) : "Pilih Tanggal"}</span>
+              <span class="pointer-events-none flex shrink-0 items-center text-muted-foreground">${renderIcon("CalendarDays", "h-5 w-5")}</span>
+            </button>
+            <input type="date" id="filter-peminjaman-tanggal" name="tanggal" aria-label="Pilih tanggal peminjaman" value="${escapeHtml(tanggalFilter)}" tabindex="-1" aria-hidden="true" class="pointer-events-none absolute left-0 top-0 h-px w-px opacity-0" style="color-scheme:light;appearance:none;-webkit-appearance:none" />
+          </div>
+        </div>
+
+        <div class="space-y-1.5">
+          <label for="filter-peminjaman-status" class="block text-sm font-semibold text-foreground">Status</label>
+          <div class="relative">
+            <select id="filter-peminjaman-status" name="status" style="color: ${statusFilter === "all" ? "var(--muted-foreground)" : "var(--foreground)"};" class="${selectClass("appearance-none pr-10 cursor-pointer")}">
+              <option value="" disabled hidden style="color: var(--muted-foreground)" ${statusFilter === "all" ? "selected" : ""}>Pilih status</option>
+              <option style="color: var(--foreground)" value="${STATUS_PEMINJAMAN.DIAJUKAN}" ${statusFilter === STATUS_PEMINJAMAN.DIAJUKAN ? "selected" : ""}>Diajukan</option>
+              <option style="color: var(--foreground)" value="${STATUS_PEMINJAMAN.DISETUJUI}" ${statusFilter === STATUS_PEMINJAMAN.DISETUJUI ? "selected" : ""}>Disetujui</option>
+              <option style="color: var(--foreground)" value="${STATUS_PEMINJAMAN.DIPINJAM}" ${statusFilter === STATUS_PEMINJAMAN.DIPINJAM ? "selected" : ""}>Dipinjam</option>
+              <option style="color: var(--foreground)" value="${STATUS_PEMINJAMAN.DITOLAK}" ${statusFilter === STATUS_PEMINJAMAN.DITOLAK ? "selected" : ""}>Ditolak</option>
+            </select>
+            <span class="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground flex items-center">${renderIcon("ChevronDown", "h-4 w-4")}</span>
+          </div>
+        </div>
+      </form>
+
+      <div class="mt-5 flex items-center justify-end gap-3">
+        <button type="button" data-action="reset-filter-dialog" class="filter-reset-link px-2 py-2.5 text-sm font-semibold text-slate-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">Reset</button>
+        <button type="button" data-action="apply-filter-dialog" class="rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">Terapkan</button>
+      </div>
+    </div>
+  </dialog>`;
 }
 
 function refresh() {
@@ -598,6 +594,7 @@ export async function mount(root) {
   tanggalFilter = "";
   statusFilter = "all";
   rows = await loadRows();
+  markNotificationsRead('kelola-peminjaman', [STATUS_PEMINJAMAN.DIAJUKAN], rows);
   rootElement.innerHTML = renderContent();
 
   clickHandler = async (event) => {
@@ -706,17 +703,44 @@ export async function mount(root) {
       rootElement.querySelector("#dialog-filter-peminjaman")?.showModal();
       return;
     }
+    if (action === "open-filter-peminjaman-date") {
+      const dateInput = rootElement.querySelector("#filter-peminjaman-tanggal");
+      try {
+        if (typeof dateInput?.showPicker === "function") dateInput.showPicker();
+        else dateInput?.click();
+      } catch {
+        dateInput?.click();
+      }
+      return;
+    }
     if (action === "close-filter-dialog") {
       rootElement.querySelector("#dialog-filter-peminjaman")?.close();
       return;
     }
     if (action === "reset-filter-dialog") {
-      okiFilter = "all";
-      tanggalFilter = "";
-      statusFilter = "all";
-      currentPage = 1;
-      rootElement.querySelector("#dialog-filter-peminjaman")?.close();
-      refresh();
+      // Reset hanya mengembalikan isian popup ke placeholder awal.
+      // Popup tetap terbuka dan filter aktif baru berubah setelah Terapkan diklik.
+      const form = rootElement.querySelector("#form-filter-peminjaman");
+      const okiSelect = form?.querySelector("#filter-peminjaman-oki");
+      const statusSelect = form?.querySelector("#filter-peminjaman-status");
+      const dateInput = form?.querySelector("#filter-peminjaman-tanggal");
+      const dateDisplay = form?.querySelector("#filter-peminjaman-date-display");
+      if (okiSelect) {
+        okiSelect.value = "";
+        okiSelect.classList.add("!text-muted-foreground");
+        okiSelect.style.color = "var(--muted-foreground)";
+      }
+      if (statusSelect) {
+        statusSelect.value = "";
+        statusSelect.classList.add("!text-muted-foreground");
+        statusSelect.style.color = "var(--muted-foreground)";
+      }
+      if (dateInput) dateInput.value = "";
+      if (dateDisplay) {
+        dateDisplay.textContent = "Pilih Tanggal";
+        dateDisplay.classList.remove("text-foreground");
+        dateDisplay.classList.add("text-muted-foreground");
+      }
       return;
     }
     if (action === "apply-filter-dialog") {
@@ -862,6 +886,21 @@ export async function mount(root) {
   };
 
   changeHandler = async (event) => {
+    if (["filter-peminjaman-oki", "filter-peminjaman-status"].includes(event.target.id)) {
+      event.target.classList.toggle("!text-muted-foreground", !event.target.value);
+      event.target.style.color = event.target.value ? "var(--foreground)" : "var(--muted-foreground)";
+      return;
+    }
+    if (event.target.id === "filter-peminjaman-tanggal") {
+      const selectedDate = event.target.value;
+      const dateDisplay = rootElement.querySelector("#filter-peminjaman-date-display");
+      if (dateDisplay) {
+        dateDisplay.textContent = selectedDate ? dateLabel(selectedDate) : "Pilih Tanggal";
+        dateDisplay.classList.toggle("text-muted-foreground", !selectedDate);
+        dateDisplay.classList.toggle("text-foreground", !!selectedDate);
+      }
+      return;
+    }
     if (event.target.id === "tanggal-pengambilan") {
       pickupData.tanggalPengambilan = event.target.value;
       pickupData.tanggalError = "";
