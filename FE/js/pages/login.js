@@ -82,8 +82,8 @@ function renderForgotPasswordPage() {
                 <p id="forgot-whatsapp-error" class="mt-1 text-xs text-rose-600 hidden"></p>
               </div>
               <div class="flex items-center justify-end gap-3 pt-3">
-                <button type="button" data-action="forgot-back-login" class="inline-flex h-11 items-center justify-center rounded-xl px-6 text-sm font-medium text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-800">Batal</button>
-                <button type="submit" class="inline-flex h-11 items-center justify-center rounded-xl bg-primary px-8 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90">Kirim</button>
+                <button type="button" data-action="forgot-back-login" class="inline-flex h-11 items-center justify-center rounded-xl px-6 text-sm font-medium text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-800 border w-full">Batal</button>
+                <button type="submit" class="inline-flex h-11 items-center justify-center rounded-xl bg-primary px-8 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 w-full">Kirim</button>
               </div>
             </form>
             <footer class="mt-auto py-4 text-center text-xs text-zinc-400">&copy; 2026. PinjemDulu - All Rights Reserved.</footer>
