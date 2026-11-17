@@ -7,6 +7,31 @@ import { ENV } from '../config.js';
 import { getToken } from '../state/session.js';
 
 let mockOverride = null;
+let pendingRequestsCount = 0;
+
+function notifyLoadingState(delta) {
+  pendingRequestsCount = Math.max(0, pendingRequestsCount + delta);
+  if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+    try {
+      window.dispatchEvent(new CustomEvent('pd:loading-state', {
+        detail: {
+          active: pendingRequestsCount > 0,
+          count: pendingRequestsCount,
+        },
+      }));
+    } catch {
+      /* abaikan jika lingkungan non-browser */
+    }
+  }
+}
+
+/**
+ * Dapatkan jumlah request API yang sedang aktif berjalan.
+ * @returns {number}
+ */
+export function getPendingRequestsCount() {
+  return pendingRequestsCount;
+}
 
 /**
  * Periksa apakah mode mock sedang aktif.
@@ -52,90 +77,95 @@ export function delay(ms = 100) {
  * @returns {Promise<any>}
  */
 export async function apiFetch(endpoint, options = {}) {
-  const baseUrl = getApiBaseUrl().replace(/\/+$/, '');
-  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-  const url = endpoint.startsWith('http://') || endpoint.startsWith('https://')
-    ? endpoint
-    : `${baseUrl}${cleanEndpoint}`;
+  notifyLoadingState(1);
+  try {
+    const baseUrl = getApiBaseUrl().replace(/\/+$/, '');
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const url = endpoint.startsWith('http://') || endpoint.startsWith('https://')
+      ? endpoint
+      : `${baseUrl}${cleanEndpoint}`;
 
-  const headers = new Headers(options.headers || {});
+    const headers = new Headers(options.headers || {});
 
-  // Sertakan token JWT otomatis dari session jika tersedia dan belum diset manual
-  if (!headers.has('Authorization')) {
-    const token = getToken();
-    if (token) {
-      headers.set('Authorization', `Bearer ${token}`);
+    // Sertakan token JWT otomatis dari session jika tersedia dan belum diset manual
+    if (!headers.has('Authorization')) {
+      const token = getToken();
+      if (token) {
+        headers.set('Authorization', `Bearer ${token}`);
+      }
     }
-  }
 
-  // Tangani body & header Content-Type
-  let finalBody = options.body;
-  const isFormData = typeof FormData !== 'undefined' && finalBody instanceof FormData;
-  const isBlob = typeof Blob !== 'undefined' && finalBody instanceof Blob;
+    // Tangani body & header Content-Type
+    let finalBody = options.body;
+    const isFormData = typeof FormData !== 'undefined' && finalBody instanceof FormData;
+    const isBlob = typeof Blob !== 'undefined' && finalBody instanceof Blob;
 
-  if (finalBody !== undefined && finalBody !== null) {
-    if (isFormData || isBlob) {
-      // Biarkan browser/fetch mengatur header Content-Type otomatis (termasuk boundary)
-      headers.delete('Content-Type');
-    } else if (typeof finalBody === 'object') {
-      if (!headers.has('Content-Type')) {
+    if (finalBody !== undefined && finalBody !== null) {
+      if (isFormData || isBlob) {
+        // Biarkan browser/fetch mengatur header Content-Type otomatis (termasuk boundary)
+        headers.delete('Content-Type');
+      } else if (typeof finalBody === 'object') {
+        if (!headers.has('Content-Type')) {
+          headers.set('Content-Type', 'application/json');
+        }
+        finalBody = JSON.stringify(finalBody);
+      } else if (!headers.has('Content-Type')) {
         headers.set('Content-Type', 'application/json');
       }
-      finalBody = JSON.stringify(finalBody);
-    } else if (!headers.has('Content-Type')) {
-      headers.set('Content-Type', 'application/json');
     }
-  }
 
-  const fetchOptions = {
-    ...options,
-    headers,
-    body: finalBody,
-  };
+    const fetchOptions = {
+      ...options,
+      headers,
+      body: finalBody,
+    };
 
-  const response = await fetch(url, fetchOptions);
+    const response = await fetch(url, fetchOptions);
 
-  // Status 204 No Content: respons tanpa payload
-  if (response.status === 204) {
-    return null;
-  }
-
-  // Parse body respons (JSON atau teks)
-  const contentType = response.headers.get('content-type') || '';
-  let responseData = null;
-
-  if (contentType.includes('application/json')) {
-    try {
-      responseData = await response.json();
-    } catch {
-      responseData = null;
+    // Status 204 No Content: respons tanpa payload
+    if (response.status === 204) {
+      return null;
     }
-  } else {
-    try {
-      const text = await response.text();
-      responseData = text ? JSON.parse(text) : null;
-    } catch {
-      responseData = null;
+
+    // Parse body respons (JSON atau teks)
+    const contentType = response.headers.get('content-type') || '';
+    let responseData = null;
+
+    if (contentType.includes('application/json')) {
+      try {
+        responseData = await response.json();
+      } catch {
+        responseData = null;
+      }
+    } else {
+      try {
+        const text = await response.text();
+        responseData = text ? JSON.parse(text) : null;
+      } catch {
+        responseData = null;
+      }
     }
+
+    // Tangani kegagalan HTTP status (4xx, 5xx)
+    if (!response.ok) {
+      const message =
+        responseData?.message ||
+        (typeof responseData === 'string' ? responseData : null) ||
+        response.statusText ||
+        `Permintaan gagal dengan status ${response.status}`;
+
+      const error = new Error(message);
+      error.statusCode = response.status;
+      error.status = response.status;
+      error.code = responseData?.code || null;
+      error.errors = responseData?.errors || null;
+      error.data = responseData;
+
+      throw error;
+    }
+
+    return responseData;
+  } finally {
+    notifyLoadingState(-1);
   }
-
-  // Tangani kegagalan HTTP status (4xx, 5xx)
-  if (!response.ok) {
-    const message =
-      responseData?.message ||
-      (typeof responseData === 'string' ? responseData : null) ||
-      response.statusText ||
-      `Permintaan gagal dengan status ${response.status}`;
-
-    const error = new Error(message);
-    error.statusCode = response.status;
-    error.status = response.status;
-    error.code = responseData?.code || null;
-    error.errors = responseData?.errors || null;
-    error.data = responseData;
-
-    throw error;
-  }
-
-  return responseData;
 }

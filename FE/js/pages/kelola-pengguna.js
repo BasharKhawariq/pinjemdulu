@@ -18,7 +18,9 @@ import { buttonClass, selectClass } from '../ui/classes.js';
 import { renderOrganisasiLogo } from '../ui/organisasi-badge.js';
 import { renderEmptyState } from '../ui/empty-state.js';
 import { renderPagination as renderSharedPagination } from '../ui/pagination.js';
+import { renderTableLoadingRow } from '../ui/loading-state.js';
 import { formatTanggal } from '../lib/format.js';
+import { getUser } from '../state/session.js';
 
 const PAGE_SIZE = 10;
 const ORGANISASI_LIST = ['BEM', 'HMTI', 'HME', 'HIMANIA', 'RISPOL', 'HMS', 'THEATRISIC', 'PP'];
@@ -26,6 +28,7 @@ const ORGANISASI_LIST = ['BEM', 'HMTI', 'HME', 'HIMANIA', 'RISPOL', 'HMS', 'THEA
 // State Utama
 let activeTab = 'pengguna'; // 'pengguna' | 'request-password'
 let users = [];
+let isUsersLoading = false;
 let searchTerm = '';
 let roleFilter = 'all';
 let statusFilter = 'all';
@@ -33,6 +36,7 @@ let currentPage = 1;
 
 // State Request Password
 let requestPasswords = [];
+let isRpLoading = false;
 let rpSearchTerm = '';
 let rpStatusFilter = 'all';
 let rpCurrentPage = 1;
@@ -72,11 +76,28 @@ function initials(name) {
 }
 
 function organizationOf(user) {
-  return user?.displayOrganization || user?.organisasi?.namaOrganisasi || user?.namaOrganisasi || user?.okiPemohon || '—';
+  return (
+    user?.displayOrganization ||
+    user?.singkatan ||
+    user?.organisasi?.namaOrganisasi ||
+    user?.organisasi?.singkatan ||
+    user?.namaOrganisasi ||
+    user?.okiPemohon ||
+    (typeof user?.organisasi === 'string' ? user.organisasi : null) ||
+    '—'
+  );
 }
 
 function orgLogoOf(user) {
-  return user?.logoOrganisasi || user?.organisasiLogo || user?.organisasi?.icon || user?.organisasi?.logo || null;
+  return (
+    user?.logoUrl ||
+    user?.organisasi?.logoUrl ||
+    user?.logoOrganisasi ||
+    user?.organisasiLogo ||
+    user?.organisasi?.icon ||
+    user?.organisasi?.logo ||
+    null
+  );
 }
 
 function renderOrgLogo(user) {
@@ -132,6 +153,9 @@ function visibleUsers() {
 }
 
 function renderUserRows() {
+  if (isUsersLoading) {
+    return renderTableLoadingRow({ colspan: 6, message: 'Memuat data pengguna...' });
+  }
   const filtered = visibleUsers();
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   currentPage = Math.min(currentPage, pages);
@@ -158,6 +182,9 @@ function renderUserRows() {
 }
 
 function renderRpRows() {
+  if (isRpLoading) {
+    return renderTableLoadingRow({ colspan: 6, message: 'Memuat data request password...' });
+  }
   if (!requestPasswords.length) return renderEmptyState({ colspan: 6 });
 
   const start = (rpCurrentPage - 1) * PAGE_SIZE;
@@ -184,7 +211,8 @@ function renderRpRows() {
             </span>
             <div class="min-w-0">
               <div class="truncate text-xs font-medium text-slate-800">${escapeHtml(row.namaPengguna || 'Pengguna')}</div>
-              <div class="mt-0.5 flex items-center gap-1.5 text-xs text-slate-400">
+              <div class="mt-0.5 flex items-center gap-1.5 text-xs text-slate-700">
+                ${renderOrganisasiLogo(row.okiPemohon, row.logoUrl, 'h-3.5 w-3.5')}
                 <span>${escapeHtml(row.okiPemohon || '—')}</span>
               </div>
             </div>
@@ -491,7 +519,17 @@ function renderModal() {
   const isPeminjam = currentRole === ROLES.PEMINJAM;
   const isPj = currentRole === ROLES.PENANGGUNG_JAWAB;
 
-  return `<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-[2px] p-4 sm:p-6" data-modal-backdrop><section role="dialog" aria-modal="true" aria-labelledby="user-form-title" class="w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white p-6 sm:p-8 shadow-2xl transition-all"><h2 id="user-form-title" class="text-xl font-semibold tracking-tight text-slate-900">${editing ? 'Edit Pengguna' : 'Tambah Pengguna'}</h2><form id="user-form" class="mt-6 space-y-4"><div><label class="mb-2 block text-sm font-medium text-slate-900">Nama Pengguna</label><input name="nama" type="text" value="${escapeHtml(editing ? (u.nama || '') : '')}" placeholder="${editing ? 'Nama Pengguna' : 'Nama Pengguna'}" required class="w-full rounded-2xl border border-slate-100 bg-white px-4 py-3.5 text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.03)]" /></div><div><label class="mb-2 block text-sm font-medium text-slate-900">NIM</label><input name="nim" type="text" value="${escapeHtml(editing ? (u.nim || '') : '')}" placeholder="NIM" required class="w-full rounded-2xl border border-slate-100 bg-white px-4 py-3.5 text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.03)]" /></div><div><label class="mb-2 block text-sm font-medium text-slate-900">Nomor Whatsapp</label><div class="flex items-center overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.03)] focus-within:border-slate-300 focus-within:ring-2 focus-within:ring-slate-100"><span class="inline-flex h-12 items-center border-r border-slate-100 bg-slate-50 px-4 text-sm font-medium text-slate-600">+62</span><input name="noWhatsapp" type="tel" value="${escapeHtml(cleanWa(editing ? (u.noWhatsapp || u.no_whatsapp || '') : ''))}" placeholder="${editing ? '812-3456-7890' : 'Masukkan nomor whatsapp anda'}" class="h-12 flex-1 px-4 text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none" /><span class="pr-4 flex items-center justify-center"><svg class="h-5 w-5 shrink-0 rounded-full border border-slate-200 overflow-hidden" viewBox="0 0 24 24"><path d="M0,0 H24 V12 H0 Z" class="fill-rose-600" /><path d="M0,12 H24 V24 H0 Z" class="fill-white" /></svg></span></div></div><div><label class="mb-2 block text-sm font-medium text-slate-900">Organisasi</label><div class="relative"><select name="displayOrganization" class="${selectClass('appearance-none pr-10 cursor-pointer')}">${ORGANISASI_LIST.map((org) => `<option value="${escapeHtml(org)}" ${(editing ? organizationOf(u) : 'HIMANIA') === org ? 'selected' : ''}>${escapeHtml(org)}</option>`).join('')}</select><span class="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 flex items-center">${renderIcon('ChevronDown', 'h-4 w-4 stroke-[2.2]')}</span></div></div><div><span class="mb-3 block text-sm font-medium text-slate-900">Role</span><div class="space-y-3" id="role-radio-group"><label class="flex cursor-pointer items-center gap-3" data-role-label><input type="radio" name="role" value="${ROLES.PEMINJAM}" ${isPeminjam ? 'checked' : ''} class="sr-only" /><span data-role-indicator class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${isPeminjam ? 'border-primary bg-primary text-white' : 'border-slate-300 bg-white text-transparent'}"><svg data-role-check class="h-3 w-3 stroke-[3] ${isPeminjam ? 'block' : 'hidden'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span class="text-sm font-medium text-slate-800">Peminjam</span></label><label class="flex cursor-pointer items-center gap-3" data-role-label><input type="radio" name="role" value="${ROLES.PENANGGUNG_JAWAB}" ${isPj ? 'checked' : ''} class="sr-only" /><span data-role-indicator class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${isPj ? 'border-primary bg-primary text-white' : 'border-slate-300 bg-white text-transparent'}"><svg data-role-check class="h-3 w-3 stroke-[3] ${isPj ? 'block' : 'hidden'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span class="text-sm font-medium text-slate-800">Penanggung Jawab</span></label></div></div><div id="user-form-error" class="hidden rounded-xl bg-red-50 px-4 py-2 text-sm text-red-700"></div><div class="mt-8 flex items-center justify-end gap-4"><button type="button" data-action="close-modal" class="cancel-form-button rounded-xl px-6 py-2.5 text-sm font-semibold text-slate-500 transition hover:bg-slate-50">Batal</button><button type="submit" class="rounded-xl bg-primary px-8 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90">${editing ? 'Edit' : 'Tambah'}</button></div></form></section></div>`;
+  const currentUser = getUser();
+  const pjOrg =
+    currentUser?.organisasi?.namaOrganisasi ||
+    currentUser?.organisasi?.singkatan ||
+    currentUser?.organisasi?.nama ||
+    (typeof currentUser?.organisasi === 'string' ? currentUser.organisasi : null) ||
+    currentUser?.displayOrganization ||
+    'HMTI';
+  const selectedOrg = editing ? organizationOf(u) : pjOrg;
+
+  return `<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-[2px] p-4 sm:p-6" data-modal-backdrop><section role="dialog" aria-modal="true" aria-labelledby="user-form-title" class="w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white p-6 sm:p-8 shadow-2xl transition-all"><h2 id="user-form-title" class="text-xl font-semibold tracking-tight text-slate-900">${editing ? 'Edit Pengguna' : 'Tambah Pengguna'}</h2><form id="user-form" class="mt-6 space-y-4"><div><label class="mb-2 block text-sm font-medium text-slate-900">Nama Pengguna</label><input name="nama" type="text" value="${escapeHtml(editing ? (u.nama || '') : '')}" placeholder="${editing ? 'Nama Pengguna' : 'Nama Pengguna'}" required class="w-full rounded-2xl border border-slate-100 bg-white px-4 py-3.5 text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.03)]" /></div><div><label class="mb-2 block text-sm font-medium text-slate-900">NIM</label><input name="nim" type="text" value="${escapeHtml(editing ? (u.nim || '') : '')}" placeholder="NIM" required class="w-full rounded-2xl border border-slate-100 bg-white px-4 py-3.5 text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.03)]" /></div><div><label class="mb-2 block text-sm font-medium text-slate-900">Nomor Whatsapp</label><div class="flex items-center overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.03)] focus-within:border-slate-300 focus-within:ring-2 focus-within:ring-slate-100"><span class="inline-flex h-12 items-center border-r border-slate-100 bg-slate-50 px-4 text-sm font-medium text-slate-600">+62</span><input name="noWhatsapp" type="tel" value="${escapeHtml(cleanWa(editing ? (u.noWhatsapp || u.no_whatsapp || '') : ''))}" placeholder="${editing ? '812-3456-7890' : 'Masukkan nomor whatsapp anda'}" class="h-12 flex-1 px-4 text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none" /><span class="pr-4 flex items-center justify-center"><svg class="h-5 w-5 shrink-0 rounded-full border border-slate-200 overflow-hidden" viewBox="0 0 24 24"><path d="M0,0 H24 V12 H0 Z" class="fill-rose-600" /><path d="M0,12 H24 V24 H0 Z" class="fill-white" /></svg></span></div></div><div><label class="mb-2 block text-sm font-medium text-slate-900">Organisasi</label><div class="relative"><select name="displayOrganizationSelect" disabled class="${selectClass('appearance-none pr-10 cursor-not-allowed bg-slate-50 text-slate-500 opacity-90')}"><option value="${escapeHtml(selectedOrg)}" selected>${escapeHtml(selectedOrg)}</option></select><input type="hidden" name="displayOrganization" value="${escapeHtml(selectedOrg)}" /><span class="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 flex items-center">${renderIcon('Lock', 'h-4 w-4 stroke-[2]')}</span></div><p class="mt-1 text-xs text-slate-400">Organisasi otomatis disesuaikan dengan organisasi Anda (${escapeHtml(selectedOrg)}).</p></div><div><span class="mb-3 block text-sm font-medium text-slate-900">Role</span><div class="space-y-3" id="role-radio-group"><label class="flex cursor-pointer items-center gap-3" data-role-label><input type="radio" name="role" value="${ROLES.PEMINJAM}" ${isPeminjam ? 'checked' : ''} class="sr-only" /><span data-role-indicator class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${isPeminjam ? 'border-primary bg-primary text-white' : 'border-slate-300 bg-white text-transparent'}"><svg data-role-check class="h-3 w-3 stroke-[3] ${isPeminjam ? 'block' : 'hidden'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span class="text-sm font-medium text-slate-800">Peminjam</span></label><label class="flex cursor-pointer items-center gap-3" data-role-label><input type="radio" name="role" value="${ROLES.PENANGGUNG_JAWAB}" ${isPj ? 'checked' : ''} class="sr-only" /><span data-role-indicator class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${isPj ? 'border-primary bg-primary text-white' : 'border-slate-300 bg-white text-transparent'}"><svg data-role-check class="h-3 w-3 stroke-[3] ${isPj ? 'block' : 'hidden'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span class="text-sm font-medium text-slate-800">Penanggung Jawab</span></label></div></div><div id="user-form-error" class="hidden rounded-xl bg-red-50 px-4 py-2 text-sm text-red-700"></div><div class="mt-8 flex items-center justify-end gap-4"><button type="button" data-action="close-modal" class="cancel-form-button rounded-xl px-6 py-2.5 text-sm font-semibold text-slate-500 transition hover:bg-slate-50">Batal</button><button type="submit" class="rounded-xl bg-primary px-8 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90">${editing ? 'Edit' : 'Tambah'}</button></div></form></section></div>`;
 }
 
 function renderContent() {
@@ -673,6 +711,8 @@ function refresh() {
 }
 
 async function loadRpData() {
+  isRpLoading = true;
+  refresh();
   try {
     const res = await getRequestPasswordList({
       page: rpCurrentPage,
@@ -688,6 +728,8 @@ async function loadRpData() {
     requestPasswords = [];
     rpTotal = 0;
     rpTotalPages = 1;
+  } finally {
+    isRpLoading = false;
   }
 }
 
@@ -708,6 +750,8 @@ export async function mount(root, ctx = {}) {
   rpCurrentPage = 1;
   selectedRp = null;
   rpProsesData = null;
+  isUsersLoading = false;
+  isRpLoading = false;
   rpFormattedMessage = '';
   copyFeedback = false;
 
@@ -724,15 +768,39 @@ export async function mount(root, ctx = {}) {
     copyTimer = null;
   }
 
+  isUsersLoading = true;
+  isRpLoading = true;
+  rootElement.innerHTML = renderContent();
+
   // Muat data awal secara paralel
   try {
-    const [userData] = await Promise.all([getUsers(), loadRpData()]);
+    const [userData] = await Promise.all([
+      getUsers(),
+      getRequestPasswordList({
+        page: rpCurrentPage,
+        limit: PAGE_SIZE,
+        q: rpSearchTerm,
+        status: rpStatusFilter,
+      }).then((res) => {
+        requestPasswords = res?.data || [];
+        rpTotal = res?.meta?.total || 0;
+        rpTotalPages = res?.meta?.totalPages || 1;
+      }).catch((err) => {
+        console.error('Gagal memuat request password:', err);
+        requestPasswords = [];
+        rpTotal = 0;
+        rpTotalPages = 1;
+      }),
+    ]);
     users = userData || [];
   } catch {
     users = [];
+  } finally {
+    isUsersLoading = false;
+    isRpLoading = false;
   }
 
-  rootElement.innerHTML = renderContent();
+  refresh();
 
   clickHandler = async (event) => {
     const button = event.target.closest('[data-action]');
@@ -1167,4 +1235,6 @@ export function unmount() {
   changeHandler = null;
   selectedRp = null;
   rpProsesData = null;
+  isUsersLoading = false;
+  isRpLoading = false;
 }

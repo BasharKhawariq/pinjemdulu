@@ -279,6 +279,33 @@ function initApp() {
     renderShell();
   });
 
+  // Indikator spinner dan soft-loading halus global saat panggilan API berlangsung
+  window.addEventListener('pd:loading-state', (e) => {
+    const isActive = Boolean(e?.detail?.active);
+    const indicator = document.getElementById('navbar-loading-indicator');
+    const progressBar = document.getElementById('global-progress-bar');
+
+    if (indicator) {
+      if (isActive) {
+        indicator.classList.remove('hidden');
+        indicator.classList.add('inline-flex');
+      } else {
+        indicator.classList.remove('inline-flex');
+        indicator.classList.add('hidden');
+      }
+    }
+
+    if (progressBar) {
+      if (isActive) {
+        progressBar.classList.remove('opacity-0');
+        progressBar.classList.add('opacity-100');
+      } else {
+        progressBar.classList.remove('opacity-100');
+        progressBar.classList.add('opacity-0');
+      }
+    }
+  });
+
   checkSession().then((u) => {
     if (u) refreshBadges().catch(() => {});
   }).catch(() => {});

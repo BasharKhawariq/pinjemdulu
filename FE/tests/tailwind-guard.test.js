@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const ROOT_DIR = path.resolve('.');
+const ROOT_DIR = fs.existsSync(path.resolve('FE', 'css', 'app.css')) ? path.resolve('FE') : path.resolve('.');
 
 function getAllFiles(dir, exts = ['.js']) {
   let results = [];

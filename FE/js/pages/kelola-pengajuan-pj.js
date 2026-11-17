@@ -9,8 +9,10 @@ import { renderSearchInput } from '../ui/search-input.js';
 import { renderModal as renderModalComponent } from '../ui/modal.js';
 import { renderOrganisasiLogo } from '../ui/organisasi-badge.js';
 import { renderEmptyState } from '../ui/empty-state.js';
+import { renderTableLoadingRow } from '../ui/loading-state.js';
 
 let rows = [];
+let isLoading = false;
 let activeTab = STATUS_REQUEST_PJ.MENUNGGU;
 let searchTerm = '';
 let currentPage = 1;
@@ -44,10 +46,14 @@ function visibleRows() {
   return rows.filter((row) => {
     const name = personName(row);
     const organization = (typeof row.organisasi === 'string' ? row.organisasi : row.organisasi?.namaOrganisasi) || row.okiPemohon || row.pemohon?.organisasi?.namaOrganisasi || row.pemohon?.displayOrganization || '';
-    return String(row.status).toLowerCase() === activeTab && (!q || `${name} ${organization} ${row.pemohon?.nim || ''}`.toLowerCase().includes(q));
+    const nim = row.pemohon?.nim || row.nimPemohon || row.nim || '';
+    return String(row.status).toLowerCase() === activeTab && (!q || `${name} ${organization} ${nim}`.toLowerCase().includes(q));
   });
 }
 function renderTableRows() {
+  if (isLoading) {
+    return renderTableLoadingRow({ colspan: 5, message: 'Memuat data pengajuan...' });
+  }
   const filtered = visibleRows();
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   currentPage = Math.min(currentPage, pages);
@@ -57,13 +63,13 @@ function renderTableRows() {
   return pageRows.map((row, index) => {
     const id = String(row.id);
     const name = personName(row);
-    const org = row.organisasi?.namaOrganisasi || row.pemohon?.organisasi?.namaOrganisasi || row.pemohon?.displayOrganization || row.organisasi || '';
+    const org = (typeof row.organisasi === 'string' ? row.organisasi : row.organisasi?.namaOrganisasi) || row.okiPemohon || row.pemohon?.organisasi?.namaOrganisasi || row.pemohon?.displayOrganization || '';
     const status = statusInfo(row.status);
-    const pending = row.status === STATUS_REQUEST_PJ.MENUNGGU;
+    const pending = String(row.status || '').toLowerCase() === 'menunggu';
     return `<tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50/60">
       <td class="whitespace-nowrap px-4 py-3.5 text-center text-xs text-slate-400">${start + index + 1}</td>
       <td class="min-w-[220px] px-4 py-3"><div class="flex items-center gap-2.5"><span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-xs font-semibold text-white">${escapeHtml(initials(name))}</span><div class="min-w-0"><span class="block truncate text-xs font-medium text-slate-500">${escapeHtml(name)}</span>${org ? `<span class="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500">${renderOrganisasiLogo(org, row.pemohon?.logoUrl || row.logoUrl, 'h-3.5 w-3.5')}<span>${escapeHtml(org)}</span></span>` : ''}</div></div></td>
-      <td class="w-[190px] whitespace-nowrap px-4 py-3.5 text-center text-xs text-slate-400">${escapeHtml(dateLabel(row.tanggalPengajuan || row.createdAt))}</td>
+      <td class="w-[190px] whitespace-nowrap px-4 py-3.5 text-center text-xs text-slate-400">${escapeHtml(dateLabel(row.tanggalPengajuan || row.tanggalRequest || row.createdAt))}</td>
       <td class="w-[140px] px-4 py-3.5 text-center"><span class="inline-flex whitespace-nowrap rounded-xl px-2.5 py-1 text-xs font-semibold ${status.cls}">${escapeHtml(status.label)}</span></td>
       <td class="whitespace-nowrap px-4 py-3.5"><div class="flex items-center justify-center gap-0"><button type="button" data-action="detail" data-id="${escapeHtml(id)}" title="Lihat detail" aria-label="Lihat detail" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100">${renderIcon('Info', 'h-4 w-4')}</button>${pending ? `<button type="button" data-action="approve" data-id="${escapeHtml(id)}" title="Setujui pengajuan" aria-label="Setujui pengajuan" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-green-600 hover:bg-green-50">${renderIcon('CircleCheck', 'h-4 w-4')}</button><button type="button" data-action="reject" data-id="${escapeHtml(id)}" title="Tolak pengajuan" aria-label="Tolak pengajuan" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-red-600 hover:bg-red-50">${renderIcon('CircleX', 'h-4 w-4')}</button>` : ''}</div></td>
     </tr>`;
@@ -139,8 +145,8 @@ function renderModal() {
   const row = modalRow;
   const status = statusInfo(row.status);
   const organization = (typeof row.organisasi === 'string' ? row.organisasi : row.organisasi?.namaOrganisasi) || row.okiPemohon || row.pemohon?.organisasi?.namaOrganisasi || row.pemohon?.displayOrganization || '—';
-  const nim = row.pemohon?.nim || '—';
-  const attachment = row.lampiran?.nama || row.lampiran?.name || '';
+  const nim = row.pemohon?.nim || row.nimPemohon || row.nim || '—';
+  const attachment = row.lampiran?.nama || row.lampiran?.name || (row.lampiranUrl ? row.lampiranUrl.split('/').pop() : '') || '';
   const statusClass = status.label === 'Menunggu' ? 'bg-amber-50 text-amber-600' : status.label === 'Disetujui' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600';
   const rejectionReasonText = row.alasanPenolakan || row.alasan_penolakan || '';
   return `
@@ -160,14 +166,17 @@ function renderModal() {
             </div>
           </div>
           <div class="flex items-center justify-between gap-6"><p class="text-base font-semibold text-slate-900">NIM</p><p class="break-all text-right text-base font-medium text-slate-800">${escapeHtml(nim)}</p></div>
-          <div class="flex items-center justify-between gap-6"><p class="text-base font-semibold text-slate-900">Tanggal Pengajuan</p><p class="text-right text-base font-medium text-slate-800">${escapeHtml(dateLabel(row.tanggalPengajuan || row.createdAt))}</p></div>
+          <div class="flex items-center justify-between gap-6"><p class="text-base font-semibold text-slate-900">Tanggal Pengajuan</p><p class="text-right text-base font-medium text-slate-800">${escapeHtml(dateLabel(row.tanggalPengajuan || row.tanggalRequest || row.createdAt))}</p></div>
           <div class="flex items-center justify-between gap-6"><p class="text-base font-semibold text-slate-900">Status</p><span class="inline-flex rounded-xl px-4 py-1.5 text-xs font-medium ${statusClass}">${escapeHtml(status.label)}</span></div>
           ${status.label === 'Ditolak' ? `<div><p class="mb-2 text-base font-semibold text-slate-900">Alasan Penolakan</p><div class="rounded-2xl border border-slate-100 bg-white px-5 py-4 text-base font-medium text-slate-700 whitespace-pre-line">${escapeHtml(rejectionReasonText || '—')}</div></div>` : ''}
           <div>
             <p class="mb-2 text-base font-semibold text-slate-900">Lampiran Surat</p>
             <div class="flex min-h-[62px] items-center gap-3 overflow-hidden rounded-2xl border border-slate-100 bg-white px-5 py-4">
               <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-400">${renderIcon('FileImage', 'h-5 w-5')}</span>
-              <span class="break-words text-base font-medium text-slate-800">${escapeHtml(attachment || 'Tidak ada lampiran surat')}</span>
+              ${row.lampiranUrl
+                ? `<a href="${escapeHtml(row.lampiranUrl)}" target="_blank" rel="noopener noreferrer" class="break-words text-base font-medium text-primary hover:underline">${escapeHtml(attachment || 'Unduh Berkas Surat SK')}</a>`
+                : `<span class="break-words text-base font-medium text-slate-800">${escapeHtml(attachment || 'Tidak ada lampiran surat')}</span>`
+              }
             </div>
           </div>
         </div>
@@ -221,9 +230,17 @@ export async function mount(root) {
   feedbackModal = null;
   rejectionReason = '';
   rejectionValidationCount = 0;
-  rows = await getRequestPj();
-  markNotificationsRead('request-pj', [STATUS_REQUEST_PJ.MENUNGGU], rows);
+  isLoading = true;
   rootElement.innerHTML = renderContent();
+  try {
+    rows = await getRequestPj();
+  } catch {
+    rows = [];
+  } finally {
+    isLoading = false;
+  }
+  markNotificationsRead('request-pj', [STATUS_REQUEST_PJ.MENUNGGU], rows);
+  refresh();
   clickHandler = async (event) => {
     const button = event.target.closest('[data-action]');
     if (!button) {
@@ -344,5 +361,5 @@ export function unmount() {
   if (rootElement && inputHandler) rootElement.removeEventListener('input', inputHandler);
   if (toastTimeout) clearTimeout(toastTimeout);
   toastTimeout = null;
-  rootElement = null; clickHandler = null; inputHandler = null; rows = []; modalRow = null;
+  rootElement = null; clickHandler = null; inputHandler = null; rows = []; modalRow = null; isLoading = false;
 }

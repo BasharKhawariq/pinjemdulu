@@ -14,10 +14,12 @@ import { renderIcon } from '../ui/icons.js';
 import { escapeHtml } from '../ui/html.js';
 import { renderOrganisasiLogo } from '../ui/organisasi-badge.js';
 import { renderEmptyState } from '../ui/empty-state.js';
+import { renderTableLoadingRow } from '../ui/loading-state.js';
 import * as PlaceholderPage from './placeholder.js';
 
 let activeTab = 'peminjaman';
 let currentUser = null;
+let isLoading = false;
 let livePeminjaman = [];
 let liveRequestPj = [];
 let livePengembalian = [];
@@ -50,7 +52,7 @@ function getStatusBadge(status) {
   if (normalized === 'menunggu' || normalized === STATUS_PEMINJAMAN.MENUNGGU_KONFIRMASI_PENGEMBALIAN) {
     return { label: 'Menunggu', cls: 'bg-amber-50 text-amber-600' };
   }
-  if (normalized === 'dikembalikan' || normalized === STATUS_PEMINJAMAN.DIKEMBALIKAN) {
+  if (normalized === 'dikembalikan' || normalized === 'selesai' || normalized === STATUS_PEMINJAMAN.DIKEMBALIKAN) {
     return { label: 'Dikembalikan', cls: 'bg-emerald-50 text-emerald-600' };
   }
   if (normalized === 'terlambat' || normalized === STATUS_PEMINJAMAN.TERLAMBAT) {
@@ -89,10 +91,13 @@ function computeStats() {
     : 0;
 
   return {
-    disetujui: livePeminjaman.filter((r) => r.status === STATUS_PEMINJAMAN.DISETUJUI || String(r.status).toLowerCase() === 'disetujui').length,
-    ditolak: livePeminjaman.filter((r) => r.status === STATUS_PEMINJAMAN.DITOLAK || String(r.status).toLowerCase() === 'ditolak').length,
-    dikembalikan: livePeminjaman.filter((r) => r.status === STATUS_PEMINJAMAN.DIKEMBALIKAN || String(r.status).toLowerCase() === 'dikembalikan').length,
-    terlambat: livePeminjaman.filter((r) => r.status === STATUS_PEMINJAMAN.TERLAMBAT || String(r.status).toLowerCase() === 'terlambat').length,
+    disetujui: livePeminjaman.filter((r) => String(r.status || '').toLowerCase() === 'disetujui').length,
+    ditolak: livePeminjaman.filter((r) => String(r.status || '').toLowerCase() === 'ditolak').length,
+    dikembalikan: livePeminjaman.filter((r) => {
+      const s = String(r.status || '').toLowerCase();
+      return s === STATUS_PEMINJAMAN.DIKEMBALIKAN || s === 'dikembalikan' || s === 'selesai';
+    }).length,
+    terlambat: livePeminjaman.filter((r) => String(r.status || '').toLowerCase() === 'terlambat').length,
     totalPeminjaman: livePeminjaman.length,
     pengajuanPj: pjCount,
   };
@@ -102,9 +107,9 @@ function getPeminjamanTableRows() {
   if (livePeminjaman.length > 0) {
     return livePeminjaman.slice(0, 4).map((row, idx) => ({
       id: String(row.id || row.idPeminjaman || `live-${idx}`),
-      namaBarang: row.inventaris?.namaBarang || row.barang?.namaBarang || row.namaBarang || 'Barang inventaris',
-      organisasi: row.inventaris?.namaOrganisasi || row.barang?.organisasi || row.namaOrganisasi || 'Organisasi',
-      logoUrl: row.inventaris?.logoUrl || row.barang?.logoUrl || row.logoUrl,
+      namaBarang: row.namaBarang || row.inventaris?.namaBarang || row.barang?.namaBarang || 'Barang inventaris',
+      organisasi: row.okiPemilik || row.inventaris?.namaOrganisasi || row.barang?.organisasi || row.namaOrganisasi || 'Organisasi',
+      logoUrl: row.logoPemilikUrl || row.inventaris?.logoUrl || row.barang?.logoUrl || row.logoUrl || null,
       tanggalDiajukan: row.tanggalPengajuan || row.createdAt || row.startDate,
       tanggalMulai: row.startDate || row.mulai || row.tanggalMulai,
       tanggalSelesai: row.endDate || row.selesai || row.tanggalSelesai,
@@ -121,9 +126,9 @@ function getPengembalianTableRows() {
   if (livePengembalian.length > 0) {
     return livePengembalian.slice(0, 4).map((row, idx) => ({
       id: String(row.id || row.idPengembalian || `live-${idx}`),
-      namaBarang: row.namaBarang || 'Barang inventaris',
-      organisasi: row.organisasi || row.namaOrganisasi || 'Organisasi',
-      logoUrl: row.logoUrl,
+      namaBarang: row.namaBarang || row.inventaris?.namaBarang || row.barang?.namaBarang || 'Barang inventaris',
+      organisasi: row.okiPemilik || row.inventaris?.namaOrganisasi || row.organisasi || row.namaOrganisasi || 'Organisasi',
+      logoUrl: row.logoPemilikUrl || row.inventaris?.logoUrl || row.logoUrl || null,
       tanggalMulai: row.tanggalMulai,
       tanggalSelesai: row.tanggalSelesai,
       tanggalDikembalikan: row.tanggalDikembalikan,
@@ -227,7 +232,9 @@ function renderTable() {
     )
     .join('');
 
-  const bodyHtml = rows.length ? rows
+  const bodyHtml = isLoading
+    ? renderTableLoadingRow({ colspan: 8, message: 'Memuat pengajuan saya...' })
+    : (rows.length ? rows
     .map((row, index) => {
       const badge = getStatusBadge(row.status);
       const orgBadgeCls = getOrgBadgeClass(row.organisasi);
@@ -277,7 +284,7 @@ function renderTable() {
         </tr>
       `;
     })
-    .join('') : renderEmptyState({ colspan: 8 });
+    .join('') : renderEmptyState({ colspan: 8 }));
 
   return `
     <div class="overflow-x-auto">
@@ -463,6 +470,11 @@ export async function mount(root, ctx = {}) {
   activeTab = 'peminjaman';
   detailRow = null;
 
+  isLoading = true;
+  if (rootElement) {
+    rootElement.innerHTML = renderDashboardContent(ctx);
+  }
+
   try {
     const [loans, pjRequests, returns, dashStats] = await Promise.all([
       getPeminjaman(),
@@ -479,6 +491,8 @@ export async function mount(root, ctx = {}) {
     liveRequestPj = [];
     livePengembalian = [];
     apiDashboardStats = null;
+  } finally {
+    isLoading = false;
   }
 
   if (rootElement) {

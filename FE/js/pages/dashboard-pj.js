@@ -4,7 +4,8 @@
  */
 
 import { getPeminjaman, getKelolaPeminjaman, getDashboardPjStats, updateMockPeminjamanStatus, updateMockPeminjamanPickup } from '../services/peminjaman.js';
-import { getKelolaPengembalian, updateMockPengembalianStatus } from '../services/pengembalian.js';
+import { getPengembalian, getKelolaPengembalian, updateMockPengembalianStatus } from '../services/pengembalian.js';
+import { isMockEnabled } from '../services/client.js';
 import { getRequestPj } from '../services/request-pj.js';
 import { STATUS_PEMINJAMAN } from '../lib/constants.js';
 import { formatTanggal } from '../lib/format.js';
@@ -17,12 +18,16 @@ import { compressImageToDataUrl } from './kelola-inventaris-form.js';
 import { validateFotoFile } from '../lib/inventaris-form.js';
 import { renderOrganisasiLogo } from '../ui/organisasi-badge.js';
 import { renderEmptyState } from '../ui/empty-state.js';
+import { renderTableLoadingRow } from '../ui/loading-state.js';
 
 let activeTab = 'peminjaman';
 let managementTab = 'peminjaman';
 let currentUser = null;
+let isLoading = false;
 let livePeminjaman = [];
 let livePengembalian = [];
+let livePeminjamanSaya = [];
+let livePengembalianSaya = [];
 let liveRequestPj = [];
 let liveInventaris = [];
 let liveStats = null;
@@ -170,11 +175,12 @@ function computeStats() {
 }
 
 function getPeminjamanTableRows() {
-  if (livePeminjaman.length > 0) {
-    return livePeminjaman.slice(0, 4).map((row, idx) => ({
+  if (livePeminjamanSaya.length > 0) {
+    return livePeminjamanSaya.slice(0, 4).map((row, idx) => ({
       id: String(row.id || row.idPeminjaman || `live-${idx}`),
-      namaBarang: row.inventaris?.namaBarang || row.barang?.namaBarang || 'Barang inventaris',
-      organisasi: row.inventaris?.namaOrganisasi || row.barang?.organisasi || 'BEM',
+      namaBarang: row.namaBarang || row.inventaris?.namaBarang || row.barang?.namaBarang || 'Barang inventaris',
+      organisasi: row.okiPemilik || row.inventaris?.namaOrganisasi || row.barang?.organisasi || row.namaOrganisasi || 'Organisasi',
+      logoUrl: row.logoPemilikUrl || row.inventaris?.logoUrl || row.barang?.logoUrl || row.logoUrl || null,
       tanggalDiajukan: row.tanggalPengajuan || row.startDate,
       tanggalMulai: row.startDate || row.mulai,
       tanggalSelesai: row.endDate || row.selesai,
@@ -188,12 +194,12 @@ function getPeminjamanTableRows() {
 }
 
 function getPengembalianTableRows() {
-  if (livePengembalian.length > 0) {
-    return livePengembalian.slice(0, 4).map((row, idx) => ({
+  if (livePengembalianSaya.length > 0) {
+    return livePengembalianSaya.slice(0, 4).map((row, idx) => ({
       id: String(row.id || row.idPengembalian || `live-${idx}`),
-      namaBarang: row.namaBarang || 'Barang inventaris',
-      organisasi: row.organisasi || row.namaOrganisasi || 'Organisasi',
-      logoUrl: row.logoUrl,
+      namaBarang: row.namaBarang || row.inventaris?.namaBarang || row.barang?.namaBarang || 'Barang inventaris',
+      organisasi: row.okiPemilik || row.inventaris?.namaOrganisasi || row.organisasi || row.namaOrganisasi || 'Organisasi',
+      logoUrl: row.logoPemilikUrl || row.inventaris?.logoUrl || row.logoUrl || null,
       tanggalMulai: row.tanggalMulai,
       tanggalSelesai: row.tanggalSelesai,
       tanggalDikembalikan: row.tanggalDikembalikan,
@@ -250,33 +256,47 @@ function renderRightBannerCards() {
 function renderManagementTable() {
   const isReturn = managementTab === 'pengembalian';
   const targetRoute = isReturn ? '#/kelola/pengembalian' : '#/kelola/peminjaman';
-  const sourceRows = isReturn && livePengembalian.length ? livePengembalian : livePeminjaman;
-  const allRows = sourceRows.map((row, index) => ({
-    id: String(row.id || row.idPengembalian || row.idPeminjaman || index),
-    nama: row.peminjam?.nama || row.pengguna?.nama || row.namaPeminjam || row.nama || 'Peminjam',
-    organisasi: row.peminjam?.organisasi || row.okiPeminjam || row.inventaris?.namaOrganisasi || row.barang?.namaOrganisasi || row.barang?.organisasi || row.inventaris?.organisasi || row.organisasi || '—',
-    barang: row.inventaris?.namaBarang || row.barang?.namaBarang || row.barang?.nama || row.namaBarang || row.barang || 'Barang inventaris',
-    mulai: row.startDate || row.mulai || row.tanggalMulai,
-    pengambilan: row.tanggalPengambilan,
-    selesai: row.endDate || row.selesai || row.tanggalSelesai,
-    tanggalKembali: row.tanggalPengembalian || row.tanggalDikembalikan,
-    jumlah: row.jumlahPinjam ?? row.jumlahUnit ?? 1,
-    status: row.status || 'diajukan',
-  }));
+  const sourceRows = isReturn
+    ? (!isMockEnabled() ? livePengembalian : (livePengembalian.length ? livePengembalian : livePeminjaman))
+    : livePeminjaman;
+  const allRows = sourceRows.map((row, index) => {
+    const borrowerOrg = typeof row.peminjam?.organisasi === 'object'
+      ? (row.peminjam?.organisasi?.singkatan || row.peminjam?.organisasi?.namaOrganisasi)
+      : (row.peminjam?.organisasi || row.okiPeminjam || row.organisasi || '—');
+    return {
+      id: String(row.id || row.idPengembalian || row.idPeminjaman || index),
+      idPengembalian: row.idPengembalian || null,
+      idPeminjaman: row.idPeminjaman || row.id || null,
+      nama: row.peminjam?.nama || row.pengguna?.nama || row.namaPeminjam || row.nama || 'Peminjam',
+      organisasi: borrowerOrg,
+      logoUrl: row.peminjam?.logoUrl || row.logoPeminjamUrl || null,
+      barang: row.namaBarang || row.inventaris?.namaBarang || row.barang?.namaBarang || row.barang?.nama || row.barang || 'Barang inventaris',
+      mulai: row.startDate || row.mulai || row.tanggalMulai,
+      pengambilan: row.tanggalPengambilan,
+      selesai: row.endDate || row.selesai || row.tanggalSelesai,
+      tanggalKembali: row.tanggalPengembalian || row.tanggalDikembalikan,
+      jumlah: row.jumlahPinjam ?? row.jumlahUnit ?? 1,
+      status: row.status || 'diajukan',
+    };
+  });
   const returnStatuses = [
     STATUS_PEMINJAMAN.MENUNGGU_KONFIRMASI_PENGEMBALIAN,
     STATUS_PEMINJAMAN.TERLAMBAT,
     STATUS_PEMINJAMAN.DIKEMBALIKAN,
-    STATUS_PEMINJAMAN.DITOLAK,
-    'menunggu_pengembalian', 'menunggu', 'terlambat', 'dikembalikan', 'selesai', 'ditolak',
+    'menunggu_pengembalian', 'menunggu', 'terlambat', 'dikembalikan', 'selesai',
   ].map((value) => String(value).toLowerCase());
   const rows = (isReturn
-    ? allRows.filter((row) => returnStatuses.includes(String(row.status).toLowerCase()))
-    : allRows).slice(0, 5);
+    ? (isMockEnabled() && !livePengembalian.length
+        ? allRows.filter((row) => returnStatuses.includes(String(row.status || '').toLowerCase()))
+        : allRows)
+    : allRows.filter((row) => !returnStatuses.includes(String(row.status || '').toLowerCase()) || String(row.status || '').toLowerCase() === 'ditolak')
+  ).slice(0, 5);
   const pendingValues = ['diajukan', 'menunggu_persetujuan'];
   const approvedValues = ['disetujui'];
   const returnPendingValues = [String(STATUS_PEMINJAMAN.MENUNGGU_KONFIRMASI_PENGEMBALIAN).toLowerCase(), 'menunggu_pengembalian', 'menunggu'];
-  const body = rows.length ? rows.map((row, index) => {
+  const body = isLoading
+    ? renderTableLoadingRow({ colspan: isReturn ? 8 : 9, message: 'Memuat data pengelolaan...' })
+    : (rows.length ? rows.map((row, index) => {
     const status = String(row.status || '').toLowerCase();
     const pending = pendingValues.includes(status);
     const approved = approvedValues.includes(status);
@@ -288,14 +308,14 @@ function renderManagementTable() {
       : `${actionButton('management-detail-loan', 'Lihat detail peminjaman', 'Info')}${pending ? `${actionButton('management-approve-loan', 'Setujui pengajuan', 'CircleCheck', 'text-green-600 hover:bg-green-50')}${actionButton('management-reject-loan', 'Tolak pengajuan', 'CircleX', 'text-red-600 hover:bg-red-50')}` : approved ? actionButton('management-pickup', 'Konfirmasi pengambilan', 'HandCoins', 'text-slate-400 hover:bg-slate-100') : ''}`;
     return `<tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50/60">
       <td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400">${index + 1}</td>
-      <td class="min-w-[190px] px-4 py-3"><div class="flex items-center gap-2.5"><span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-xs font-semibold text-white">${escapeHtml(initials)}</span><span class="min-w-0"><span class="block truncate text-xs font-medium text-slate-500">${escapeHtml(row.nama)}</span><span class="mt-1 flex items-center gap-1.5 text-[11px] text-slate-700">${renderOrganisasiLogo(row.organisasi, row.logoUrl, 'h-3.5 w-3.5')}${escapeHtml(row.organisasi)}</span></span></div></td>
+      <td class="min-w-[190px] px-4 py-3"><div class="flex items-center gap-2.5"><span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-xs font-semibold text-white">${escapeHtml(initials)}</span><span class="min-w-0"><span class="block truncate text-xs font-medium text-slate-500">${escapeHtml(row.nama)}</span><span class="mt-1 flex items-center gap-1.5 text-[11px] text-slate-700">${renderOrganisasiLogo(row.organisasi, row.logoUrl, 'h-3.5 w-3.5')}<span>${escapeHtml(row.organisasi)}</span></span></span></div></td>
       <td class="min-w-[150px] px-4 py-4 text-xs text-slate-400">${escapeHtml(row.barang)}</td>
       <td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400">${escapeHtml(formatDateEnOrId(row.mulai))}</td>
       ${isReturn ? `<td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400">${escapeHtml(formatDateEnOrId(row.selesai))}</td><td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400">${escapeHtml(formatDateEnOrId(row.tanggalKembali))}</td>` : `<td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400">${escapeHtml(approved || status === String(STATUS_PEMINJAMAN.DIPINJAM).toLowerCase() ? formatDateEnOrId(row.pengambilan) : '—')}</td><td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400">${escapeHtml(formatDateEnOrId(row.selesai))}</td><td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400">${escapeHtml(row.jumlah)}</td>`}
       ${isReturn ? `<td class="whitespace-nowrap px-4 py-4 text-center">${renderStatusChip({ status: row.status, className: String(row.status || '').toLowerCase() === 'ditolak' ? 'status-chip-return-rejected' : '' })}</td>` : `<td class="whitespace-nowrap px-4 py-4 text-center">${renderStatusChip({ status: row.status })}</td>`}
       <td class="whitespace-nowrap px-1 py-4"><div class="flex items-center justify-center gap-0">${actionButtons}</div></td>
     </tr>`;
-  }).join('') : renderEmptyState({ colspan: isReturn ? 8 : 9 });
+  }).join('') : renderEmptyState({ colspan: isReturn ? 8 : 9 }));
 
   const headers = isReturn
     ? '<th class="px-4 py-4 text-center font-semibold">No</th><th class="px-4 py-4 font-semibold">Nama Peminjam</th><th class="px-4 py-4 font-semibold">Barang Dipinjam</th><th class="px-4 py-4 text-center font-semibold">Tanggal Mulai</th><th class="px-4 py-4 text-center font-semibold">Tanggal Selesai</th><th class="px-4 py-4 text-center font-semibold">Tanggal Pengembalian</th><th class="px-4 py-4 text-center font-semibold">Status</th><th class="px-4 py-4 text-center font-semibold">Aksi</th>'
@@ -331,7 +351,9 @@ function renderTable() {
     )
     .join('');
 
-  const bodyHtml = rows.length ? rows
+  const bodyHtml = isLoading
+    ? renderTableLoadingRow({ colspan: 8, message: 'Memuat data pengajuan...' })
+    : (rows.length ? rows
     .map((row, index) => {
       const badge = getStatusBadge(row.status, isPengembalian);
       const orgBadgeCls = getOrgBadgeClass(row.organisasi);
@@ -381,7 +403,7 @@ function renderTable() {
         </tr>
       `;
     })
-    .join('') : renderEmptyState({ colspan: 8 });
+    .join('') : renderEmptyState({ colspan: 8 }));
 
   return `
     <div class="overflow-x-auto">
@@ -531,10 +553,16 @@ function renderManagementModal() {
   if (managementModal === 'success-approve-loan') return renderModalComponent({ variant: 'success', title: 'Pengajuan Disetujui', description: 'Pengajuan peminjaman barang berhasil disetujui dan status telah diperbarui.', primaryAction: {label:'Tutup',action:'management-close',className:'w-full rounded-xl transition-colors hover:brightness-110'} });
   if (managementModal === 'success-reject-loan') return renderModalComponent({ variant: 'reject', title: 'Pengajuan Berhasil Ditolak', description: 'Pengajuan peminjaman barang berhasil ditolak.', primaryAction: {label:'Tutup',action:'management-close',className:'w-full rounded-xl transition-colors hover:brightness-110'} });
 
-  if (managementModal === 'pickup') return shell('Pengambilan Barang', `<div class="space-y-4">
-    <div><label for="dashboard-pickup-date" class="mb-2 block text-sm font-semibold text-slate-900">Tanggal Pengambilan</label><div class="relative"><input id="dashboard-pickup-date" type="date" value="${escapeHtml(managementPickupDate)}" class="h-12 w-full rounded-2xl border border-slate-100 bg-white px-4 text-sm font-medium ${managementPickupDate ? 'text-slate-800' : 'text-transparent'} outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100">${managementPickupDate ? '' : '<span class="pointer-events-none absolute inset-y-0 left-4 flex items-center text-sm font-medium text-slate-400">Pilih tanggal</span>'}</div></div>
-    <div><p class="mb-2 text-sm font-semibold text-slate-900">Foto Barang</p><button type="button" data-action="management-choose-pickup-photo" class="flex min-h-[150px] w-full flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-center transition-colors hover:bg-slate-100">${managementPickupPhoto ? `<img src="${escapeHtml(managementPickupPhoto)}" alt="Foto barang" class="max-h-32 rounded-lg object-contain">` : `<img src="assets/img/Image-Dropbox.png" alt="" class="mb-2 h-10 w-10 object-contain"><span class="text-xs font-semibold text-slate-700">Seret foto ke sini, atau Pilih File</span><span class="mt-1 text-[10px] text-slate-400">File harus berformat JPG atau PNG dengan ukuran maksimal 2 MB.</span>`}</button><input id="dashboard-pickup-photo" type="file" accept="image/jpeg,image/png,image/jpg" class="sr-only">${managementPickupPhotoError ? `<p class="mt-1 text-xs text-rose-600">${escapeHtml(managementPickupPhotoError)}</p>` : ''}</div>
-    ${managementError ? `<p role="alert" class="text-xs text-red-600">${escapeHtml(managementError)}</p>` : ''}</div>`, `${primary('management-close','Batal','border border-slate-200 bg-white text-slate-600 hover:border-rose-700 hover:bg-rose-700 hover:text-white')}${primary('management-submit-pickup','Kirim')}`);
+  if (managementModal === 'pickup') {
+    const start = String(managementModalRow?.mulai || managementModalRow?.startDate || managementModalRow?.tanggalMulai || '').slice(0, 10);
+    const end = String(managementModalRow?.selesai || managementModalRow?.endDate || managementModalRow?.tanggalSelesai || '').slice(0, 10);
+    const isNotStarted = Boolean(start && todayIsoDate() < start);
+    return shell('Pengambilan Barang', `<div class="space-y-4">
+      ${isNotStarted ? `<div class="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800"><span class="font-semibold">Perhatian:</span> Periode peminjaman baru dimulai pada tanggal <strong>${escapeHtml(formatDateEnOrId(start))}</strong>. Pengambilan barang belum dapat diproses sebelum tanggal mulai.</div>` : ''}
+      <div><label for="dashboard-pickup-date" class="mb-2 block text-sm font-semibold text-slate-900">Tanggal Pengambilan</label><div class="relative"><input id="dashboard-pickup-date" type="date" ${start ? `min="${escapeHtml(start)}"` : ''} ${end ? `max="${escapeHtml(end)}"` : ''} value="${escapeHtml(managementPickupDate)}" class="h-12 w-full rounded-2xl border border-slate-100 bg-white px-4 text-sm font-medium ${managementPickupDate ? 'text-slate-800' : 'text-transparent'} outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100">${managementPickupDate ? '' : '<span class="pointer-events-none absolute inset-y-0 left-4 flex items-center text-sm font-medium text-slate-400">Pilih tanggal</span>'}</div></div>
+      <div><p class="mb-2 text-sm font-semibold text-slate-900">Foto Barang</p><button type="button" data-action="management-choose-pickup-photo" class="flex min-h-[150px] w-full flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-center transition-colors hover:bg-slate-100">${managementPickupPhoto ? `<img src="${escapeHtml(managementPickupPhoto)}" alt="Foto barang" class="max-h-32 rounded-lg object-contain">` : `<img src="assets/img/Image-Dropbox.png" alt="" class="mb-2 h-10 w-10 object-contain"><span class="text-xs font-semibold text-slate-700">Seret foto ke sini, atau Pilih File</span><span class="mt-1 text-[10px] text-slate-400">File harus berformat JPG atau PNG dengan ukuran maksimal 2 MB.</span>`}</button><input id="dashboard-pickup-photo" type="file" accept="image/jpeg,image/png,image/jpg" class="sr-only">${managementPickupPhotoError ? `<p class="mt-1 text-xs text-rose-600">${escapeHtml(managementPickupPhotoError)}</p>` : ''}</div>
+      ${managementError ? `<p role="alert" class="text-xs text-red-600">${escapeHtml(managementError)}</p>` : ''}</div>`, `${primary('management-close','Batal','border border-slate-200 bg-white text-slate-600 hover:border-rose-700 hover:bg-rose-700 hover:text-white')}${isNotStarted ? '<button type="button" disabled class="rounded-xl bg-slate-300 px-6 py-3 text-sm font-semibold text-slate-500 cursor-not-allowed shadow-none">Kirim</button>' : primary('management-submit-pickup','Kirim')}`);
+  }
 
   if (managementModal === 'confirm-approve-return') return '';
   if (managementModal === 'form-approve-return') return '';
@@ -690,26 +718,39 @@ export async function mount(root, ctx = {}) {
 
   const reloadData = async () => {
     try {
-      const [loans, returns, pjRequests, inventoryResult, stats] = await Promise.all([
-        getKelolaPeminjaman().catch(() => getPeminjaman()),
+      const [loans, returns, myLoans, myReturns, pjRequests, inventoryResult, stats] = await Promise.all([
+        getKelolaPeminjaman().catch(() => []),
         getKelolaPengembalian().catch(() => []),
+        getPeminjaman().catch(() => []),
+        getPengembalian().catch(() => []),
         getRequestPj().catch(() => []),
         getInventarisKelola().catch(() => ({ data: [] })),
         getDashboardPjStats().catch(() => null),
       ]);
       livePeminjaman = Array.isArray(loans) ? loans : [];
       livePengembalian = Array.isArray(returns) ? returns : [];
+      livePeminjamanSaya = Array.isArray(myLoans) ? myLoans : [];
+      livePengembalianSaya = Array.isArray(myReturns) ? myReturns : [];
       liveRequestPj = Array.isArray(pjRequests) ? pjRequests : [];
       liveInventaris = Array.isArray(inventoryResult?.data) ? inventoryResult.data : [];
       liveStats = stats;
     } catch {
       livePeminjaman = [];
       livePengembalian = [];
+      livePeminjamanSaya = [];
+      livePengembalianSaya = [];
       liveRequestPj = [];
       liveInventaris = [];
       liveStats = null;
+    } finally {
+      isLoading = false;
     }
   };
+
+  isLoading = true;
+  if (rootElement) {
+    rootElement.innerHTML = renderDashboardContent(ctx);
+  }
 
   await reloadData();
 
@@ -769,12 +810,58 @@ export async function mount(root, ctx = {}) {
       } catch (error) { managementError = error?.message || 'Status pengajuan gagal diperbarui.'; refreshDashboard(); }
       return;
     }
-    if (action === 'management-pickup') { managementPickupDate = new Date().toISOString().slice(0,10); managementPickupPhoto = ''; managementPickupPhotoError = ''; setManagementModal('pickup'); return; }
+    if (action === 'management-pickup') {
+      const pickupId = actionEl.dataset.id;
+      managementModalRow = findManagementRow(pickupId);
+      const start = String(managementModalRow?.mulai || managementModalRow?.startDate || managementModalRow?.tanggalMulai || '').slice(0, 10);
+      const today = todayIsoDate();
+      managementPickupDate = (start && today >= start) ? today : '';
+      managementPickupPhoto = '';
+      managementPickupPhotoError = '';
+      managementError = '';
+      setManagementModal('pickup', pickupId);
+      return;
+    }
     if (action === 'management-submit-pickup') {
+      const start = String(managementModalRow?.mulai || managementModalRow?.startDate || managementModalRow?.tanggalMulai || '').slice(0, 10);
+      const end = String(managementModalRow?.selesai || managementModalRow?.endDate || managementModalRow?.tanggalSelesai || '').slice(0, 10);
       managementPickupDate = rootElement.querySelector('#dashboard-pickup-date')?.value || '';
-      if (!managementPickupDate) { managementError = 'Tanggal pengambilan wajib diisi.'; refreshDashboard(); return; }
-      try { await updateMockPeminjamanPickup(managementModalRow?.id || managementModalRow?.idPeminjaman, { tanggalPengambilan: managementPickupDate, fotoPengambilan: managementPickupPhoto }); await reloadData(); managementModal = null; managementModalRow = null; managementError = ''; refreshDashboard(); }
-      catch (error) { managementError = error?.message || 'Pengambilan gagal dikonfirmasi.'; refreshDashboard(); }
+      if (start && todayIsoDate() < start) {
+        managementError = `Peminjaman belum dimulai. Pengambilan hanya dapat diproses mulai tanggal ${formatDateEnOrId(start)}.`;
+        refreshDashboard();
+        return;
+      }
+      if (!managementPickupDate) {
+        managementError = 'Tanggal pengambilan wajib diisi.';
+        refreshDashboard();
+        return;
+      }
+      if (start && managementPickupDate < start) {
+        managementError = `Tanggal pengambilan tidak boleh sebelum tanggal mulai (${formatDateEnOrId(start)}).`;
+        refreshDashboard();
+        return;
+      }
+      if (end && managementPickupDate > end) {
+        managementError = `Tanggal pengambilan tidak boleh melebihi tanggal selesai (${formatDateEnOrId(end)}).`;
+        refreshDashboard();
+        return;
+      }
+      if (!managementPickupPhoto) {
+        managementError = 'Foto barang wajib diisi.';
+        refreshDashboard();
+        return;
+      }
+      try {
+        await updateMockPeminjamanPickup(managementModalRow?.id || managementModalRow?.idPeminjaman, { tanggalPengambilan: managementPickupDate, fotoPengambilan: managementPickupPhoto });
+        await reloadData();
+        managementModal = null;
+        managementModalRow = null;
+        managementError = '';
+        refreshDashboard();
+      } catch (error) {
+        managementError = error?.message || 'Pengambilan gagal dikonfirmasi.';
+        refreshDashboard();
+      }
       return;
     }
     if (action === 'management-approve-return') { managementReturnDate = ''; managementReturnCondition = 'baik'; managementReturnPhoto = ''; managementReturnSanksi = ''; managementReturnPhotoError = ''; managementError = ''; managementReturnDateError = ''; managementReturnSanksiError = ''; setManagementModal('form-approve-return'); return; }
@@ -795,7 +882,7 @@ export async function mount(root, ctx = {}) {
     if (action === 'management-choose-pickup-photo') { rootElement.querySelector('#dashboard-pickup-photo')?.click(); return; }
     if (action === 'management-execute-approve-return') {
       try {
-        await updateMockPengembalianStatus(managementModalRow?.id || managementModalRow?.idPengembalian || managementModalRow?.idPeminjaman, STATUS_PEMINJAMAN.DIKEMBALIKAN, { tanggalPengembalian: managementReturnDate, sanksi: managementReturnSanksi, kondisiPengembalian: managementReturnCondition, fotoKondisi: managementReturnPhoto });
+        await updateMockPengembalianStatus(managementModalRow?.idPengembalian || managementModalRow?.id || managementModalRow?.idPeminjaman, STATUS_PEMINJAMAN.DIKEMBALIKAN, { tanggalPengembalian: managementReturnDate, sanksi: managementReturnSanksi, kondisiPengembalian: managementReturnCondition, fotoKondisi: managementReturnPhoto });
         await reloadData();
         managementModal = 'success-approve-return'; managementError = '';
         refreshDashboard();
@@ -814,7 +901,7 @@ export async function mount(root, ctx = {}) {
     }
     if (action === 'management-back-reject-return') { managementModal = 'reject-return'; managementError = ''; refreshDashboard(); return; }
     if (action === 'management-execute-reject-return') {
-      try { await updateMockPengembalianStatus(managementModalRow?.id || managementModalRow?.idPengembalian || managementModalRow?.idPeminjaman, STATUS_PEMINJAMAN.DITOLAK, { alasanPenolakan: managementReturnReason }); await reloadData(); managementModal = 'success-reject-return'; managementError = ''; refreshDashboard(); }
+      try { await updateMockPengembalianStatus(managementModalRow?.idPengembalian || managementModalRow?.id || managementModalRow?.idPeminjaman, STATUS_PEMINJAMAN.DITOLAK, { alasanPenolakan: managementReturnReason }); await reloadData(); managementModal = 'success-reject-return'; managementError = ''; refreshDashboard(); }
       catch (error) { managementError = error?.message || 'Pengembalian gagal ditolak.'; managementModal = 'confirm-reject-return'; refreshDashboard(); }
       return;
     }
@@ -960,7 +1047,7 @@ export async function mount(root, ctx = {}) {
   root.addEventListener('pointerover', managementLateTooltipPointerOverHandler);
   root.addEventListener('pointerout', managementLateTooltipPointerOutHandler);
   root.addEventListener('scroll', managementLateTooltipScrollHandler, true);
-  window.addEventListener('resize', managementLateTooltipScrollHandler);
+  if (typeof window !== 'undefined') window.addEventListener('resize', managementLateTooltipScrollHandler);
   root.__dashboardReturnPhotoChangeHandler = returnPhotoChangeHandler;
   root.__dashboardManagementInputHandler = managementInputHandler;
 }

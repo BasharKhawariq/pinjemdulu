@@ -11,6 +11,7 @@ import { renderStatusChip } from '../ui/status-chip.js';
 import { renderModal as renderGlobalModal } from '../ui/modal.js';
 import { renderOrganisasiLogo } from '../ui/organisasi-badge.js';
 import { renderEmptyState } from '../ui/empty-state.js';
+import { renderTableLoadingRow } from '../ui/loading-state.js';
 
 const TABS = [
   { key: 'menunggu', label: 'Menunggu' },
@@ -21,6 +22,7 @@ const TABS = [
 
 const DEMO_ROWS = [];
 
+let isLoading = false;
 let activeTab = 'menunggu';
 let searchTerm = '';
 let currentPage = 1;
@@ -49,6 +51,9 @@ function renderTabs() {
 }
 
 function renderRows() {
+  if (isLoading) {
+    return renderTableLoadingRow({ colspan: 8, message: 'Memuat data pengembalian...' });
+  }
   const rows = getFilteredRows();
   const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   currentPage = Math.min(currentPage, pageCount);
@@ -236,6 +241,8 @@ export async function mount(root, ctx = {}) {
   searchTerm = '';
   currentPage = 1;
   actionDialog = null;
+  isLoading = true;
+  refreshTable();
   try {
     const all = isMockEnabled() ? await getPeminjaman() : await getPengembalian();
     const mapped = all.filter((p) => {
@@ -285,6 +292,8 @@ export async function mount(root, ctx = {}) {
     }
   } catch {
     DEMO_ROWS.length = 0;
+  } finally {
+    isLoading = false;
   }
   refreshTable();
   onClickHandler = async (event) => {

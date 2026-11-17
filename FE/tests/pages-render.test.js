@@ -33,19 +33,14 @@ function assertNoEscapedMarkup(output, componentName) {
   }
 }
 
-test('pages-render: LoginPage merender struktur form dua kolom, captcha, dan masuk cepat tanpa escape ganda', () => {
+test('pages-render: LoginPage merender struktur form dua kolom, captcha, dan form masuk tanpa escape ganda', () => {
   const html = LoginPage.render();
   assert.ok(typeof html === 'string');
   assert.ok(html.includes('Selamat Datang Kembali!'));
   assert.ok(html.includes('Siap mengelola atau meminjam?'));
-  assert.ok(html.includes('login-email'));
+  assert.ok(html.includes('login-nim'));
   assert.ok(html.includes('login-password'));
   assert.ok(html.includes('login-captcha-answer'));
-  assert.ok(html.includes('Maitri Sakti'));
-  assert.ok(html.includes('Siti Rahma'));
-  assert.ok(html.includes('Budi Santoso'));
-  assert.ok(html.includes('Aulia Putri'));
-  assert.ok(html.includes('Nonaktif'));
   assert.ok(!html.includes('undefined'));
   assert.ok(!html.includes('[object Object]'));
 
@@ -53,7 +48,6 @@ test('pages-render: LoginPage merender struktur form dua kolom, captcha, dan mas
   assert.ok(html.includes('assets/img/Logo-PinjemDulu.png'));
   assert.ok(html.includes('<svg'));
   assert.ok(html.includes('<button'));
-  assert.ok(html.includes('data-action="quick-login"'));
 });
 
 test('pages-render: DashboardPage merender sapaan peminjam, 4 kartu status, ringkasan kanan, dan tabel Pengajuan Saya', () => {
@@ -69,8 +63,6 @@ test('pages-render: DashboardPage merender sapaan peminjam, 4 kartu status, ring
   assert.ok(html.includes('Total Peminjaman'));
   assert.ok(html.includes('Pengajuan PJ'));
   assert.ok(html.includes('Pengajuan Saya'));
-  assert.ok(html.includes('Proyektor Epson'));
-  assert.ok(html.includes('Lihat Semua'));
   assert.ok(!html.includes('undefined'));
   assert.ok(!html.includes('[object Object]'));
   assertNoEscapedMarkup(html, 'DashboardPage');

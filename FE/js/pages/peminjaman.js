@@ -16,15 +16,17 @@ import { renderStatusChip } from '../ui/status-chip.js';
 import { renderModal } from '../ui/modal.js';
 import { renderOrganisasiLogo } from '../ui/organisasi-badge.js';
 import { renderEmptyState } from '../ui/empty-state.js';
+import { renderTableLoadingRow } from '../ui/loading-state.js';
 
 const TABS = [
   { key: 'diajukan', label: 'Diajukan', statuses: [STATUS_PEMINJAMAN.DIAJUKAN, 'diajukan'] },
   { key: 'disetujui', label: 'Disetujui', statuses: [STATUS_PEMINJAMAN.DISETUJUI, 'disetujui'] },
-  { key: 'dipinjam', label: 'Dipinjam', statuses: [STATUS_PEMINJAMAN.DIPINJAM, 'dipinjam', 'sedang dipinjam'] },
+  { key: 'dipinjam', label: 'Dipinjam', statuses: [STATUS_PEMINJAMAN.DIPINJAM, 'dipinjam', 'sedang dipinjam', 'pengembalian', 'menunggu_pengembalian', 'menunggu'] },
   { key: 'ditolak', label: 'Ditolak', statuses: [STATUS_PEMINJAMAN.DITOLAK, 'ditolak'] },
 ];
 
 let pageRows = [];
+let isLoading = false;
 let activeTab = 'diajukan';
 let searchTerm = '';
 let currentPage = 1;
@@ -125,6 +127,9 @@ function renderActions(row, id, name) {
 }
 
 function renderRows() {
+  if (isLoading) {
+    return renderTableLoadingRow({ colspan: activeTab === 'dipinjam' ? 9 : 8, message: 'Memuat data peminjaman...' });
+  }
   const filtered = getFilteredRows();
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   currentPage = Math.min(currentPage, pageCount);
@@ -379,6 +384,8 @@ export async function mount(root, ctx = {}) {
   currentPage = 1;
   dialog = null;
   lastTrigger = null;
+  isLoading = true;
+  renderTableContent();
   try {
     const all = await getPeminjaman();
     const user = ctx.user || null;
@@ -393,6 +400,8 @@ export async function mount(root, ctx = {}) {
     }
   } catch {
     pageRows = [];
+  } finally {
+    isLoading = false;
   }
   renderTableContent();
 

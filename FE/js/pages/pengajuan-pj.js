@@ -22,6 +22,7 @@ import { renderPagination as renderSharedPagination } from '../ui/pagination.js'
 import { mockUsers } from '../data/users.js';
 import { renderOrganisasiLogo } from '../ui/organisasi-badge.js';
 import { renderEmptyState } from '../ui/empty-state.js';
+import { renderTableLoadingRow } from '../ui/loading-state.js';
 
 const PAGE_SIZE = 5;
 
@@ -38,6 +39,7 @@ const ORG_DOT = {
 };
 
 let rows = [];
+let isLoading = false;
 let user = null;
 let activeTab = STATUS_REQUEST_PJ.MENUNGGU;
 let currentPage = 1;
@@ -83,6 +85,9 @@ function renderTabs() {
 }
 
 function renderRows() {
+  if (isLoading) {
+    return renderTableLoadingRow({ colspan: 5, message: 'Memuat data pengajuan...' });
+  }
   const filtered = getFilteredRows();
   currentPage = Math.min(currentPage, pageCount());
   const start = (currentPage - 1) * PAGE_SIZE;
@@ -154,14 +159,18 @@ function renderFileChip(nama) {
 
 function renderDetail(row) {
   const org = namaOrganisasiPemohon(row.pemohon, row.organisasi);
-  const ditolak = row.status === STATUS_REQUEST_PJ.DITOLAK;
+  const s = String(row.status || '').toLowerCase();
+  const ditolak = s === 'ditolak';
   const statusClass =
-    row.status === STATUS_REQUEST_PJ.MENUNGGU
+    s === 'menunggu'
       ? 'bg-amber-50 text-amber-600'
-      : row.status === STATUS_REQUEST_PJ.DISETUJUI
+      : s === 'disetujui'
         ? 'bg-green-50 text-green-700'
         : 'bg-red-50 text-red-600';
-  const statusLabel = TAB_PENGAJUAN_PJ.find((tab) => tab.key === row.status)?.label || '—';
+  const statusLabel = TAB_PENGAJUAN_PJ.find((tab) => tab.key === s)?.label || row.status || '—';
+  const pemohonNama = row.pemohon?.nama || row.namaPemohon || row.nama || '—';
+  const pemohonNim = row.pemohon?.nim || row.nimPemohon || row.nim || '—';
+  const attachment = row.lampiran?.nama || row.lampiran?.name || (row.lampiranUrl ? row.lampiranUrl.split('/').pop() : '') || 'Tidak ada lampiran surat';
   return `
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4" data-modal-overlay>
       <section role="dialog" aria-modal="true" aria-labelledby="pj-detail-title" class="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl sm:p-8">
@@ -174,19 +183,22 @@ function renderDetail(row) {
           <div class="flex items-center justify-between gap-6">
             <p class="text-base font-semibold text-slate-900">Nama Pemohon</p>
             <div class="text-right">
-              <p class="text-base font-medium text-slate-800">${escapeHtml(row.pemohon?.nama || '—')}</p>
+              <p class="text-base font-medium text-slate-800">${escapeHtml(pemohonNama)}</p>
               <p class="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-slate-600">${renderOrganisasiLogo(org, row.pemohon?.logoUrl || row.logoUrl || row.organisasi?.logoUrl, 'h-4 w-4')}<span>${escapeHtml(org)}</span></p>
             </div>
           </div>
-          <div class="flex items-center justify-between gap-6"><p class="text-base font-semibold text-slate-900">NIM</p><p class="break-all text-right text-base font-medium text-slate-800">${escapeHtml(row.pemohon?.nim || '—')}</p></div>
-          <div class="flex items-center justify-between gap-6"><p class="text-base font-semibold text-slate-900">Tanggal Pengajuan</p><p class="text-right text-base font-medium text-slate-800">${escapeHtml(dateOnly(row.tanggalPengajuan))}</p></div>
+          <div class="flex items-center justify-between gap-6"><p class="text-base font-semibold text-slate-900">NIM</p><p class="break-all text-right text-base font-medium text-slate-800">${escapeHtml(pemohonNim)}</p></div>
+          <div class="flex items-center justify-between gap-6"><p class="text-base font-semibold text-slate-900">Tanggal Pengajuan</p><p class="text-right text-base font-medium text-slate-800">${escapeHtml(dateOnly(row.tanggalPengajuan || row.tanggalRequest || row.createdAt))}</p></div>
           <div class="flex items-center justify-between gap-6"><p class="text-base font-semibold text-slate-900">Status</p><span class="inline-flex rounded-xl px-4 py-1.5 text-xs font-medium ${statusClass}">${escapeHtml(statusLabel)}</span></div>
           ${ditolak ? `<div><p class="mb-2 text-base font-semibold text-slate-900">Alasan Penolakan</p><div class="rounded-2xl border border-slate-100 bg-white px-5 py-4 text-base font-medium text-slate-700 whitespace-pre-line">${escapeHtml(row.alasanPenolakan || 'Pengajuan ditolak oleh pengelola.')}</div></div>` : ''}
           <div>
             <p class="mb-2 text-base font-semibold text-slate-900">Lampiran Surat</p>
             <div class="flex min-h-[62px] items-center gap-3 overflow-hidden rounded-2xl border border-slate-100 bg-white px-5 py-4">
               <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-400">${renderIcon('FileImage', 'h-5 w-5')}</span>
-              <span class="break-words text-base font-medium text-slate-800">${escapeHtml(row.lampiran?.nama || 'Tidak ada lampiran surat')}</span>
+              ${row.lampiranUrl
+                ? `<a href="${escapeHtml(row.lampiranUrl)}" target="_blank" rel="noopener noreferrer" class="break-words text-base font-medium text-primary hover:underline">${escapeHtml(attachment)}</a>`
+                : `<span class="break-words text-base font-medium text-slate-800">${escapeHtml(attachment)}</span>`
+              }
             </div>
           </div>
         </div>
@@ -385,10 +397,14 @@ export async function mount(root, ctx = {}) {
   currentPage = 1;
   dialog = null;
   lastTrigger = null;
+  isLoading = true;
+  renderTableContent();
   try {
     rows = user?.nim ? await getRequestPjSaya(user.nim) : [];
   } catch {
     rows = [];
+  } finally {
+    isLoading = false;
   }
   renderTableContent();
 
@@ -471,4 +487,5 @@ export function unmount() {
   lastTrigger = null;
   rows = [];
   user = null;
+  isLoading = false;
 }
