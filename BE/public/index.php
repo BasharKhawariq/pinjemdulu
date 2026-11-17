@@ -29,8 +29,13 @@ set_exception_handler(function (Throwable $e): void {
 
 function cors_headers(): void
 {
-    $allow = function_exists('env') ? env('CORS_ALLOW_ORIGIN', '*') : '*';
-    header('Access-Control-Allow-Origin: ' . $allow);
+    $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+    $configured = function_exists('env') ? env('CORS_ALLOW_ORIGIN', '') : '';
+    $allowedOrigins = array_values(array_filter(array_map('trim', explode(',', (string) $configured))));
+    $allow = in_array($origin, $allowedOrigins, true) ? $origin : '';
+    if ($allow !== '') {
+        header('Access-Control-Allow-Origin: ' . $allow);
+    }
     header('Vary: Origin');
     header('Access-Control-Allow-Headers: Authorization, Content-Type');
     header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
