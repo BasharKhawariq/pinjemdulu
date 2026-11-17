@@ -9,7 +9,7 @@ declare(strict_types=1);
 const STATUS_PEMINJAMAN = ['Diajukan', 'Disetujui', 'Dipinjam', 'Ditolak', 'Pengembalian', 'Selesai'];
 const STATUS_PENGEMBALIAN = ['Menunggu', 'Dikembalikan', 'Ditolak', 'Terlambat'];
 
-const KOLOM_PINJAM = "id_peminjaman, nim_peminjam, nama_peminjam, oki_peminjam, id_inventaris, nama_barang,
+const KOLOM_PINJAM = "id_peminjaman, nim_peminjam, nama_peminjam, oki_peminjam, logo_peminjam, id_inventaris, nama_barang,
     id_organisasi_pemilik, oki_pemilik, logo_pemilik, jumlah_pinjam, tanggal_pengajuan, tgl_mulai, tgl_selesai,
     tanggal_pengambilan, keperluan, status, alasan_penolakan, nama_pemroses, created_at,
     (status = 'Dipinjam') AS bisa_ajukan_pengembalian";
@@ -20,7 +20,7 @@ const KOLOM_KEMBALI = 'id_pengembalian, id_peminjaman, nim_peminjam, nama_peminj
 
 function pinjam_map(array $r): array
 {
-    return urlkan($r, ['logo_pemilik' => 'logo_pemilik_url']);
+    return urlkan($r, ['logo_pemilik' => 'logo_pemilik_url', 'logo_peminjam' => 'logo_peminjam_url']);
 }
 
 /** Data pengembalian sebuah peminjaman (termasuk baris 'Terlambat' virtual), atau null. */
