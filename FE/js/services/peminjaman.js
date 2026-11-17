@@ -220,18 +220,21 @@ export async function getKelolaPeminjaman(params = {}) {
     status: item.status,
     alasanPenolakan: item.alasanPenolakan,
     namaPemroses: item.namaPemroses,
-    logoUrl: item.logoPemilikUrl || item.logoPeminjamUrl || null,
+    logoUrl: item.logoPeminjamUrl || null,
+    logoPemilikUrl: item.logoPemilikUrl || null,
+    logoPeminjamUrl: item.logoPeminjamUrl || null,
     suratUrl: item.suratUrl || null,
     peminjam: {
       nama: item.namaPeminjam,
       nim: item.nimPeminjam,
       organisasi: item.okiPeminjam,
+      logoUrl: item.logoPeminjamUrl || null,
     },
     inventaris: {
       idInventaris: item.idInventaris,
       namaBarang: item.namaBarang,
       namaOrganisasi: item.okiPemilik,
-      logoUrl: item.logoPemilikUrl,
+      logoUrl: item.logoPemilikUrl || null,
     },
   }));
 }

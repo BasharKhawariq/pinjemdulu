@@ -30,17 +30,22 @@ export function validateLampiran(file) {
 /** Filter pengajuan milik NIM tertentu pada tab status tertentu. */
 export function filterPengajuanPj(rows, { nim, status } = {}) {
   return (rows || []).filter((row) => {
-    if (nim && String(row.pemohon?.nim) !== String(nim)) return false;
-    return !status || String(row.status).toLowerCase() === status;
+    const rowNim = row.pemohon?.nim || row.nimPemohon || row.nim;
+    if (nim && String(rowNim) !== String(nim)) return false;
+    return !status || String(row.status).toLowerCase() === String(status).toLowerCase();
   });
 }
 
 /** Nama organisasi yang ditampilkan untuk pemohon. */
 export function namaOrganisasiPemohon(pemohon, organisasi = null) {
+  if (typeof organisasi === 'string' && organisasi.trim()) return organisasi.trim();
+  if (typeof pemohon?.organisasi === 'string' && pemohon.organisasi.trim()) return pemohon.organisasi.trim();
   return (
     organisasi?.namaOrganisasi ||
+    organisasi?.singkatan ||
     pemohon?.displayOrganization ||
     pemohon?.organisasi?.namaOrganisasi ||
+    pemohon?.organisasi?.singkatan ||
     '—'
   );
 }

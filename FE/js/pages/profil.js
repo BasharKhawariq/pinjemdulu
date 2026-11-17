@@ -213,7 +213,7 @@ export function render(ctx = {}) {
   const user = ctx.user || {};
   const name = user.nama || user.namaPengguna || 'Pengguna';
   const organization = organizationOf(user);
-  const logoUrl = user?.organisasi?.logoUrl || null;
+  const logoUrl = user?.logoUrl || user?.organisasi?.logoUrl || null;
   const initials = getInitials(name) || 'PD';
   const waDisplay = user.noWhatsapp || user.no_whatsapp || '+62 812-3643-1837';
 

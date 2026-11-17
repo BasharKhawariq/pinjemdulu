@@ -162,9 +162,13 @@ export function render({
   const userName = user?.nama || 'Maitri Sakti';
   const userNim = user?.nim || '254107020789';
   const userOki =
+    user?.displayOrganization ||
+    user?.singkatan ||
+    user?.organisasi?.singkatan ||
     user?.organisasi?.namaOrganisasi ||
     user?.organisasi?.nama ||
-    (typeof user?.organisasi === 'string' ? user?.organisasi : 'BEM');
+    user?.namaOrganisasi ||
+    (typeof user?.organisasi === 'string' ? user?.organisasi : 'Organisasi');
 
   return html`
     <div class="mx-auto w-full px-4 py-6 sm:px-6 lg:px-8">

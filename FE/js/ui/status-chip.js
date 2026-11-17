@@ -14,7 +14,8 @@ export function statusChipClass(status) {
   if (
     s === STATUS_PEMINJAMAN.MENUNGGU_KONFIRMASI_PENGEMBALIAN ||
     s === 'menunggu_pengembalian' ||
-    s === 'menunggu'
+    s === 'menunggu' ||
+    s === 'pengembalian'
   ) {
     return 'bg-amber-100 text-amber-800';
   }
@@ -72,6 +73,7 @@ export function formatStatusLabel(status) {
   if (s === STATUS_PEMINJAMAN.DISETUJUI || s === 'disetujui') return 'Disetujui';
   if (s === STATUS_PEMINJAMAN.DIPINJAM || s === 'dipinjam' || s === 'sedang dipinjam' || s === 'sedang_dipinjam') return 'Dipinjam';
   if (s === STATUS_PEMINJAMAN.DITOLAK || s === 'ditolak') return 'Ditolak';
+  if (s === 'pengembalian') return 'Pengembalian';
   if (s === STATUS_PEMINJAMAN.MENUNGGU_KONFIRMASI_PENGEMBALIAN || s === 'menunggu_pengembalian' || s === 'menunggu') return 'Menunggu';
   if (s === STATUS_PEMINJAMAN.DIKEMBALIKAN || s === 'selesai' || s === 'dikembalikan') return 'Dikembalikan';
   if (s === STATUS_PEMINJAMAN.TERLAMBAT || s === 'terlambat') return 'Terlambat';
