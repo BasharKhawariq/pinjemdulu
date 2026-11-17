@@ -358,7 +358,7 @@ export async function mount(root, ctx = {}) {
       if (currentKategoriIds.length === 0) {
         labelKategori.textContent = 'Semua Kategori';
       } else if (currentKategoriIds.length === 1) {
-        const found = allKategori.find((k) => k.idKategori === currentKategoriIds[0]);
+        const found = allKategori.find((k) => String(k.idKategori) === String(currentKategoriIds[0]));
         labelKategori.textContent = found ? found.namaKategori : '1 Kategori';
       } else {
         labelKategori.textContent = `${currentKategoriIds.length} Kategori`;
@@ -373,7 +373,7 @@ export async function mount(root, ctx = {}) {
         chipsKategori.classList.remove('hidden');
         chipsKategori.innerHTML = currentKategoriIds
           .map((id) => {
-            const k = allKategori.find((item) => item.idKategori === id);
+            const k = allKategori.find((item) => String(item.idKategori) === String(id));
             const name = k ? k.namaKategori : id;
             return `
               <span class="inline-flex items-center gap-1 rounded-md bg-zinc-100 px-2 py-0.5 text-xs text-zinc-800">
@@ -391,7 +391,7 @@ export async function mount(root, ctx = {}) {
     if (optionsKategori && allKategori.length > 0) {
       optionsKategori.innerHTML = allKategori
         .map((k) => {
-          const checked = currentKategoriIds.includes(k.idKategori);
+          const checked = currentKategoriIds.includes(String(k.idKategori));
           return `
             <label class="flex cursor-pointer items-center gap-2 rounded-lg p-2 text-sm transition hover:bg-primary hover:text-white group">
               <input
@@ -399,8 +399,11 @@ export async function mount(root, ctx = {}) {
                 data-action="select-kategori"
                 value="${escapeHtml(k.idKategori)}"
                 ${checked ? 'checked' : ''}
-                class="rounded border-zinc-300 text-primary focus:ring-primary h-4 w-4"
+                class="peer sr-only"
               />
+              <span class="flex h-4 w-4 shrink-0 items-center justify-center rounded border border-zinc-300 bg-white text-transparent transition peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white group-hover:border-primary group-hover:bg-primary/10">
+                ${renderIcon('Check', 'h-3 w-3')}
+              </span>
               <span class="flex-1 truncate group-hover:text-white">${escapeHtml(k.namaKategori)}</span>
             </label>
           `;
@@ -412,7 +415,7 @@ export async function mount(root, ctx = {}) {
     if (modalOptionsKat && allKategori.length > 0) {
       modalOptionsKat.innerHTML = allKategori
         .map((k) => {
-          const checked = currentKategoriIds.includes(k.idKategori);
+          const checked = currentKategoriIds.includes(String(k.idKategori));
           return `
             <label class="flex cursor-pointer items-center gap-2 rounded-lg p-2 text-sm transition hover:bg-primary hover:text-white group">
               <input
@@ -420,8 +423,11 @@ export async function mount(root, ctx = {}) {
                 data-action="select-kategori"
                 value="${escapeHtml(k.idKategori)}"
                 ${checked ? 'checked' : ''}
-                class="rounded border-zinc-300 text-primary focus:ring-primary h-4 w-4"
+                class="peer sr-only"
               />
+              <span class="flex h-4 w-4 shrink-0 items-center justify-center rounded border border-zinc-300 bg-white text-transparent transition peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white group-hover:border-primary group-hover:bg-primary/10">
+                ${renderIcon('Check', 'h-3 w-3')}
+              </span>
               <span class="flex-1 truncate group-hover:text-white">${escapeHtml(k.namaKategori)}</span>
             </label>
           `;
@@ -434,7 +440,7 @@ export async function mount(root, ctx = {}) {
       if (currentOkiIds.length === 0) {
         labelOki.textContent = 'Semua OKI';
       } else if (currentOkiIds.length === 1) {
-        const found = allOrganisasi.find((o) => o.idOrganisasi === currentOkiIds[0]);
+        const found = allOrganisasi.find((o) => String(o.idOrganisasi) === String(currentOkiIds[0]));
         labelOki.textContent = found ? found.namaOrganisasi : '1 OKI';
       } else {
         labelOki.textContent = `${currentOkiIds.length} OKI`;
@@ -449,7 +455,7 @@ export async function mount(root, ctx = {}) {
         chipsOki.classList.remove('hidden');
         chipsOki.innerHTML = currentOkiIds
           .map((id) => {
-            const o = allOrganisasi.find((item) => item.idOrganisasi === id);
+            const o = allOrganisasi.find((item) => String(item.idOrganisasi) === String(id));
             const name = o ? o.namaOrganisasi : id;
             return `
               <span class="inline-flex items-center gap-1 rounded-md bg-zinc-100 px-2 py-0.5 text-xs text-zinc-800">
@@ -467,7 +473,7 @@ export async function mount(root, ctx = {}) {
     if (optionsOki && allOrganisasi.length > 0) {
       optionsOki.innerHTML = allOrganisasi
         .map((o) => {
-          const checked = currentOkiIds.includes(o.idOrganisasi);
+          const checked = currentOkiIds.includes(String(o.idOrganisasi));
           return `
             <label class="flex cursor-pointer items-center gap-2 rounded-lg p-2 text-sm transition hover:bg-primary hover:text-white group">
               <input
@@ -475,8 +481,11 @@ export async function mount(root, ctx = {}) {
                 data-action="select-oki"
                 value="${escapeHtml(o.idOrganisasi)}"
                 ${checked ? 'checked' : ''}
-                class="rounded border-zinc-300 text-primary focus:ring-primary h-4 w-4"
+                class="peer sr-only"
               />
+              <span class="flex h-4 w-4 shrink-0 items-center justify-center rounded border border-zinc-300 bg-white text-transparent transition peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white group-hover:border-primary group-hover:bg-primary/10">
+                ${renderIcon('Check', 'h-3 w-3')}
+              </span>
               <span class="flex-1 truncate group-hover:text-white">${escapeHtml(o.namaOrganisasi)}</span>
             </label>
           `;
@@ -488,7 +497,7 @@ export async function mount(root, ctx = {}) {
     if (modalOptionsOki && allOrganisasi.length > 0) {
       modalOptionsOki.innerHTML = allOrganisasi
         .map((o) => {
-          const checked = currentOkiIds.includes(o.idOrganisasi);
+          const checked = currentOkiIds.includes(String(o.idOrganisasi));
           return `
             <label class="flex cursor-pointer items-center gap-2 rounded-lg p-2 text-sm transition hover:bg-primary hover:text-white group">
               <input
@@ -496,8 +505,11 @@ export async function mount(root, ctx = {}) {
                 data-action="select-oki"
                 value="${escapeHtml(o.idOrganisasi)}"
                 ${checked ? 'checked' : ''}
-                class="rounded border-zinc-300 text-primary focus:ring-primary h-4 w-4"
+                class="peer sr-only"
               />
+              <span class="flex h-4 w-4 shrink-0 items-center justify-center rounded border border-zinc-300 bg-white text-transparent transition peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white group-hover:border-primary group-hover:bg-primary/10">
+                ${renderIcon('Check', 'h-3 w-3')}
+              </span>
               <span class="flex-1 truncate group-hover:text-white">${escapeHtml(o.namaOrganisasi)}</span>
             </label>
           `;
@@ -662,11 +674,6 @@ export async function mount(root, ctx = {}) {
       return;
     }
 
-    // Cegah penutupan jika klik di dalam popover
-    if (e.target.closest('#popover-kategori') || e.target.closest('#popover-oki')) {
-      return;
-    }
-
     // Buka/Tutup Filter Modal Dialog
     const openFilterModal = e.target.closest('[data-action="open-filter-dialog"]');
     if (openFilterModal) {
@@ -683,7 +690,7 @@ export async function mount(root, ctx = {}) {
     const removeKatChip = e.target.closest('[data-action="remove-kategori-chip"]');
     if (removeKatChip) {
       const id = removeKatChip.getAttribute('data-id');
-      currentKategoriIds = currentKategoriIds.filter((k) => k !== id);
+      currentKategoriIds = currentKategoriIds.filter((k) => String(k) !== String(id));
       currentPage = 1;
       updateDropdownUI();
       updateUrlQuery();
@@ -695,11 +702,16 @@ export async function mount(root, ctx = {}) {
     const removeOkiChip = e.target.closest('[data-action="remove-oki-chip"]');
     if (removeOkiChip) {
       const id = removeOkiChip.getAttribute('data-id');
-      currentOkiIds = currentOkiIds.filter((o) => o !== id);
+      currentOkiIds = currentOkiIds.filter((o) => String(o) !== String(id));
       currentPage = 1;
       updateDropdownUI();
       updateUrlQuery();
       loadData();
+      return;
+    }
+
+    // Cegah penutupan jika klik di dalam popover
+    if (e.target.closest('#popover-kategori') || e.target.closest('#popover-oki')) {
       return;
     }
 
@@ -749,9 +761,9 @@ export async function mount(root, ctx = {}) {
     if (e.target.matches('[data-action="select-kategori"]')) {
       const val = e.target.value;
       if (e.target.checked) {
-        if (!currentKategoriIds.includes(val)) currentKategoriIds.push(val);
+        if (!currentKategoriIds.some((id) => String(id) === String(val))) currentKategoriIds.push(String(val));
       } else {
-        currentKategoriIds = currentKategoriIds.filter((k) => k !== val);
+        currentKategoriIds = currentKategoriIds.filter((k) => String(k) !== String(val));
       }
       currentPage = 1;
       updateDropdownUI();
@@ -763,9 +775,9 @@ export async function mount(root, ctx = {}) {
     if (e.target.matches('[data-action="select-oki"]')) {
       const val = e.target.value;
       if (e.target.checked) {
-        if (!currentOkiIds.includes(val)) currentOkiIds.push(val);
+        if (!currentOkiIds.some((id) => String(id) === String(val))) currentOkiIds.push(String(val));
       } else {
-        currentOkiIds = currentOkiIds.filter((o) => o !== val);
+        currentOkiIds = currentOkiIds.filter((o) => String(o) !== String(val));
       }
       currentPage = 1;
       updateDropdownUI();
