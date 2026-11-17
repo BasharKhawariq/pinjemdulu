@@ -22,6 +22,7 @@ import { validateFotoFile } from "../lib/inventaris-form.js";
 import { compressImageToDataUrl } from "./kelola-inventaris-form.js";
 import { renderOrganisasiLogo } from "../ui/organisasi-badge.js";
 import { renderEmptyState } from "../ui/empty-state.js";
+import { renderTableLoadingRow } from "../ui/loading-state.js";
 
 const OKI_LIST = [
   "BEM",
@@ -35,6 +36,7 @@ const OKI_LIST = [
 ];
 
 let rows = [];
+let isLoading = false;
 let searchTerm = "";
 let okiFilter = "all";
 let tanggalFilter = "";
@@ -120,7 +122,9 @@ function organizationName(row) {
   return (
     row.peminjam?.displayOrganization ||
     row.pengguna?.displayOrganization ||
-    row.peminjam?.organisasi?.namaOrganisasi ||
+    row.okiPeminjam ||
+    row.organisasi ||
+    (typeof row.peminjam?.organisasi === 'string' ? row.peminjam.organisasi : row.peminjam?.organisasi?.namaOrganisasi) ||
     row.peminjam?.namaOrganisasi ||
     row.inventaris?.namaOrganisasi ||
     row.barang?.namaOrganisasi ||
@@ -230,6 +234,9 @@ function visibleRows() {
 }
 
 function renderTableRows() {
+  if (isLoading) {
+    return renderTableLoadingRow({ colspan: 9, message: "Memuat data peminjaman..." });
+  }
   const filtered = visibleRows();
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   currentPage = Math.min(currentPage, pages);
@@ -258,7 +265,7 @@ function renderTableRows() {
       <td class="min-w-[210px] px-4 py-3">
         <div class="flex items-center gap-2.5">
           <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-xs font-semibold text-white">${escapeHtml(initials(name))}</span>
-          <span class="min-w-0"><span class="block truncate text-xs font-medium text-slate-500">${escapeHtml(name)}</span><span class="mt-1 flex items-center gap-1.5 text-[11px] text-slate-700">${renderOrganisasiLogo(org, row.peminjam?.logoUrl || row.logoUrl, 'h-3.5 w-3.5')}<span>${escapeHtml(org)}</span></span></span>
+          <span class="min-w-0"><span class="block truncate text-xs font-medium text-slate-500">${escapeHtml(name)}</span><span class="mt-1 flex items-center gap-1.5 text-[11px] text-slate-700">${renderOrganisasiLogo(org, row.peminjam?.logoUrl || row.logoPeminjamUrl, 'h-3.5 w-3.5')}<span>${escapeHtml(org)}</span></span></span>
         </div>
       </td>
       <td class="min-w-[150px] px-4 py-4 text-xs text-slate-400">${escapeHtml(itemName(row))}</td>
@@ -326,22 +333,29 @@ function renderPagination() {
 
 function renderModal() {
   if (pickupModal) {
+    const isNotStarted = Boolean(pickupData.startDate && todayIsoDate() < pickupData.startDate);
+    const minDate = pickupData.startDate || todayIsoDate();
+    const maxDate = pickupData.endDate || "";
     return `<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4" data-modal-backdrop>
       <section role="dialog" aria-modal="true" aria-labelledby="pickup-title" class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
         <h2 id="pickup-title" class="text-2xl font-semibold tracking-tight text-slate-900">Pengambilan Barang</h2>
+        ${isNotStarted ? `<div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 flex items-start gap-2">
+          <span>⚠️</span>
+          <span><strong>Perhatian:</strong> Periode peminjaman baru dimulai pada tanggal <strong>${escapeHtml(dateLabel(pickupData.startDate))}</strong>. Pengambilan barang belum dapat diproses sebelum tanggal mulai.</span>
+        </div>` : ''}
         <div class="mt-5 space-y-4 text-sm">
           <div>
             <label for="tanggal-pengambilan" class="mb-2 block text-sm font-semibold text-slate-900">Tanggal Pengambilan</label>
             <div data-action="open-pickup-date" class="relative flex h-12 w-full cursor-pointer items-center rounded-xl border ${pickupData.tanggalError ? 'border-rose-400' : 'border-slate-200'} bg-white px-4 transition-colors hover:border-slate-300 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/15">
               <span id="pickup-date-display" class="pointer-events-none flex-1 text-sm ${pickupData.tanggalPengambilan ? 'text-slate-800' : 'text-slate-400'}">${pickupData.tanggalPengambilan ? escapeHtml(dateLabel(pickupData.tanggalPengambilan)) : 'Pilih Tanggal'}</span>
               <span class="pointer-events-none ml-3 text-slate-400">${renderIcon('CalendarDays', 'h-5 w-5 text-slate-400')}</span>
-              <input type="date" id="tanggal-pengambilan" aria-label="Pilih tanggal pengambilan" min="${todayIsoDate()}" value="${escapeHtml(pickupData.tanggalPengambilan)}" class="pointer-events-none absolute inset-0 h-full w-full cursor-pointer opacity-0" style="color-scheme:light">
+              <input type="date" id="tanggal-pengambilan" aria-label="Pilih tanggal pengambilan" min="${escapeHtml(minDate)}" ${maxDate ? `max="${escapeHtml(maxDate)}"` : ''} value="${escapeHtml(pickupData.tanggalPengambilan)}" class="pointer-events-none absolute inset-0 h-full w-full cursor-pointer opacity-0" style="color-scheme:light">
             </div>
             ${pickupData.tanggalError ? `<p id="pickup-date-error" role="alert" class="mt-1 text-xs text-rose-600">${escapeHtml(pickupData.tanggalError)}</p>` : ''}
           </div>
           <div><p class="mb-2 text-sm font-semibold text-slate-900">Foto Barang</p><button type="button" data-action="choose-pickup-photo" class="flex min-h-[150px] w-full flex-col items-center justify-center rounded-2xl border border-dashed ${pickupData.fotoError ? 'border-rose-400' : 'border-slate-300'} bg-slate-50 p-4 text-center transition-colors hover:bg-slate-100">${pickupData.fotoPengambilan ? `<img src="${escapeHtml(pickupData.fotoPengambilan)}" alt="Foto barang" class="max-h-32 rounded-lg object-contain">` : `<img src="assets/img/Image-Dropbox.png" alt="" class="mb-2 h-10 w-10 object-contain"><span class="text-xs font-semibold text-slate-700">Seret foto ke sini, atau Pilih File</span><span class="mt-1 text-[10px] text-slate-400">File harus berformat JPG atau PNG dengan ukuran maksimal 2 MB.</span>`}</button><input id="pickup-photo" type="file" accept="image/jpeg,image/png,image/jpg" class="sr-only">${pickupData.error ? `<p class="mt-1 text-xs text-rose-600">${escapeHtml(pickupData.error)}</p>` : ""}${pickupData.fotoError ? `<p role="alert" class="mt-1 text-xs text-rose-600">${escapeHtml(pickupData.fotoError)}</p>` : ""}</div>
         </div>
-        <div class="mt-6 flex justify-end gap-3"><button type="button" data-action="close-pickup" class="rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-600 transition-colors hover:border-rose-700 hover:bg-rose-700 hover:text-white">Batal</button><button type="button" data-action="submit-pickup" class="rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:brightness-110">Kirim</button></div>
+        <div class="mt-6 flex justify-end gap-3"><button type="button" data-action="close-pickup" class="rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-600 transition-colors hover:border-rose-700 hover:bg-rose-700 hover:text-white">Batal</button><button type="button" data-action="submit-pickup" ${isNotStarted ? 'disabled class="rounded-xl bg-slate-300 px-6 py-3 text-sm font-semibold text-slate-500 cursor-not-allowed shadow-none"' : 'class="rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:brightness-110"'}>Kirim</button></div>
       </section>
     </div>`;
   }
@@ -433,7 +447,7 @@ function renderModal() {
         <div class="mt-6 space-y-6 text-sm">
           <div class="flex items-center justify-between gap-6">
             <p class="text-base font-medium text-slate-900">Nama Peminjam</p>
-            <div class="text-right"><p class="text-base font-medium text-slate-800">${escapeHtml(borrowerName)}</p><p class="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-slate-600">${renderOrganisasiLogo(org, borrower.logoUrl || row.logoUrl, 'h-4 w-4')}<span>${escapeHtml(org)}</span></p></div>
+            <div class="text-right"><p class="text-base font-medium text-slate-800">${escapeHtml(borrowerName)}</p><p class="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-slate-600">${renderOrganisasiLogo(org, borrower.logoUrl || row.logoPeminjamUrl, 'h-4 w-4')}<span>${escapeHtml(org)}</span></p></div>
           </div>
           <div class="flex items-center justify-between gap-6"><p class="text-base font-medium text-slate-900">NIM</p><p class="text-base font-medium text-slate-800">${escapeHtml(borrowerNim)}</p></div>
           <div class="flex items-center justify-between gap-6"><p class="text-base font-medium text-slate-900">Nama Barang</p><p class="text-base font-medium text-slate-800 text-right">${escapeHtml(name)}</p></div>
@@ -593,8 +607,16 @@ export async function mount(root) {
   okiFilter = "all";
   tanggalFilter = "";
   statusFilter = "all";
-  rows = await loadRows();
-  markNotificationsRead('kelola-peminjaman', [STATUS_PEMINJAMAN.DIAJUKAN], rows);
+  isLoading = true;
+  if (rootElement) {
+    rootElement.innerHTML = renderContent();
+  }
+  try {
+    rows = await loadRows();
+    markNotificationsRead('kelola-peminjaman', [STATUS_PEMINJAMAN.DIAJUKAN], rows);
+  } finally {
+    isLoading = false;
+  }
   rootElement.innerHTML = renderContent();
 
   clickHandler = async (event) => {
@@ -630,8 +652,19 @@ export async function mount(root) {
       return;
     }
     if (action === "pickup") {
-      pickupModal = { id };
-      pickupData = { tanggalPengambilan: "", fotoPengambilan: "", error: "", tanggalError: "", fotoError: "" };
+      const row = rows.find((item) => String(item.id || item.idPeminjaman) === String(id));
+      const startDate = String(row?.startDate || row?.mulai || row?.tanggalMulai || "").slice(0, 10);
+      const endDate = String(row?.endDate || row?.selesai || row?.tanggalSelesai || "").slice(0, 10);
+      pickupModal = { id, row };
+      pickupData = {
+        tanggalPengambilan: "",
+        fotoPengambilan: "",
+        error: "",
+        tanggalError: "",
+        fotoError: "",
+        startDate,
+        endDate,
+      };
       refresh();
       return;
     }
@@ -656,14 +689,18 @@ export async function mount(root) {
       return;
     }
     if (action === "submit-pickup") {
-      // Validasi kedua field dalam satu kali submit agar semua peringatan tampil bersamaan.
+      // Validasi field: pengambilan hanya boleh dalam periode sewa barang (mulai s.d. selesai)
       pickupData.tanggalError = "";
       pickupData.fotoError = "";
 
-      if (!pickupData.tanggalPengambilan) {
+      if (pickupData.startDate && todayIsoDate() < pickupData.startDate) {
+        pickupData.tanggalError = `Peminjaman belum dimulai. Pengambilan hanya dapat diproses mulai tanggal ${dateLabel(pickupData.startDate)}.`;
+      } else if (!pickupData.tanggalPengambilan) {
         pickupData.tanggalError = "Tanggal pengambilan wajib diisi.";
-      } else if (pickupData.tanggalPengambilan < todayIsoDate()) {
-        pickupData.tanggalError = "Tanggal pengambilan tidak boleh sebelum hari ini.";
+      } else if (pickupData.startDate && pickupData.tanggalPengambilan < pickupData.startDate) {
+        pickupData.tanggalError = `Tanggal pengambilan tidak boleh sebelum tanggal mulai (${dateLabel(pickupData.startDate)}).`;
+      } else if (pickupData.endDate && pickupData.tanggalPengambilan > pickupData.endDate) {
+        pickupData.tanggalError = `Tanggal pengambilan tidak boleh melebihi tanggal selesai (${dateLabel(pickupData.endDate)}).`;
       }
 
       if (!pickupData.fotoPengambilan) {

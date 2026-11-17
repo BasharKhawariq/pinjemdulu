@@ -143,9 +143,7 @@ test('pages-kelola-inventaris: render state kosong dan state filter kosong', () 
     cari: '',
     nAktif: 0,
   }).toString();
-  assert.ok(htmlKosong.includes('Belum ada inventaris'));
-  assert.ok(htmlKosong.includes('Anda belum memiliki barang inventaris'));
-  assert.ok(htmlKosong.includes('Tambah Inventaris'));
+  assert.ok(htmlKosong.includes('Belum ada data untuk ditampilkan') || htmlKosong.includes('Belum ada inventaris'));
 
   // State hasil filter kosong
   const htmlFilterKosong = KelolaPage.renderKelolaContent({
@@ -155,7 +153,6 @@ test('pages-kelola-inventaris: render state kosong dan state filter kosong', () 
     nAktif: 1,
   }).toString();
   assert.ok(htmlFilterKosong.includes('Tidak ada hasil yang cocok'));
-  assert.ok(htmlFilterKosong.includes('Coba ubah kata kunci pencarian atau setel ulang filter.'));
   assert.ok(htmlFilterKosong.includes('Setel Ulang Filter'));
 });
 

@@ -15,6 +15,9 @@ import { compressImageToDataUrl } from './kelola-inventaris-form.js';
 import { validateFotoFile } from '../lib/inventaris-form.js';
 import { renderOrganisasiLogo } from '../ui/organisasi-badge.js';
 import { renderEmptyState } from '../ui/empty-state.js';
+import { renderTableLoadingRow } from '../ui/loading-state.js';
+
+let isLoading = false;
 
 function renderReturnStatusChip(status) {
   const isRejected = String(status || '').toLowerCase().trim() === 'ditolak';
@@ -167,7 +170,9 @@ function organizationName(row) {
   return (
     row.peminjam?.displayOrganization ||
     row.pengguna?.displayOrganization ||
-    row.peminjam?.organisasi?.namaOrganisasi ||
+    row.okiPeminjam ||
+    row.organisasi ||
+    (typeof row.peminjam?.organisasi === 'string' ? row.peminjam.organisasi : row.peminjam?.organisasi?.namaOrganisasi) ||
     row.peminjam?.namaOrganisasi ||
     row.inventaris?.namaOrganisasi ||
     row.barang?.namaOrganisasi ||
@@ -176,7 +181,7 @@ function organizationName(row) {
 }
 
 function itemName(row) {
-  return row.inventaris?.namaBarang || row.barang?.namaBarang || row.barang?.nama || 'Barang inventaris';
+  return row.namaBarang || row.inventaris?.namaBarang || row.barang?.namaBarang || row.barang?.nama || 'Barang inventaris';
 }
 
 function initials(name) {
@@ -236,6 +241,9 @@ function visibleRows() {
 }
 
 function renderTableRows() {
+  if (isLoading) {
+    return renderTableLoadingRow({ colspan: 8, message: 'Memuat data pengembalian...' });
+  }
   const filtered = visibleRows();
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   currentPage = Math.min(currentPage, pages);
@@ -254,7 +262,7 @@ function renderTableRows() {
 
     return `<tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50/60">
       <td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400">${start + index + 1}</td>
-      <td class="min-w-[190px] px-4 py-3"><div class="flex items-center gap-2.5"><span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-xs font-semibold text-white">${escapeHtml(initials(name))}</span><span class="min-w-0"><span class="block truncate text-xs font-medium text-slate-500">${escapeHtml(name)}</span><span class="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500">${renderOrganisasiLogo(org, row.peminjam?.logoUrl || row.logoUrl, 'h-3.5 w-3.5')}<span>${escapeHtml(org)}</span></span></span></div></td>
+      <td class="min-w-[190px] px-4 py-3"><div class="flex items-center gap-2.5"><span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-xs font-semibold text-white">${escapeHtml(initials(name))}</span><span class="min-w-0"><span class="block truncate text-xs font-medium text-slate-500">${escapeHtml(name)}</span><span class="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500">${renderOrganisasiLogo(org, row.peminjam?.logoUrl || row.logoPeminjamUrl, 'h-3.5 w-3.5')}<span>${escapeHtml(org)}</span></span></span></div></td>
       <td class="min-w-[140px] px-4 py-4 text-xs text-slate-400">${escapeHtml(itemName(row))}</td>
       <td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400">${escapeHtml(dateLabel(row.startDate || row.mulai || row.tanggalMulai))}</td>
       <td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400">${escapeHtml(dateLabel(row.endDate || row.selesai || row.tanggalSelesai))}</td>
@@ -385,7 +393,7 @@ function renderModal() {
         <div class="mt-6 space-y-6 text-sm">
           <div class="flex items-center justify-between gap-6">
             <p class="text-base font-semibold text-slate-900">Nama Peminjam</p>
-            <div class="text-right"><p class="text-base font-medium text-slate-800">${escapeHtml(name)}</p><p class="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-slate-600">${renderOrganisasiLogo(org, row.peminjam?.logoUrl || row.logoUrl, 'h-4 w-4')}<span>${escapeHtml(org)}</span></p></div>
+            <div class="text-right"><p class="text-base font-medium text-slate-800">${escapeHtml(name)}</p><p class="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-slate-600">${renderOrganisasiLogo(org, row.peminjam?.logoUrl || row.logoPeminjamUrl, 'h-4 w-4')}<span>${escapeHtml(org)}</span></p></div>
           </div>
           <div class="flex items-center justify-between gap-6"><p class="text-base font-semibold text-slate-900">NIM</p><p class="text-base font-medium text-slate-800">${escapeHtml(nim)}</p></div>
           <div class="flex items-center justify-between gap-6"><p class="text-base font-semibold text-slate-900">Barang Dipinjam</p><p class="text-right text-base font-medium text-slate-800">${escapeHtml(itemName(row))}</p></div>
@@ -560,17 +568,20 @@ function renderModal() {
 
 async function loadRows() {
   const all = await getKelolaPengembalian();
-  return all.filter((row) => [
-    STATUS_PEMINJAMAN.MENUNGGU_KONFIRMASI_PENGEMBALIAN,
-    STATUS_PEMINJAMAN.TERLAMBAT,
-    STATUS_PEMINJAMAN.DIKEMBALIKAN,
-    STATUS_PEMINJAMAN.DITOLAK,
+  const validStatuses = new Set([
+    'menunggu',
     'menunggu_pengembalian',
     'terlambat',
     'selesai',
     'dikembalikan',
     'ditolak',
-  ].includes(row.status));
+    'pengembalian_ditolak',
+  ]);
+  return (all || []).filter((row) => {
+    if (!row || !row.status) return false;
+    const s = String(row.status).toLowerCase().trim();
+    return validStatuses.has(s);
+  });
 }
 
 function renderContent() {
@@ -665,7 +676,7 @@ function renderContent() {
           <div class="relative">
             <select id="filter-pengembalian-status" name="status" style="color: ${statusFilter === 'all' ? 'var(--muted-foreground)' : 'var(--foreground)'};" class="${selectClass('appearance-none pr-10 cursor-pointer')}">
               <option value="" disabled hidden style="color: var(--muted-foreground)" ${statusFilter === 'all' ? 'selected' : ''}>Pilih status</option>
-              <option style="color: var(--foreground)" value="${STATUS_PEMINJAMAN.MENUNGGU_KONFIRMASI_PENGEMBALIAN}" ${statusFilter === STATUS_PEMINJAMAN.MENUNGGU_KONFIRMASI_PENGEMBALIAN ? 'selected' : ''}>Menunggu</option>
+              <option style="color: var(--foreground)" value="${STATUS_PEMINJAMAN.MENUNGGU_KONFIRMASI_PENGEMBALIAN}" ${statusFilter === STATUS_PEMINJAMAN.MENUNGGU_KONFIRMASI_PENGEMBALIAN ? 'selected' : ''}>Menunggu Konfirmasi</option>
               <option style="color: var(--foreground)" value="${STATUS_PEMINJAMAN.DIKEMBALIKAN}" ${statusFilter === STATUS_PEMINJAMAN.DIKEMBALIKAN ? 'selected' : ''}>Dikembalikan</option>
               <option style="color: var(--foreground)" value="${STATUS_PEMINJAMAN.TERLAMBAT}" ${statusFilter === STATUS_PEMINJAMAN.TERLAMBAT ? 'selected' : ''}>Terlambat</option>
               <option style="color: var(--foreground)" value="${STATUS_PEMINJAMAN.DITOLAK}" ${statusFilter === STATUS_PEMINJAMAN.DITOLAK ? 'selected' : ''}>Ditolak</option>
@@ -707,8 +718,16 @@ export async function mount(root) {
   okiFilter = 'all';
   tanggalFilter = '';
   statusFilter = 'all';
-  rows = await loadRows();
-  markNotificationsRead('kelola-pengembalian', [STATUS_PEMINJAMAN.MENUNGGU_KONFIRMASI_PENGEMBALIAN], rows);
+  isLoading = true;
+  if (rootElement) {
+    rootElement.innerHTML = renderContent();
+  }
+  try {
+    rows = await loadRows();
+    markNotificationsRead('kelola-pengembalian', [STATUS_PEMINJAMAN.MENUNGGU_KONFIRMASI_PENGEMBALIAN], rows);
+  } finally {
+    isLoading = false;
+  }
   rootElement.innerHTML = renderContent();
 
   clickHandler = async (event) => {
@@ -885,7 +904,7 @@ export async function mount(root) {
     if (action === 'execute-approve') {
       try {
         await updateMockPengembalianStatus(
-          modalRow.id || modalRow.idPeminjaman,
+          modalRow.idPengembalian || modalRow.id || modalRow.idPeminjaman,
           STATUS_PEMINJAMAN.DIKEMBALIKAN,
           {
             tanggalPengembalian: formData.tanggalPengembalian,
@@ -956,7 +975,7 @@ export async function mount(root) {
       }
       try {
         await updateMockPengembalianStatus(
-          modalRow.id || modalRow.idPeminjaman,
+          modalRow.idPengembalian || modalRow.id || modalRow.idPeminjaman,
           STATUS_PEMINJAMAN.DITOLAK,
           {
             alasanPenolakan: formData.alasanPenolakan,

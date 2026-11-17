@@ -853,6 +853,12 @@ function closeFeedbackDialog() {
 async function handleFotoFileSelected(file) {
   if (!file) return;
 
+  const currentInputs = readCurrentFormInputs();
+  pageState.formData = {
+    ...pageState.formData,
+    ...currentInputs,
+  };
+
   const errFoto = validateFotoFile(file);
   if (errFoto) {
     pageState.formErrors = { ...pageState.formErrors, fotoFile: errFoto };
@@ -952,9 +958,14 @@ async function handleDocumentClick(e) {
       }
     }
   } else if (action === 'remove-foto') {
-    pageState.formData.thumbnail = '';
-    pageState.formData.fotoFile = null;
-    pageState.formData.hapusFoto = true;
+    const currentInputs = readCurrentFormInputs();
+    pageState.formData = {
+      ...pageState.formData,
+      ...currentInputs,
+      thumbnail: '',
+      fotoFile: null,
+      hapusFoto: true,
+    };
     const fileInput = document.getElementById('form-foto-input');
     if (fileInput) fileInput.value = '';
     updateUI();
@@ -1065,6 +1076,14 @@ function handleDocumentInput(e) {
       inp.focus();
       inp.setSelectionRange(inp.value.length, inp.value.length);
     }
+    return;
+  }
+  if (e.target && e.target.closest('#inventaris-form, form')) {
+    const currentInputs = readCurrentFormInputs();
+    pageState.formData = {
+      ...pageState.formData,
+      ...currentInputs,
+    };
   }
 }
 
@@ -1185,6 +1204,14 @@ export async function mount(container, ctx = {}) {
     if (e.target && e.target.id === 'form-foto-input') {
       const file = e.target.files?.[0];
       if (file) handleFotoFileSelected(file);
+      return;
+    }
+    if (e.target && e.target.closest('#inventaris-form, form')) {
+      const currentInputs = readCurrentFormInputs();
+      pageState.formData = {
+        ...pageState.formData,
+        ...currentInputs,
+      };
     }
   });
 }

@@ -1186,9 +1186,30 @@ function handleSearchInput(e) {
   }, 300);
 }
 
+function syncFormDataFromDOM() {
+  const dlg = document.getElementById('dialog-form-kelola');
+  if (!dlg) return;
+  const namaInp = dlg.querySelector('#form-input-nama');
+  if (namaInp && typeof namaInp.value === 'string') pageState.formData.namaBarang = namaInp.value;
+  const jumlahInp = dlg.querySelector('#form-input-jumlah');
+  if (jumlahInp && jumlahInp.value !== '') pageState.formData.totalBarang = Number(jumlahInp.value) || 1;
+  const katSelect = dlg.querySelector('#form-select-kategori');
+  if (katSelect && katSelect.value) pageState.formData.idKategori = Number(katSelect.value) || katSelect.value;
+  const kondisiRadio = dlg.querySelector('input[name="kondisi"]:checked');
+  if (kondisiRadio) pageState.formData.kondisi = kondisiRadio.value;
+  const descInp = dlg.querySelector('#form-input-deskripsi');
+  if (descInp && typeof descInp.value === 'string') {
+    pageState.formData.deskripsi = descInp.value;
+    pageState.formData.deskripsiBarang = descInp.value;
+  }
+}
+
 function handleDocumentInput(e) {
   if (e.target && e.target.id === 'kelola-search-input') {
     handleSearchInput(e);
+  }
+  if (e.target && e.target.closest('#dialog-form-kelola')) {
+    syncFormDataFromDOM();
   }
 }
 
@@ -1196,6 +1217,9 @@ function handleDocumentChange(e) {
   if (e.target && e.target.id === 'form-foto-input') {
     handleFileInputChange(e);
     return;
+  }
+  if (e.target && e.target.closest('#dialog-form-kelola')) {
+    syncFormDataFromDOM();
   }
 
   const checkbox = e.target;
@@ -1374,6 +1398,7 @@ function closeFeedbackDialog() {
 async function handleFotoUpload(file) {
   if (!file) return;
 
+  syncFormDataFromDOM();
   const errFoto = validateFotoFile(file);
   if (errFoto) {
     pageState.formErrors = { ...pageState.formErrors, fotoFile: errFoto };
@@ -1385,6 +1410,8 @@ async function handleFotoUpload(file) {
   try {
     const dataUrl = await compressImageToDataUrl(file);
     pageState.formData.thumbnail = dataUrl;
+    pageState.formData.fotoFile = file;
+    pageState.formData.hapusFoto = false;
     delete pageState.formErrors.fotoFile;
     updateUI();
     document.getElementById('dialog-form-kelola')?.showModal();
@@ -1491,6 +1518,15 @@ async function handleDocumentClick(e) {
     actionEl.remove();
     pageState.meta.page = 1;
     loadData();
+  } else if (action === 'remove-foto') {
+    syncFormDataFromDOM();
+    pageState.formData.thumbnail = '';
+    pageState.formData.fotoFile = null;
+    pageState.formData.hapusFoto = true;
+    const fileInput = document.getElementById('form-foto-input');
+    if (fileInput) fileInput.value = '';
+    updateUI();
+    document.getElementById('dialog-form-kelola')?.showModal();
   } else if (action === 'close-detail-dialog') {
     closeDetailDialog();
   } else if (action === 'change-page') {

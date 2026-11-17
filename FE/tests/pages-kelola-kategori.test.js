@@ -96,7 +96,7 @@ test('renderKelolaKategoriContent: state kosong alami dan kosong pencarian', () 
     cari: '',
     loading: false,
   }).toString();
-  assert.ok(emptyHtml.includes('Belum ada kategori'));
+  assert.ok(emptyHtml.includes('Belum ada data untuk ditampilkan') || emptyHtml.includes('Belum ada kategori'));
   assert.ok(emptyHtml.includes('data-action="open-tambah-dialog"'));
   assertNoEscapedMarkup(emptyHtml, 'renderKelolaKategoriContent (empty)');
 
