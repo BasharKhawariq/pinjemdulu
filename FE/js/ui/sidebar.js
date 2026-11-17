@@ -175,7 +175,7 @@ function renderSidebarNav(items, collapsed, currentHash, role = '', idPrefix = '
               data-group="${escapeHtml(item.key)}"
               aria-expanded="${isOpen}"
               aria-controls="${escapeHtml(subId)}"
-              class="group sidebar-nav-group flex w-full items-center justify-between rounded-2xl px-3 py-3 text-[15px] text-zinc-400 transition hover:bg-zinc-50/60 hover:text-zinc-900 font-medium"
+              class="group flex w-full items-center justify-between rounded-2xl px-3 py-3 text-[15px] text-zinc-400 transition hover:bg-zinc-50/60 hover:text-zinc-900 font-medium"
             >
               <div class="flex items-center gap-3">
                 <span class="inline-flex h-6 w-6 shrink-0 items-center justify-center">

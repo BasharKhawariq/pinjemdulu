@@ -18,6 +18,7 @@ export async function getUsers(params = {}) {
       nim: u.nim,
       nama: u.namaPengguna,
       namaPengguna: u.namaPengguna,
+      noWhatsapp: u.noWhatsapp || u.no_whatsapp || '',
       role: (u.role === 'Penanggung Jawab' || String(u.role).toLowerCase().includes('jawab')) ? ROLES.PENANGGUNG_JAWAB : ROLES.PEMINJAM,
       statusAkun: u.statusAkun ? STATUS_AKUN.AKTIF : STATUS_AKUN.NONAKTIF,
       status_akun: u.statusAkun ? STATUS_AKUN.AKTIF : STATUS_AKUN.NONAKTIF,
@@ -48,7 +49,7 @@ export async function updateMockUser(id, updates = {}) {
         body: { statusAkun: isAktif },
       });
     }
-    if (updates.nama !== undefined || updates.role !== undefined || (updates.nim !== undefined && updates.nim !== nim)) {
+    if (updates.nama !== undefined || updates.role !== undefined || updates.noWhatsapp !== undefined || (updates.nim !== undefined && updates.nim !== nim)) {
       const roleFormatted = (updates.role === ROLES.PENANGGUNG_JAWAB || updates.role === 'Penanggung Jawab')
         ? 'Penanggung Jawab'
         : 'Peminjam';
@@ -58,6 +59,7 @@ export async function updateMockUser(id, updates = {}) {
           namaPengguna: updates.nama ? String(updates.nama).trim() : undefined,
           role: updates.role ? roleFormatted : undefined,
           nim: updates.nim ? String(updates.nim).trim() : undefined,
+          noWhatsapp: updates.noWhatsapp !== undefined ? String(updates.noWhatsapp).trim() : undefined,
         },
       });
     }
@@ -71,6 +73,7 @@ export async function updateMockUser(id, updates = {}) {
   if (updates.nama !== undefined) user.nama = String(updates.nama).trim();
   if (updates.nim !== undefined) user.nim = String(updates.nim).trim();
   if (updates.email !== undefined) user.email = String(updates.email).trim();
+  if (updates.noWhatsapp !== undefined) user.noWhatsapp = String(updates.noWhatsapp).trim();
   if (updates.businessUnit !== undefined) user.businessUnit = String(updates.businessUnit).trim();
   if (updates.displayOrganization !== undefined) user.displayOrganization = String(updates.displayOrganization).trim();
   if (updates.role !== undefined) {
@@ -94,8 +97,9 @@ export async function addMockUser(data = {}) {
       method: 'POST',
       body: {
         nim: String(data.nim).trim(),
-        namaPengguna: String(data.nama).trim(),
+        namaPengguna: String(data.nama || data.namaPengguna).trim(),
         role: roleFormatted,
+        noWhatsapp: data.noWhatsapp ? String(data.noWhatsapp).trim() : undefined,
       },
     });
     return res?.data || res;

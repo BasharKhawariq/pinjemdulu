@@ -28,11 +28,11 @@ function renderForgotPasswordPage() {
     modal = renderModalComponent({
       id: 'modal-forgot-password-confirm',
       title: 'Kirim Data Ubah Password?',
-      description: 'Pastikan No. WhatsApp Anda aktif dan dapat dihubungi.',
+      description: 'Pastikan No Whatsapp anda aktif dan dapat dihubungi',
       variant: 'send',
       actions: [
         { label: 'Kembali', action: 'forgot-back-form', variant: 'outline' },
-        { label: 'Kirim', action: 'forgot-submit-confirm' },
+        { label: 'Kirim', action: 'forgot-submit-confirm', className: 'bg-primary hover:bg-primary/90 text-primary-foreground' },
       ],
     }).toString();
   } else if (forgotModal === 'success') {
@@ -41,7 +41,15 @@ function renderForgotPasswordPage() {
       title: 'Data Ubah Password Berhasil Dikirim!',
       description: 'Permintaan ubah password Anda berhasil dikirim. Silakan periksa WhatsApp Anda secara berkala untuk mendapatkan informasi dan melanjutkan ke tahap berikutnya.',
       variant: 'success',
-      actions: [{ label: 'Mengerti', action: 'forgot-close-success' }],
+      actions: [{ label: 'Mengerti', action: 'forgot-close-success', className: 'w-full bg-primary hover:bg-primary/90 text-primary-foreground' }],
+    }).toString();
+  } else if (forgotModal === 'error-wa') {
+    modal = renderModalComponent({
+      id: 'modal-forgot-password-error',
+      title: 'Nomor whatsapp tidak sesuai!',
+      description: 'Nomor WhatsApp yang Anda masukkan tidak terdaftar pada NIM tersebut.',
+      variant: 'error',
+      actions: [{ label: 'Kembali', action: 'forgot-back-form', className: 'w-full bg-primary hover:bg-primary/90 text-primary-foreground' }],
     }).toString();
   }
 
@@ -69,11 +77,14 @@ function renderForgotPasswordPage() {
                 <p id="forgot-nim-error" class="mt-1 text-xs text-rose-600 ${forgotError ? '' : 'hidden'}">${escapeHtml(forgotError)}</p>
               </div>
               <div>
-                <label for="forgot-whatsapp" class="${labelClass('mb-2 block text-zinc-600')}">No. Whatsapp<span class="ml-0.5 text-rose-500">*</span></label>
+                <label for="forgot-whatsapp" class="${labelClass('mb-2 block text-zinc-600')}">No.Whatsapp<span class="ml-0.5 text-rose-500">*</span></label>
                 <input id="forgot-whatsapp" name="whatsapp" type="tel" inputmode="tel" placeholder="Masukkan nomor whatsapp yang bisa dihubungi" class="${inputClass('h-12 rounded-2xl px-4 py-3')}" required />
                 <p id="forgot-whatsapp-error" class="mt-1 text-xs text-rose-600 hidden"></p>
               </div>
-              <button type="submit" class="${buttonClass({ variant: 'default', size: 'lg' })} h-12 w-full rounded-2xl">Kirim</button>
+              <div class="flex items-center justify-end gap-3 pt-3">
+                <button type="button" data-action="forgot-back-login" class="inline-flex h-11 items-center justify-center rounded-xl px-6 text-sm font-medium text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-800">Batal</button>
+                <button type="submit" class="inline-flex h-11 items-center justify-center rounded-xl bg-primary px-8 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90">Kirim</button>
+              </div>
             </form>
             <footer class="mt-auto py-4 text-center text-xs text-zinc-400">&copy; 2026. PinjemDulu - All Rights Reserved.</footer>
           </div>
@@ -282,8 +293,14 @@ export function mount(root) {
           forgotModal = 'success';
           forgotError = '';
         } catch (err) {
-          forgotModal = null;
-          forgotError = err?.message || 'Gagal mengirim permintaan ubah password.';
+          const errMsg = String(err?.message || '');
+          if (err?.code === 'WHATSAPP_TIDAK_SESUAI' || errMsg.toLowerCase().includes('whatsapp') || errMsg.toLowerCase().includes('tidak terdaftar')) {
+            forgotModal = 'error-wa';
+            forgotError = '';
+          } else {
+            forgotModal = null;
+            forgotError = errMsg || 'Gagal mengirim permintaan ubah password.';
+          }
         }
         root.innerHTML = render();
       }

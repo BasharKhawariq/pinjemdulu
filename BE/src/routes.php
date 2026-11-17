@@ -17,6 +17,7 @@ return [
     // ---- Akun & referensi (semua role)
     ['GET',  '/api/me',                           'h_me',                   'user'],
     ['POST', '/api/ubah-password',                'h_ubah_password',        'user'],
+    ['POST', '/api/ubah-whatsapp',                'h_ubah_whatsapp',        'user'],
     ['GET',  '/api/organisasi',                   'h_organisasi',           'user'],
     ['GET',  '/api/kategori',                     'h_kategori_ref',         'user'],
     ['GET',  '/api/badge',                        'h_badge',                'user'],

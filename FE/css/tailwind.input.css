@@ -93,7 +93,7 @@
 
 /* Reset khusus popup Filter Barang Inventaris: hitam dan bergaris bawah saat hover. */
 .filter-reset-link:hover:not(:disabled) {
-  color: #000000 !important;
+  color: black !important;
   text-decoration: underline !important;
   text-underline-offset: 4px;
 }

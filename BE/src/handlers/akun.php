@@ -94,9 +94,12 @@ function h_lupa_password(array $p): void
 {
     $err = [];
     $nim = f_str('nim', $err, true, 20, 'NIM');
-    $wa = f_str('noWhatsapp', $err, true, 20, 'No WhatsApp');
-    if ($wa !== null && !preg_match('/^[0-9+]{8,20}$/', $wa)) {
-        $err['noWhatsapp'] = 'No WhatsApp hanya boleh angka dan +, 8 sampai 20 karakter';
+    $wa = f_str('noWhatsapp', $err, true, 30, 'No WhatsApp');
+    if ($wa !== null) {
+        $waClean = preg_replace('/[^0-9+]/', '', $wa);
+        if (!preg_match('/^[0-9+]{8,20}$/', $waClean)) {
+            $err['noWhatsapp'] = 'No WhatsApp tidak valid, minimal 8 digit';
+        }
     }
     validasi_selesai($err);
 
@@ -107,12 +110,37 @@ function h_lupa_password(array $p): void
     try {
         db_one('SELECT sp_ajukan_lupa_password(CAST(:nim AS varchar), CAST(:wa AS varchar))', ['nim' => $nim, 'wa' => $wa]);
     } catch (PDOException $e) {
-        if (pg_state($e) === 'P0001' && str_contains(pg_message($e), 'tidak terdaftar')) {
-            fail(404, 'NIM_TIDAK_TERDAFTAR', 'NIM tidak terdaftar');
+        if (pg_state($e) === 'P0001') {
+            if (str_contains(pg_message($e), 'NIM tidak terdaftar')) {
+                fail(404, 'NIM_TIDAK_TERDAFTAR', 'NIM tidak terdaftar');
+            }
+            if (str_contains(pg_message($e), 'Nomor WhatsApp')) {
+                fail(400, 'WHATSAPP_TIDAK_SESUAI', 'Nomor WhatsApp yang Anda masukkan tidak terdaftar pada NIM tersebut.');
+            }
         }
         throw $e;
     }
     json_out(['message' => 'Permintaan ubah password dikirim ke penanggung jawab OKI Anda'], 201);
+}
+
+function h_ubah_whatsapp(array $p): void
+{
+    $u = me();
+    $err = [];
+    $wa = f_str('noWhatsapp', $err, true, 30, 'Nomor WhatsApp');
+    if ($wa !== null) {
+        $waClean = preg_replace('/[^0-9+]/', '', $wa);
+        if (!preg_match('/^[0-9+]{8,20}$/', $waClean)) {
+            $err['noWhatsapp'] = 'Nomor WhatsApp tidak valid (minimal 8 digit)';
+        }
+    }
+    validasi_selesai($err);
+
+    db_one('UPDATE pengguna SET no_whatsapp = :wa, updated_at = now() WHERE nim = :nim', [
+        'wa' => $wa,
+        'nim' => $u['nim'],
+    ]);
+    json_out(['message' => 'Nomor WhatsApp berhasil diubah', 'noWhatsapp' => $wa]);
 }
 
 function h_reset_password(array $p): void

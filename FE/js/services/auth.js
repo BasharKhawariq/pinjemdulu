@@ -58,6 +58,7 @@ export function normalizeUser(rawUser) {
     ...rawUser,
     id: rawUser?.nim || rawUser?.id,
     nim: rawUser?.nim || '',
+    noWhatsapp: rawUser?.noWhatsapp || rawUser?.no_whatsapp || '',
     nama: rawUser?.namaPengguna || rawUser?.nama || '',
     namaPengguna: rawUser?.namaPengguna || rawUser?.nama || '',
     role: isPj ? ROLES.PENANGGUNG_JAWAB : ROLES.PEMINJAM,
@@ -309,6 +310,45 @@ export async function ubahPassword(payload) {
     const normalized = normalizeUser(res.user);
     if (res.token) normalized.token = res.token;
     loginSession(normalized, res.token);
+  }
+
+  return res;
+}
+
+/**
+ * Layanan Ubah Nomor WhatsApp.
+ * @param {{ noWhatsapp: string }} payload
+ * @returns {Promise<{ message: string, noWhatsapp?: string }>}
+ */
+export async function ubahWhatsapp(payload) {
+  const { noWhatsapp } = payload || {};
+  const waStr = String(noWhatsapp || '').trim();
+  if (!waStr) {
+    const err = new Error('Nomor WhatsApp wajib diisi');
+    err.statusCode = 422;
+    err.errors = { noWhatsapp: 'Nomor WhatsApp wajib diisi' };
+    throw err;
+  }
+
+  if (isMockEnabled()) {
+    await delay(30);
+    const currentUser = getUser();
+    if (currentUser) {
+      currentUser.noWhatsapp = waStr;
+      loginSession(currentUser);
+    }
+    return { message: 'Nomor WhatsApp berhasil diubah', noWhatsapp: waStr };
+  }
+
+  const res = await apiFetch('/api/ubah-whatsapp', {
+    method: 'POST',
+    body: { noWhatsapp: waStr },
+  });
+
+  const currentUser = getUser();
+  if (currentUser) {
+    currentUser.noWhatsapp = waStr;
+    loginSession(currentUser);
   }
 
   return res;

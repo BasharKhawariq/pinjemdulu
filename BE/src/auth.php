@@ -73,7 +73,7 @@ function token_parse(string $token): ?array
 function load_user(string $nim): ?array
 {
     $u = db_one(
-        'SELECT u.nim, u.nama_pengguna, u.role, u.status_akun, u.id_organisasi,
+        'SELECT u.nim, u.nama_pengguna, u.no_whatsapp, u.role, u.status_akun, u.id_organisasi,
                 o.nama_organisasi, o.singkatan, o.logo_path,
                 floor(extract(epoch FROM u.updated_at))::bigint AS diubah_epoch
          FROM pengguna u JOIN organisasi o ON o.id_organisasi = u.id_organisasi
@@ -91,6 +91,7 @@ function user_payload(array $u): array
     return [
         'nim' => $u['nim'],
         'namaPengguna' => $u['nama_pengguna'],
+        'noWhatsapp' => $u['no_whatsapp'] ?? null,
         'role' => $u['role'],
         'isPj' => $u['is_pj'],
         'idOrganisasi' => $u['id_organisasi'],

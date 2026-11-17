@@ -38,6 +38,7 @@ CREATE TABLE pengguna (
   nim            varchar(20)  PRIMARY KEY,
   id_organisasi  integer      NOT NULL REFERENCES organisasi (id_organisasi) ON UPDATE CASCADE ON DELETE RESTRICT,
   nama_pengguna  varchar(100) NOT NULL CHECK (btrim(nama_pengguna) <> ''),
+  no_whatsapp    varchar(20),
   password_hash  text         NOT NULL,
   role           role_pengguna NOT NULL DEFAULT 'Peminjam',
   status_akun    boolean      NOT NULL DEFAULT true,
@@ -348,7 +349,7 @@ JOIN organisasi o ON o.id_organisasi = u.id_organisasi;
 
 -- 5.8 Daftar pengguna TANPA password_hash (Kelola Pengguna)
 CREATE VIEW v_pengguna AS
-SELECT u.nim, u.nama_pengguna, u.id_organisasi, o.nama_organisasi, o.singkatan, o.logo_path,
+SELECT u.nim, u.nama_pengguna, u.no_whatsapp, u.id_organisasi, o.nama_organisasi, o.singkatan, o.logo_path,
        u.role, u.status_akun
 FROM pengguna u JOIN organisasi o ON o.id_organisasi = u.id_organisasi;
 ALTER VIEW v_pengguna SET (security_invoker = true);
@@ -608,12 +609,35 @@ END $$;
 -- 7.2 Lupa password ---------------------------------------------------
 CREATE FUNCTION sp_ajukan_lupa_password(p_nim varchar, p_no_whatsapp varchar)
 RETURNS integer LANGUAGE plpgsql SET search_path = public AS $$
-DECLARE v_id integer;
+DECLARE
+  v_id integer;
+  v_user_wa varchar;
+  v_clean_input text;
+  v_clean_db text;
+  v_clean_insert text;
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pengguna WHERE nim = p_nim) THEN
+  SELECT no_whatsapp INTO v_user_wa FROM pengguna WHERE nim = p_nim;
+  IF NOT FOUND THEN
     RAISE EXCEPTION 'NIM tidak terdaftar';
   END IF;
-  INSERT INTO request_password (nim, no_whatsapp) VALUES (p_nim, p_no_whatsapp)
+
+  v_clean_input := regexp_replace(p_no_whatsapp, '[^0-9]', '', 'g');
+  IF v_clean_input LIKE '62%' THEN v_clean_input := '0' || substr(v_clean_input, 3); END IF;
+
+  IF v_user_wa IS NOT NULL AND btrim(v_user_wa) <> '' THEN
+    v_clean_db := regexp_replace(v_user_wa, '[^0-9]', '', 'g');
+    IF v_clean_db LIKE '62%' THEN v_clean_db := '0' || substr(v_clean_db, 3); END IF;
+
+    IF v_clean_input <> v_clean_db THEN
+      RAISE EXCEPTION 'Nomor WhatsApp tidak terdaftar pada NIM tersebut';
+    END IF;
+  ELSE
+    UPDATE pengguna SET no_whatsapp = p_no_whatsapp WHERE nim = p_nim;
+  END IF;
+
+  v_clean_insert := regexp_replace(p_no_whatsapp, '[^0-9+]', '', 'g');
+
+  INSERT INTO request_password (nim, no_whatsapp) VALUES (p_nim, v_clean_insert)
   ON CONFLICT (nim) WHERE status = 'Menunggu' DO UPDATE SET no_whatsapp = EXCLUDED.no_whatsapp
   RETURNING id_request_password INTO v_id;
   RETURN v_id;     -- diteruskan ke PJ dari OKI yang sama (filter id_organisasi_pemohon di BE)
@@ -677,18 +701,20 @@ END $$;
 --     BE memfilter v_pengguna dengan WHERE id_organisasi = <OKI PJ>) --------
 -- Password default = NIM (di-hash oleh trigger trg_pengguna_password)
 CREATE FUNCTION sp_tambah_pengguna(p_pj_nim varchar, p_nim varchar, p_nama varchar,
-                                   p_id_organisasi integer, p_role role_pengguna DEFAULT 'Peminjam')
+                                   p_id_organisasi integer, p_role role_pengguna DEFAULT 'Peminjam',
+                                   p_no_whatsapp varchar DEFAULT NULL)
 RETURNS varchar LANGUAGE plpgsql SET search_path = public AS $$
 BEGIN
   PERFORM fn_pastikan_pj(p_pj_nim, p_id_organisasi);   -- PJ hanya menambah pengguna ke OKI-nya sendiri
-  INSERT INTO pengguna (nim, id_organisasi, nama_pengguna, role) VALUES (p_nim, p_id_organisasi, p_nama, p_role);
+  INSERT INTO pengguna (nim, id_organisasi, nama_pengguna, role, no_whatsapp) VALUES (p_nim, p_id_organisasi, p_nama, p_role, p_no_whatsapp);
   RETURN p_nim;
 EXCEPTION WHEN unique_violation THEN
   RAISE EXCEPTION 'NIM sudah terdaftar';
 END $$;
 
 CREATE FUNCTION sp_ubah_pengguna(p_pj_nim varchar, p_nim_lama varchar, p_nim_baru varchar,
-                                 p_nama varchar, p_id_organisasi integer, p_role role_pengguna)
+                                 p_nama varchar, p_id_organisasi integer, p_role role_pengguna,
+                                 p_no_whatsapp varchar DEFAULT NULL)
 RETURNS void LANGUAGE plpgsql SET search_path = public AS $$
 DECLARE v_org integer;
 BEGIN
@@ -698,7 +724,8 @@ BEGIN
   IF p_id_organisasi <> v_org THEN
     RAISE EXCEPTION 'Pengguna tidak dapat dipindahkan ke OKI lain';
   END IF;
-  UPDATE pengguna SET nim = p_nim_baru, nama_pengguna = p_nama, role = p_role
+  UPDATE pengguna SET nim = p_nim_baru, nama_pengguna = p_nama, role = p_role,
+                      no_whatsapp = COALESCE(p_no_whatsapp, no_whatsapp), updated_at = now()
   WHERE nim = p_nim_lama;                      -- nim berubah => FK ikut berubah (ON UPDATE CASCADE)
 EXCEPTION WHEN unique_violation THEN
   RAISE EXCEPTION 'NIM sudah digunakan';

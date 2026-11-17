@@ -9,7 +9,7 @@ declare(strict_types=1);
 const ROLE_PENGGUNA = ['Peminjam', 'Penanggung Jawab'];
 const STATUS_REQ_PASSWORD = ['Menunggu', 'Dikonfirmasi'];
 
-const KOLOM_PENGGUNA = 'nim, nama_pengguna, id_organisasi, nama_organisasi, singkatan, logo_path, role, status_akun';
+const KOLOM_PENGGUNA = 'nim, nama_pengguna, no_whatsapp, id_organisasi, nama_organisasi, singkatan, logo_path, role, status_akun';
 
 function pengguna_map(array $r): array
 {
@@ -46,7 +46,7 @@ function h_kuser_detail(array $p): void
     json_out(camelize(pengguna_map(pengguna_milik_oki(path_nim($p)))));
 }
 
-/** POST /api/kelola-pengguna { nim, namaPengguna, role? } : OKI otomatis = OKI PJ. */
+/** POST /api/kelola-pengguna { nim, namaPengguna, role?, noWhatsapp? } : OKI otomatis = OKI PJ. */
 function h_kuser_tambah(array $p): void
 {
     $u = me();
@@ -54,12 +54,13 @@ function h_kuser_tambah(array $p): void
     $nim = f_nim('nim', $err);
     $nama = f_str('namaPengguna', $err, true, 100, 'Nama pengguna');
     $role = f_enum('role', $err, ROLE_PENGGUNA, false, 'Peminjam', 'Role');
+    $wa = f_str('noWhatsapp', $err, false, 30, 'Nomor WhatsApp');
     validasi_selesai($err);
 
     db_one(
         'SELECT sp_tambah_pengguna(CAST(:pj AS varchar), CAST(:nim AS varchar), CAST(:nama AS varchar),
-                                   CAST(:org AS integer), CAST(:role AS role_pengguna))',
-        ['pj' => $u['nim'], 'nim' => $nim, 'nama' => $nama, 'org' => $u['id_organisasi'], 'role' => $role]
+                                   CAST(:org AS integer), CAST(:role AS role_pengguna), CAST(:wa AS varchar))',
+        ['pj' => $u['nim'], 'nim' => $nim, 'nama' => $nama, 'org' => $u['id_organisasi'], 'role' => $role, 'wa' => $wa]
     );
     json_out([
         'message' => 'Pengguna berhasil ditambahkan. Password awal sama dengan NIM.',
@@ -67,7 +68,7 @@ function h_kuser_tambah(array $p): void
     ], 201);
 }
 
-/** PUT /api/kelola-pengguna/{nim} { nim?, namaPengguna?, role? } */
+/** PUT /api/kelola-pengguna/{nim} { nim?, namaPengguna?, role?, noWhatsapp? } */
 function h_kuser_ubah(array $p): void
 {
     $u = me();
@@ -78,12 +79,13 @@ function h_kuser_ubah(array $p): void
     $nimBaru = array_key_exists('nim', $b) ? f_nim('nim', $err) : $lama['nim'];
     $nama = array_key_exists('namaPengguna', $b) ? f_str('namaPengguna', $err, true, 100, 'Nama pengguna') : $lama['nama_pengguna'];
     $role = array_key_exists('role', $b) ? f_enum('role', $err, ROLE_PENGGUNA, true, null, 'Role') : $lama['role'];
+    $wa = array_key_exists('noWhatsapp', $b) ? f_str('noWhatsapp', $err, false, 30, 'Nomor WhatsApp') : ($lama['no_whatsapp'] ?? null);
     validasi_selesai($err);
 
     db_one(
         'SELECT sp_ubah_pengguna(CAST(:pj AS varchar), CAST(:lama AS varchar), CAST(:baru AS varchar), CAST(:nama AS varchar),
-                                 CAST(:org AS integer), CAST(:role AS role_pengguna))',
-        ['pj' => $u['nim'], 'lama' => $nimLama, 'baru' => $nimBaru, 'nama' => $nama, 'org' => $u['id_organisasi'], 'role' => $role]
+                                 CAST(:org AS integer), CAST(:role AS role_pengguna), CAST(:wa AS varchar))',
+        ['pj' => $u['nim'], 'lama' => $nimLama, 'baru' => $nimBaru, 'nama' => $nama, 'org' => $u['id_organisasi'], 'role' => $role, 'wa' => $wa]
     );
     json_out([
         'message' => 'Data pengguna berhasil diperbarui',
