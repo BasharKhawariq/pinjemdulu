@@ -12,6 +12,7 @@ import { renderOrganisasiLogo } from '../ui/organisasi-badge.js';
 let rootElement = null;
 let clickHandler = null;
 let submitHandler = null;
+let inputHandler = null;
 let modalMode = null; // 'password-form', 'password-cancel', 'password-confirm', 'password-success', 'wa-form', 'wa-confirm', 'wa-success'
 let passwordError = '';
 let whatsappError = '';
@@ -52,6 +53,21 @@ function field(label, value) {
 function cleanWaPrefix(num) {
   if (!num) return '';
   return String(num).replace(/^\+?62\s*-?/, '').trim();
+}
+
+export function formatNomorWa(num) {
+  if (!num) return '';
+  const digits = String(num).replace(/\D/g, '').replace(/^0+/, '').replace(/^62/, '');
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7, 12)}`;
+}
+
+export function formatWaDisplay(num) {
+  if (!num) return '+62 812-3643-1837';
+  const digits = String(num).replace(/\D/g, '').replace(/^0+/, '').replace(/^62/, '');
+  if (!digits) return '+62 812-3643-1837';
+  return `+62 ${formatNomorWa(digits)}`;
 }
 
 function renderModals(user) {
@@ -126,7 +142,7 @@ function renderModals(user) {
   // 5. WhatsApp Form
   if (modalMode === 'wa-form') {
     const rawWa = user?.noWhatsapp || user?.no_whatsapp || '';
-    const cleanNum = cleanWaPrefix(rawWa);
+    const cleanNum = formatNomorWa(rawWa);
     return `
       <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/30 p-4" data-modal-backdrop>
         <section role="dialog" aria-modal="true" aria-labelledby="wa-form-title" class="w-full max-w-md rounded-2xl bg-white p-6 text-left shadow-2xl sm:p-7">
@@ -141,9 +157,10 @@ function renderModals(user) {
                   name="noWhatsapp"
                   type="tel"
                   value="${escapeHtml(cleanNum)}"
-                  placeholder="Masukkan nomor whatsapp anda"
+                  placeholder="812-3456-7895"
                   required
-                  class="h-11 flex-1 px-3 text-sm text-slate-800 outline-none"
+                  class="h-11 flex-1 border-0 border-none bg-transparent px-3 text-sm text-slate-800 outline-none ring-0 shadow-none focus:border-0 focus:border-none focus:outline-none focus:ring-0 focus:shadow-none"
+                  style="border: none !important; outline: none !important; box-shadow: none !important;"
                 />
                 <span class="pr-3 flex items-center justify-center">
                   <svg class="h-4 w-4 shrink-0 rounded-full border border-slate-200 overflow-hidden" viewBox="0 0 24 24">
@@ -215,7 +232,7 @@ export function render(ctx = {}) {
   const organization = organizationOf(user);
   const logoUrl = user?.logoUrl || user?.organisasi?.logoUrl || null;
   const initials = getInitials(name) || 'PD';
-  const waDisplay = user.noWhatsapp || user.no_whatsapp || '+62 812-3643-1837';
+  const waDisplay = formatWaDisplay(user.noWhatsapp || user.no_whatsapp);
 
   return `
     <section class="mx-auto w-full max-w-[1080px] pb-10">
@@ -374,29 +391,38 @@ export function mount(root, ctx = {}) {
       event.preventDefault();
       const form = new FormData(event.target);
       const waRaw = String(form.get('noWhatsapp') || '').trim();
-      const digits = waRaw.replace(/[^0-9]/g, '');
+      const digits = waRaw.replace(/\D/g, '').replace(/^0+/, '').replace(/^62/, '');
       if (!digits || digits.length < 8) {
         whatsappError = 'Nomor WhatsApp tidak valid (minimal 8 angka).';
         rootElement.innerHTML = render(ctx);
         return;
       }
-      pendingWhatsapp = `+62 ${waRaw.replace(/^\+?62\s*-?/, '')}`;
+      pendingWhatsapp = `+62 ${formatNomorWa(digits)}`;
       whatsappError = '';
       modalMode = 'wa-confirm';
       rootElement.innerHTML = render(ctx);
     }
   };
 
+  inputHandler = (event) => {
+    if (event.target.id === 'edit-no-whatsapp') {
+      event.target.value = formatNomorWa(event.target.value);
+    }
+  };
+
   root.addEventListener('click', clickHandler);
   root.addEventListener('submit', submitHandler);
+  root.addEventListener('input', inputHandler);
 }
 
 export function unmount() {
   if (rootElement && clickHandler) rootElement.removeEventListener('click', clickHandler);
   if (rootElement && submitHandler) rootElement.removeEventListener('submit', submitHandler);
+  if (rootElement && inputHandler) rootElement.removeEventListener('input', inputHandler);
   rootElement = null;
   clickHandler = null;
   submitHandler = null;
+  inputHandler = null;
   modalMode = null;
   passwordError = '';
   whatsappError = '';
