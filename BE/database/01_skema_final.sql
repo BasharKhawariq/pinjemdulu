@@ -604,6 +604,7 @@ BEGIN
   END IF;
   IF length(p_password_baru) < 8 THEN RAISE EXCEPTION 'Password baru minimal 8 karakter'; END IF;
   UPDATE pengguna SET password_hash = crypt(p_password_baru, gen_salt('bf', 10)) WHERE nim = p_nim;
+  UPDATE request_password SET token_dipakai_pada = now() WHERE nim = p_nim AND token_dipakai_pada IS NULL;
 END $$;
 
 -- 7.2 Lupa password ---------------------------------------------------
@@ -635,6 +636,13 @@ BEGIN
     UPDATE pengguna SET no_whatsapp = p_no_whatsapp WHERE nim = p_nim;
   END IF;
 
+  -- Batalkan semua token lama milik peminjam ini yang belum terpakai begitu ada pengajuan baru
+  UPDATE request_password
+     SET token_dipakai_pada = now()
+   WHERE nim = p_nim
+     AND token_dipakai_pada IS NULL
+     AND status = 'Dikonfirmasi';
+
   v_clean_insert := regexp_replace(p_no_whatsapp, '[^0-9+]', '', 'g');
 
   INSERT INTO request_password (nim, no_whatsapp) VALUES (p_nim, v_clean_insert)
@@ -646,21 +654,30 @@ END $$;
 -- PJ klik "Setujui": buat token acak sekali pakai; MENGEMBALIKAN token asli satu kali saja
 CREATE FUNCTION sp_proses_request_password(p_id_request integer, p_pj_nim varchar)
 RETURNS text LANGUAGE plpgsql SET search_path = public, extensions AS $$
-DECLARE v_org integer; v_status status_request_password; v_token text;
+DECLARE v_org integer; v_status status_request_password; v_nim varchar; v_token text;
 BEGIN
-  SELECT u.id_organisasi, r.status INTO v_org, v_status
+  SELECT u.id_organisasi, r.status, r.nim INTO v_org, v_status, v_nim
   FROM request_password r JOIN pengguna u ON u.nim = r.nim
   WHERE r.id_request_password = p_id_request FOR UPDATE OF r;
   IF NOT FOUND THEN RAISE EXCEPTION 'Request password tidak ditemukan'; END IF;
   PERFORM fn_pastikan_pj(p_pj_nim, v_org);
   IF v_status <> 'Menunggu' THEN RAISE EXCEPTION 'Request sudah dikonfirmasi'; END IF;
 
+  -- Invalidasikan semua token lama milik peminjam ini yang belum terpakai
+  UPDATE request_password
+     SET token_dipakai_pada = now()
+   WHERE nim = v_nim
+     AND id_request_password <> p_id_request
+     AND token_dipakai_pada IS NULL;
+
   v_token := encode(gen_random_bytes(32), 'hex');
   UPDATE request_password
      SET token_hash = encode(digest(v_token, 'sha256'), 'hex'),
-         token_kedaluwarsa = now() + interval '24 hours',
+         token_kedaluwarsa = now() + interval '7 days',
          token_dipakai_pada = NULL,
-         diproses_oleh = p_pj_nim
+         status = 'Dikonfirmasi',
+         diproses_oleh = p_pj_nim,
+         dikonfirmasi_pada = now()
    WHERE id_request_password = p_id_request;
   RETURN v_token;
 END $$;
@@ -671,13 +688,15 @@ DECLARE v_org integer; v_hash text;
 BEGIN
   SELECT u.id_organisasi, r.token_hash INTO v_org, v_hash
   FROM request_password r JOIN pengguna u ON u.nim = r.nim
-  WHERE r.id_request_password = p_id_request AND r.status = 'Menunggu' FOR UPDATE OF r;
-  IF NOT FOUND THEN RAISE EXCEPTION 'Request tidak ditemukan atau sudah dikonfirmasi'; END IF;
+  WHERE r.id_request_password = p_id_request FOR UPDATE OF r;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Request tidak ditemukan'; END IF;
   PERFORM fn_pastikan_pj(p_pj_nim, v_org);
   IF v_hash IS NULL THEN RAISE EXCEPTION 'Proses (setujui) request terlebih dahulu untuk membuat tautan'; END IF;
   UPDATE request_password
-     SET status = 'Dikonfirmasi', pesan_terkirim = p_pesan,
-         diproses_oleh = p_pj_nim, dikonfirmasi_pada = now()
+     SET status = 'Dikonfirmasi',
+         pesan_terkirim = COALESCE(p_pesan, pesan_terkirim),
+         diproses_oleh = COALESCE(p_pj_nim, diproses_oleh),
+         dikonfirmasi_pada = COALESCE(dikonfirmasi_pada, now())
    WHERE id_request_password = p_id_request;
 END $$;
 
@@ -690,11 +709,13 @@ BEGIN
   SELECT id_request_password, nim INTO v_id, v_nim
   FROM request_password
   WHERE token_hash = encode(digest(p_token, 'sha256'), 'hex')
-    AND status = 'Dikonfirmasi' AND token_dipakai_pada IS NULL AND token_kedaluwarsa > now()
+    AND status IN ('Menunggu', 'Dikonfirmasi')
+    AND token_dipakai_pada IS NULL
+    AND token_kedaluwarsa > now()
   FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'Tautan tidak valid, sudah dipakai, atau kedaluwarsa'; END IF;
   UPDATE pengguna SET password_hash = crypt(p_password_baru, gen_salt('bf', 10)) WHERE nim = v_nim;
-  UPDATE request_password SET token_dipakai_pada = now() WHERE id_request_password = v_id;
+  UPDATE request_password SET status = 'Dikonfirmasi', token_dipakai_pada = now() WHERE id_request_password = v_id;
 END $$;
 
 -- 7.3 Kelola pengguna (PJ hanya mengelola pengguna dari OKI-nya sendiri;
