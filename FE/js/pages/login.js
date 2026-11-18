@@ -14,6 +14,14 @@ import { navigate } from '../router.js';
 import { renderModal as renderModalComponent } from '../ui/modal.js';
 import { renderOrganisasiLogo } from '../ui/organisasi-badge.js';
 
+export function formatNomorWa(num) {
+  if (!num) return '';
+  const digits = String(num).replace(/\D/g, '').replace(/^0+/, '').replace(/^62/, '');
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7, 12)}`;
+}
+
 let currentCaptchaId = '';
 let currentCaptchaText = '';
 let authView = 'login';
@@ -78,7 +86,7 @@ function renderForgotPasswordPage() {
               </div>
               <div>
                 <label for="forgot-whatsapp" class="${labelClass('mb-2 block text-zinc-600')}">No.Whatsapp<span class="ml-0.5 text-rose-500">*</span></label>
-                <input id="forgot-whatsapp" name="whatsapp" type="tel" inputmode="tel" placeholder="Masukkan nomor whatsapp yang bisa dihubungi" class="${inputClass('h-12 rounded-2xl px-4 py-3')}" required />
+                <input id="forgot-whatsapp" name="whatsapp" type="tel" inputmode="tel" placeholder="812-3456-7890" class="${inputClass('h-12 rounded-2xl px-4 py-3')}" required />
                 <p id="forgot-whatsapp-error" class="mt-1 text-xs text-rose-600 hidden"></p>
               </div>
               <div class="flex items-center justify-end gap-3 pt-3">
@@ -305,13 +313,20 @@ export function mount(root) {
         root.innerHTML = render();
       }
     });
+    root.addEventListener('input', (event) => {
+      if (event.target.id === 'forgot-whatsapp') {
+        event.target.value = formatNomorWa(event.target.value);
+      }
+    });
     root.addEventListener('submit', (event) => {
       if (event.target.id !== 'forgot-password-form') return;
       event.preventDefault();
 
       const formData = new FormData(event.target);
       const nim = String(formData.get('nim') || '').trim();
-      const whatsapp = String(formData.get('whatsapp') || '').trim();
+      const rawWa = String(formData.get('whatsapp') || '').trim();
+      const waDigits = rawWa.replace(/\D/g, '').replace(/^0+/, '').replace(/^62/, '');
+      const whatsapp = waDigits ? (waDigits.startsWith('0') ? waDigits : '0' + waDigits) : '';
       const nimError = root.querySelector('#forgot-nim-error');
       const whatsappError = root.querySelector('#forgot-whatsapp-error');
       const nimInput = root.querySelector('#forgot-nim');
