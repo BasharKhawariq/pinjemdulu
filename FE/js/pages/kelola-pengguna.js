@@ -25,6 +25,21 @@ import { getUser } from '../state/session.js';
 const PAGE_SIZE = 10;
 const ORGANISASI_LIST = ['BEM', 'HMTI', 'HME', 'HIMANIA', 'RISPOL', 'HMS', 'THEATRISIC', 'PP'];
 
+export function formatNomorWa(num) {
+  if (!num) return '';
+  const digits = String(num).replace(/\D/g, '').replace(/^0+/, '').replace(/^62/, '');
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7, 12)}`;
+}
+
+export function formatWaDisplay(num) {
+  if (!num) return '—';
+  const digits = String(num).replace(/\D/g, '').replace(/^0+/, '').replace(/^62/, '');
+  if (!digits) return '—';
+  return `+62 ${formatNomorWa(digits)}`;
+}
+
 // State Utama
 let activeTab = 'pengguna'; // 'pengguna' | 'request-password'
 let users = [];
@@ -164,16 +179,27 @@ function renderUserRows() {
 
   if (!pageRows.length) return renderEmptyState({ colspan: 6 });
 
+  const currentUser = getUser();
+
   return pageRows
     .map((user, index) => {
       const active = isActive(user);
+      const isSelf = currentUser && (
+        (currentUser.nim && String(user.nim) === String(currentUser.nim)) ||
+        (currentUser.id && String(user.id) === String(currentUser.id))
+      );
       const roleClass =
         user.role === ROLES.PENANGGUNG_JAWAB ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-700';
+
+      const toggleHtml = isSelf
+        ? `<button type="button" disabled title="Tidak dapat menonaktifkan akun sendiri" aria-label="Tidak dapat menonaktifkan akun sendiri" class="relative inline-flex h-5 w-9 items-center rounded-full bg-primary opacity-40 cursor-not-allowed"><span class="inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm translate-x-[18px]"></span></button>`
+        : `<button type="button" data-action="toggle" data-id="${escapeHtml(user.id)}" aria-label="${active ? 'Nonaktifkan' : 'Aktifkan'} akun ${escapeHtml(nameOf(user))}" aria-pressed="${active}" class="relative inline-flex h-5 w-9 items-center rounded-full transition ${active ? 'bg-primary' : 'bg-slate-200'}"><span class="inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition ${active ? 'translate-x-[18px]' : 'translate-x-[2px]'}"></span></button>`;
+
       return `<tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50/50">
       <td class="whitespace-nowrap px-4 py-3.5 text-center text-xs text-slate-500">${start + index + 1}</td>
       <td class="min-w-[190px] px-4 py-3"><div class="flex items-center gap-2.5"><span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-500 text-xs font-semibold text-white">${escapeHtml(initials(nameOf(user)))}</span><div class="min-w-0"><div class="truncate text-xs font-medium text-slate-500">${escapeHtml(nameOf(user))}</div><div class="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500">${renderOrgLogo(user)}<span class="truncate">${escapeHtml(organizationOf(user))}</span></div></div></div></td>
       <td class="whitespace-nowrap px-4 py-3.5 text-center text-xs text-slate-400">${escapeHtml(user.nim || '—')}</td>
-      <td class="px-4 py-3.5 text-center"><button type="button" data-action="toggle" data-id="${escapeHtml(user.id)}" aria-label="${active ? 'Nonaktifkan' : 'Aktifkan'} akun ${escapeHtml(nameOf(user))}" aria-pressed="${active}" class="relative inline-flex h-5 w-9 items-center rounded-full transition ${active ? 'bg-primary' : 'bg-slate-200'}"><span class="inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition ${active ? 'translate-x-[18px]' : 'translate-x-[2px]'}"></span></button></td>
+      <td class="px-4 py-3.5 text-center">${toggleHtml}</td>
       <td class="px-4 py-3.5 text-center"><span class="inline-flex whitespace-nowrap rounded-lg px-2.5 py-1 text-xs font-medium ${roleClass}">${escapeHtml(roleLabel(user.role))}</span></td>
       <td class="whitespace-nowrap px-4 py-3.5"><div class="flex items-center justify-center gap-0"><button type="button" data-action="edit" data-id="${escapeHtml(user.id)}" title="Edit pengguna" aria-label="Edit pengguna" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700">${renderIcon('Pencil', 'h-4 w-4')}</button><button type="button" data-action="detail" data-id="${escapeHtml(user.id)}" title="Detail pengguna" aria-label="Detail pengguna" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700">${renderIcon('Info', 'h-4 w-4')}</button></div></td>
     </tr>`;
@@ -287,6 +313,7 @@ function renderRpPreviewModal() {
   const resetUrl = rpProsesData.tautanReset || '';
   const nama = selectedRp.namaPengguna || selectedRp.nama || 'Pengguna';
   const nim = selectedRp.nim || '—';
+  const wa = selectedRp.noWhatsapp || selectedRp.no_whatsapp || '';
 
   return `
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-[2px] p-4 sm:p-6" data-modal-backdrop>
@@ -294,9 +321,9 @@ function renderRpPreviewModal() {
         <h2 class="text-lg font-bold text-slate-900">Tautan Ubah Password</h2>
         
         <div class="mt-5 space-y-4">
-          <!-- Nama -->
+          <!-- Nama Pengguna -->
           <div>
-            <span class="mb-1.5 block text-xs font-semibold text-slate-600">Nama</span>
+            <span class="mb-1.5 block text-xs font-semibold text-slate-600">Nama Pengguna</span>
             <div class="rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-800">
               ${escapeHtml(nama)}
             </div>
@@ -310,15 +337,23 @@ function renderRpPreviewModal() {
             </div>
           </div>
 
+          <!-- Nomor Whatsapp -->
+          <div>
+            <span class="mb-1.5 block text-xs font-semibold text-slate-600">Nomor Whatsapp</span>
+            <div class="rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-800">
+              ${escapeHtml(formatWaDisplay(wa))}
+            </div>
+          </div>
+
           <!-- Pesan dan Link URL -->
           <div>
-            <span class="mb-1.5 block text-xs font-semibold text-slate-600">Pesan dan Link URL</span>
+            <span class="mb-1.5 block text-xs font-semibold text-slate-600">Pesan dan link URL</span>
             <div id="rp-message-box" class="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 text-xs leading-relaxed text-slate-700 whitespace-pre-line select-all">
 Halo <strong class="text-slate-900">${escapeHtml(nama)}! 👋</strong>
 
 Kami menerima permintaan ubah password untuk akun PinjemDulu Anda.
 
-Untuk melanjutkan proses ubah password, silakan buka tautan berikut:
+Untuk melanjutkan proses ubah password, silakan klik tautan berikut:
 
 <a href="${escapeHtml(resetUrl)}" target="_blank" class="font-medium text-primary hover:underline break-all">${escapeHtml(resetUrl)}</a>
 
@@ -420,59 +455,71 @@ function renderRpSuccessModal() {
 function renderRpDetailModal() {
   if (!selectedRp) return '';
   const r = selectedRp;
+  const nama = r.namaPengguna || r.nama || 'Pengguna';
+  const nim = r.nim || '—';
+  const wa = r.noWhatsapp || r.no_whatsapp || '';
+  const tgl = r.tanggalRequest ? formatTanggal(String(r.tanggalRequest).slice(0, 10)) : '—';
+  const rawPesan = r.pesanTerkirim || `Halo *${nama}*! 👋\n\nKami menerima permintaan ubah password untuk akun PinjemDulu Anda.\n\nJika Anda tidak merasa mengajukan permintaan ini, silakan abaikan pesan ini.\n\nTerima kasih telah menggunakan *PinjemDulu*! 👋`;
+
+  const formattedHtmlPesan = escapeHtml(rawPesan).replace(
+    /(https?:\/\/[^\s]+)/g,
+    '<a href="$1" target="_blank" class="font-medium text-primary hover:underline break-all">$1</a>'
+  );
+
   return `
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-[2px] p-4 sm:p-6" data-modal-backdrop>
       <section role="dialog" aria-modal="true" class="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl bg-white p-6 sm:p-8 shadow-2xl">
-        <h2 class="text-lg font-bold text-slate-900">Detail Request Password</h2>
-        <div class="mt-5 space-y-3.5 text-xs sm:text-sm">
-          <div class="flex justify-between py-2 border-b border-slate-100">
-            <span class="text-slate-500">Nama Peminjam</span>
-            <span class="font-medium text-slate-800">${escapeHtml(r.namaPengguna || '—')}</span>
-          </div>
-          <div class="flex justify-between py-2 border-b border-slate-100">
-            <span class="text-slate-500">NIM</span>
-            <span class="font-medium text-slate-800">${escapeHtml(r.nim || '—')}</span>
-          </div>
-          <div class="flex justify-between py-2 border-b border-slate-100">
-            <span class="text-slate-500">No. WhatsApp</span>
-            <span class="font-medium text-slate-800">${escapeHtml(r.noWhatsapp || '—')}</span>
-          </div>
-          <div class="flex justify-between py-2 border-b border-slate-100">
-            <span class="text-slate-500">Tanggal Pengajuan</span>
-            <span class="font-medium text-slate-800">${r.tanggalRequest ? formatTanggal(String(r.tanggalRequest).slice(0, 10)) : '—'}</span>
-          </div>
-          <div class="flex justify-between py-2 border-b border-slate-100">
-            <span class="text-slate-500">Status</span>
-            <span class="inline-flex rounded-lg bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">${escapeHtml(r.status || 'Dikonfirmasi')}</span>
-          </div>
-          ${r.dikonfirmasiPada ? `
-            <div class="flex justify-between py-2 border-b border-slate-100">
-              <span class="text-slate-500">Dikonfirmasi Pada</span>
-              <span class="font-medium text-slate-800">${formatTanggal(String(r.dikonfirmasiPada).slice(0, 10))}</span>
+        <h2 class="text-lg font-bold text-slate-900">Detail Ubah Password</h2>
+
+        <div class="mt-5 space-y-4">
+          <!-- Nama Pengguna -->
+          <div>
+            <span class="mb-1.5 block text-xs font-semibold text-slate-600">Nama Pengguna</span>
+            <div class="rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-800">
+              ${escapeHtml(nama)}
             </div>
-          ` : ''}
-          ${r.nimPemroses ? `
-            <div class="flex justify-between py-2 border-b border-slate-100">
-              <span class="text-slate-500">Diproses Oleh</span>
-              <span class="font-medium text-slate-800">${escapeHtml(r.nimPemroses)}</span>
+          </div>
+
+          <!-- Tanggal Pengajuan -->
+          <div>
+            <span class="mb-1.5 block text-xs font-semibold text-slate-600">Tanggal Pengajuan</span>
+            <div class="rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-800">
+              ${escapeHtml(tgl)}
             </div>
-          ` : ''}
-          ${r.pesanTerkirim ? `
-            <div class="mt-3">
-              <span class="mb-1.5 block font-medium text-slate-700">Pesan Terkirim</span>
-              <div class="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs leading-relaxed text-slate-600 whitespace-pre-line">
-                ${escapeHtml(r.pesanTerkirim)}
-              </div>
+          </div>
+
+          <!-- NIM -->
+          <div>
+            <span class="mb-1.5 block text-xs font-semibold text-slate-600">NIM</span>
+            <div class="rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-800">
+              ${escapeHtml(nim)}
             </div>
-          ` : ''}
+          </div>
+
+          <!-- Nomor Whatsapp -->
+          <div>
+            <span class="mb-1.5 block text-xs font-semibold text-slate-600">Nomor Whatsapp</span>
+            <div class="rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-800">
+              ${escapeHtml(formatWaDisplay(wa))}
+            </div>
+          </div>
+
+          <!-- Pesan dan Link URL -->
+          <div>
+            <span class="mb-1.5 block text-xs font-semibold text-slate-600">Pesan dan link URL</span>
+            <div class="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 text-xs leading-relaxed text-slate-700 whitespace-pre-line select-all">
+              ${formattedHtmlPesan}
+            </div>
+          </div>
         </div>
+
         <div class="mt-6 flex justify-end">
           <button
             type="button"
             data-action="close-modal"
-            class="rounded-xl bg-primary px-6 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-sm hover:brightness-110 transition"
+            class="rounded-xl bg-primary px-7 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-sm hover:brightness-110 transition"
           >
-            Tutup
+            tutup
           </button>
         </div>
       </section>
@@ -502,15 +549,10 @@ function renderModal() {
   if (!selectedUser && modalMode !== 'add') return '';
   const u = selectedUser || {};
 
-  function cleanWa(num) {
-    if (!num) return '';
-    return String(num).replace(/^\+?62\s*-?/, '').trim();
-  }
-
   if (modalMode === 'detail') {
     const roleClass =
       normalizeRole(u.role) === ROLES.PENANGGUNG_JAWAB ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-700';
-    const waDisplay = u.noWhatsapp || u.no_whatsapp ? (String(u.noWhatsapp || u.no_whatsapp).startsWith('+') ? String(u.noWhatsapp || u.no_whatsapp) : `+62 ${cleanWa(u.noWhatsapp || u.no_whatsapp)}`) : '+62 812-3456-7890';
+    const waDisplay = formatWaDisplay(u.noWhatsapp || u.no_whatsapp);
     return `<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-[2px] p-4 sm:p-6" data-modal-backdrop><section role="dialog" aria-modal="true" class="w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white p-6 sm:p-8 shadow-2xl transition-all"><h2 class="text-xl font-semibold tracking-tight text-slate-900">Detail Pengguna</h2><div class="mt-6 space-y-4"><div><span class="mb-2 block text-sm font-medium text-slate-900">Nama Peminjam</span><div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-white px-4 py-3.5 shadow-[0_1px_3px_rgba(0,0,0,0.03)]"><span class="text-sm font-medium text-slate-800 break-words">${escapeHtml(nameOf(u))}</span><div class="flex shrink-0 items-center gap-1.5 text-xs font-semibold text-slate-600">${renderOrgLogo(u)}<span>${escapeHtml(organizationOf(u))}</span></div></div></div><div><span class="mb-2 block text-sm font-medium text-slate-900">NIM</span><div class="rounded-2xl border border-slate-100 bg-white px-4 py-3.5 text-sm font-medium text-slate-800 shadow-[0_1px_3px_rgba(0,0,0,0.03)] break-all">${escapeHtml(u.nim || '—')}</div></div><div><span class="mb-2 block text-sm font-medium text-slate-900">Nomor Whatsapp</span><div class="rounded-2xl border border-slate-100 bg-white px-4 py-3.5 text-sm font-medium text-slate-800 shadow-[0_1px_3px_rgba(0,0,0,0.03)] break-all">${escapeHtml(waDisplay)}</div></div><div><div class="flex items-center justify-between gap-4"><span class="text-sm font-medium text-slate-900">Role</span><span class="inline-flex rounded-xl px-4 py-1.5 text-xs font-medium ${roleClass}">${escapeHtml(roleLabel(u.role))}</span></div></div></div><div class="mt-8 flex justify-end"><button type="button" data-action="close-modal" class="rounded-xl bg-primary px-8 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90">Tutup</button></div></section></div>`;
   }
 
@@ -529,7 +571,7 @@ function renderModal() {
     'HMTI';
   const selectedOrg = editing ? organizationOf(u) : pjOrg;
 
-  return `<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-[2px] p-4 sm:p-6" data-modal-backdrop><section role="dialog" aria-modal="true" aria-labelledby="user-form-title" class="w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white p-6 sm:p-8 shadow-2xl transition-all"><h2 id="user-form-title" class="text-xl font-semibold tracking-tight text-slate-900">${editing ? 'Edit Pengguna' : 'Tambah Pengguna'}</h2><form id="user-form" class="mt-6 space-y-4"><div><label class="mb-2 block text-sm font-medium text-slate-900">Nama Pengguna</label><input name="nama" type="text" value="${escapeHtml(editing ? (u.nama || '') : '')}" placeholder="${editing ? 'Nama Pengguna' : 'Nama Pengguna'}" required class="w-full rounded-2xl border border-slate-100 bg-white px-4 py-3.5 text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.03)]" /></div><div><label class="mb-2 block text-sm font-medium text-slate-900">NIM</label><input name="nim" type="text" value="${escapeHtml(editing ? (u.nim || '') : '')}" placeholder="NIM" required class="w-full rounded-2xl border border-slate-100 bg-white px-4 py-3.5 text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.03)]" /></div><div><label class="mb-2 block text-sm font-medium text-slate-900">Nomor Whatsapp</label><div class="flex items-center overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.03)] focus-within:border-slate-300 focus-within:ring-2 focus-within:ring-slate-100"><span class="inline-flex h-12 items-center border-r border-slate-100 bg-slate-50 px-4 text-sm font-medium text-slate-600">+62</span><input name="noWhatsapp" type="tel" value="${escapeHtml(cleanWa(editing ? (u.noWhatsapp || u.no_whatsapp || '') : ''))}" placeholder="${editing ? '812-3456-7890' : 'Masukkan nomor whatsapp anda'}" class="h-12 flex-1 px-4 text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none" /><span class="pr-4 flex items-center justify-center"><svg class="h-5 w-5 shrink-0 rounded-full border border-slate-200 overflow-hidden" viewBox="0 0 24 24"><path d="M0,0 H24 V12 H0 Z" class="fill-rose-600" /><path d="M0,12 H24 V24 H0 Z" class="fill-white" /></svg></span></div></div><div><label class="mb-2 block text-sm font-medium text-slate-900">Organisasi</label><div class="relative"><select name="displayOrganizationSelect" disabled class="${selectClass('appearance-none pr-10 cursor-not-allowed bg-slate-50 text-slate-500 opacity-90')}"><option value="${escapeHtml(selectedOrg)}" selected>${escapeHtml(selectedOrg)}</option></select><input type="hidden" name="displayOrganization" value="${escapeHtml(selectedOrg)}" /><span class="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 flex items-center">${renderIcon('Lock', 'h-4 w-4 stroke-[2]')}</span></div><p class="mt-1 text-xs text-slate-400">Organisasi otomatis disesuaikan dengan organisasi Anda (${escapeHtml(selectedOrg)}).</p></div><div><span class="mb-3 block text-sm font-medium text-slate-900">Role</span><div class="space-y-3" id="role-radio-group"><label class="flex cursor-pointer items-center gap-3" data-role-label><input type="radio" name="role" value="${ROLES.PEMINJAM}" ${isPeminjam ? 'checked' : ''} class="sr-only" /><span data-role-indicator class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${isPeminjam ? 'border-primary bg-primary text-white' : 'border-slate-300 bg-white text-transparent'}"><svg data-role-check class="h-3 w-3 stroke-[3] ${isPeminjam ? 'block' : 'hidden'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span class="text-sm font-medium text-slate-800">Peminjam</span></label><label class="flex cursor-pointer items-center gap-3" data-role-label><input type="radio" name="role" value="${ROLES.PENANGGUNG_JAWAB}" ${isPj ? 'checked' : ''} class="sr-only" /><span data-role-indicator class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${isPj ? 'border-primary bg-primary text-white' : 'border-slate-300 bg-white text-transparent'}"><svg data-role-check class="h-3 w-3 stroke-[3] ${isPj ? 'block' : 'hidden'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span class="text-sm font-medium text-slate-800">Penanggung Jawab</span></label></div></div><div id="user-form-error" class="hidden rounded-xl bg-red-50 px-4 py-2 text-sm text-red-700"></div><div class="mt-8 flex items-center justify-end gap-4"><button type="button" data-action="close-modal" class="cancel-form-button rounded-xl px-6 py-2.5 text-sm font-semibold text-slate-500 transition hover:bg-slate-50">Batal</button><button type="submit" class="rounded-xl bg-primary px-8 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90">${editing ? 'Edit' : 'Tambah'}</button></div></form></section></div>`;
+  return `<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-[2px] p-4 sm:p-6" data-modal-backdrop><section role="dialog" aria-modal="true" aria-labelledby="user-form-title" class="w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white p-6 sm:p-8 shadow-2xl transition-all"><h2 id="user-form-title" class="text-xl font-semibold tracking-tight text-slate-900">${editing ? 'Edit Pengguna' : 'Tambah Pengguna'}</h2><form id="user-form" class="mt-6 space-y-4"><div><label class="mb-2 block text-sm font-medium text-slate-900">Nama Pengguna</label><input name="nama" type="text" value="${escapeHtml(editing ? (u.nama || '') : '')}" placeholder="${editing ? 'Nama Pengguna' : 'Nama Pengguna'}" required class="w-full rounded-2xl border border-slate-100 bg-white px-4 py-3.5 text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.03)]" /></div><div><div class="mb-2 flex items-center justify-between"><label class="flex items-center gap-1.5 text-sm font-medium text-slate-900"><span>NIM</span><span class="inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full bg-slate-100 text-[10px] font-semibold text-slate-500 transition hover:bg-slate-200 hover:text-slate-700" title="NIM harus 12 digit (tidak boleh lebih atau kurang)">?</span></label><span id="nim-digit-counter" class="text-xs ${((editing ? u.nim : '') || '').length === 12 ? 'font-semibold text-emerald-600' : 'font-medium text-slate-400'}">${((editing ? u.nim : '') || '').length}/12</span></div><input name="nim" type="text" inputmode="numeric" maxlength="12" value="${escapeHtml(editing ? (u.nim || '') : '')}" placeholder="NIM" required class="w-full rounded-2xl border border-slate-100 bg-white px-4 py-3.5 text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.03)]" /><p id="nim-field-error" class="mt-1.5 text-xs text-rose-500 hidden">NIM tidak valid</p></div><div><label class="mb-2 block text-sm font-medium text-slate-900">Nomor Whatsapp</label><div class="flex items-center overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.03)] focus-within:border-slate-300 focus-within:ring-2 focus-within:ring-slate-100"><span class="inline-flex h-12 items-center border-r border-slate-100 bg-slate-50 px-4 text-sm font-medium text-slate-600">+62</span><input name="noWhatsapp" type="tel" value="${escapeHtml(formatNomorWa(editing ? (u.noWhatsapp || u.no_whatsapp || '') : ''))}" placeholder="812-3456-7890" class="h-12 flex-1 border-0 border-none bg-transparent px-4 text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none ring-0 shadow-none focus:border-0 focus:border-none focus:outline-none focus:ring-0 focus:shadow-none" style="border: none !important; outline: none !important; box-shadow: none !important;" /><span class="pr-4 flex items-center justify-center"><svg class="h-5 w-5 shrink-0 rounded-full border border-slate-200 overflow-hidden" viewBox="0 0 24 24"><path d="M0,0 H24 V12 H0 Z" class="fill-rose-600" /><path d="M0,12 H24 V24 H0 Z" class="fill-white" /></svg></span></div></div><div><label class="mb-2 block text-sm font-medium text-slate-900">Organisasi</label><div class="relative"><select name="displayOrganizationSelect" disabled class="${selectClass('appearance-none pr-10 cursor-not-allowed bg-slate-50 text-slate-500 opacity-90')}"><option value="${escapeHtml(selectedOrg)}" selected>${escapeHtml(selectedOrg)}</option></select><input type="hidden" name="displayOrganization" value="${escapeHtml(selectedOrg)}" /><span class="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 flex items-center">${renderIcon('Lock', 'h-4 w-4 stroke-[2]')}</span></div><p class="mt-1 text-xs text-slate-400">Organisasi otomatis disesuaikan dengan organisasi Anda (${escapeHtml(selectedOrg)}).</p></div><div><span class="mb-3 block text-sm font-medium text-slate-900">Role</span><div class="space-y-3" id="role-radio-group"><label class="flex cursor-pointer items-center gap-3" data-role-label><input type="radio" name="role" value="${ROLES.PEMINJAM}" ${isPeminjam ? 'checked' : ''} class="sr-only" /><span data-role-indicator class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${isPeminjam ? 'border-primary bg-primary text-white' : 'border-slate-300 bg-white text-transparent'}"><svg data-role-check class="h-3 w-3 stroke-[3] ${isPeminjam ? 'block' : 'hidden'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span class="text-sm font-medium text-slate-800">Peminjam</span></label><label class="flex cursor-pointer items-center gap-3" data-role-label><input type="radio" name="role" value="${ROLES.PENANGGUNG_JAWAB}" ${isPj ? 'checked' : ''} class="sr-only" /><span data-role-indicator class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${isPj ? 'border-primary bg-primary text-white' : 'border-slate-300 bg-white text-transparent'}"><svg data-role-check class="h-3 w-3 stroke-[3] ${isPj ? 'block' : 'hidden'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span class="text-sm font-medium text-slate-800">Penanggung Jawab</span></label></div></div><div id="user-form-error" class="hidden rounded-xl bg-red-50 px-4 py-2 text-sm text-red-700"></div><div class="mt-8 flex items-center justify-end gap-4"><button type="button" data-action="close-modal" class="cancel-form-button rounded-xl px-6 py-2.5 text-sm font-semibold text-slate-500 transition hover:bg-slate-50">Batal</button><button type="submit" class="rounded-xl bg-primary px-8 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90">${editing ? 'Edit' : 'Tambah'}</button></div></form></section></div>`;
 }
 
 function renderContent() {
@@ -940,6 +982,22 @@ export async function mount(root, ctx = {}) {
     if (action === 'toggle') {
       const user = users.find((item) => String(item.id) === String(id));
       if (!user) return;
+      const currentUser = getUser();
+      if (currentUser && (
+        (currentUser.nim && String(user.nim) === String(currentUser.nim)) ||
+        (currentUser.id && String(user.id) === String(currentUser.id))
+      )) {
+        toastMessage = 'Tidak dapat menonaktifkan akun sendiri.';
+        toastType = 'error';
+        if (toastTimer) clearTimeout(toastTimer);
+        refresh();
+        toastTimer = setTimeout(() => {
+          toastMessage = '';
+          toastTimer = null;
+          refresh();
+        }, 3000);
+        return;
+      }
       const nextStatus = isActive(user) ? STATUS_AKUN.NONAKTIF : STATUS_AKUN.AKTIF;
       try {
         await updateMockUser(id, { statusAkun: nextStatus });
@@ -993,9 +1051,12 @@ export async function mount(root, ctx = {}) {
         rpFormattedMessage = `Halo *${nama}*! 👋\n\nKami menerima permintaan ubah password untuk akun PinjemDulu Anda.\n\nUntuk melanjutkan proses ubah password, silakan buka tautan berikut:\n\n${cleanTautan}\n\n*Catatan:*\n- Tautan hanya dapat digunakan satu kali untuk menyelesaikan proses ubah password.\n- Setelah berhasil digunakan, tautan tidak dapat digunakan kembali.\n\nJika Anda tidak merasa mengajukan permintaan ini, silakan abaikan pesan ini.\n\nTerima kasih telah menggunakan *PinjemDulu*! 👋`;
 
         // Update URL wa.me dengan pesan lengkap
-        const rawWa = String(selectedRp.noWhatsapp || '').replace(/\D+/g, '');
-        const intlWa = rawWa.startsWith('0') ? '62' + rawWa.slice(1) : rawWa;
+        const rawWa = String(selectedRp.noWhatsapp || selectedRp.no_whatsapp || '').replace(/\D+/g, '');
+        const intlWa = rawWa.startsWith('0') ? '62' + rawWa.slice(1) : (rawWa.startsWith('62') ? rawWa : '62' + rawWa);
         rpProsesData.waUrl = `https://wa.me/${intlWa}?text=${encodeURIComponent(rpFormattedMessage)}`;
+
+        // Refresh data agar baris di tabel langsung berstatus Dikonfirmasi
+        await loadRpData();
 
         modalMode = 'rp-preview';
         refresh();
@@ -1089,6 +1150,28 @@ export async function mount(root, ctx = {}) {
   };
 
   inputHandler = async (event) => {
+    if (event.target.name === 'noWhatsapp') {
+      const input = event.target;
+      input.value = formatNomorWa(input.value);
+      return;
+    }
+    if (event.target.name === 'nim') {
+      const input = event.target;
+      input.value = input.value.replace(/\D/g, '').slice(0, 12);
+      const counterEl = rootElement.querySelector('#nim-digit-counter');
+      if (counterEl) {
+        counterEl.textContent = `${input.value.length}/12`;
+        counterEl.className = input.value.length === 12
+          ? 'text-xs font-semibold text-emerald-600'
+          : 'text-xs font-medium text-slate-400';
+      }
+      const errEl = rootElement.querySelector('#nim-field-error');
+      if (input.value.length === 12) {
+        errEl?.classList.add('hidden');
+        input.classList.remove('border-rose-400');
+      }
+      return;
+    }
     if (event.target.id === 'search-users') {
       const input = event.target;
       const pos = input.selectionStart;
@@ -1124,11 +1207,35 @@ export async function mount(root, ctx = {}) {
     event.preventDefault();
     const form = event.target;
     const data = Object.fromEntries(new FormData(form).entries());
-    if (data.noWhatsapp) {
-      const clean = String(data.noWhatsapp).trim().replace(/^\+?62\s*-?/, '');
-      data.noWhatsapp = clean ? `+62 ${clean}` : '';
-    }
+
     const errorBox = rootElement.querySelector('#user-form-error');
+    const nimFieldErr = rootElement.querySelector('#nim-field-error');
+    const nimInput = form.querySelector('input[name="nim"]');
+
+    const nimVal = String(data.nim || '').trim();
+    if (!/^\d{12}$/.test(nimVal)) {
+      if (errorBox) {
+        errorBox.textContent = 'NIM tidak valid';
+        errorBox.classList.remove('hidden');
+      }
+      if (nimFieldErr) {
+        nimFieldErr.textContent = 'NIM tidak valid';
+        nimFieldErr.classList.remove('hidden');
+      }
+      if (nimInput) {
+        nimInput.classList.add('border-rose-400');
+        nimInput.focus();
+      }
+      return;
+    } else {
+      if (nimFieldErr) nimFieldErr.classList.add('hidden');
+      if (nimInput) nimInput.classList.remove('border-rose-400');
+    }
+
+    if (data.noWhatsapp) {
+      const cleanDigits = String(data.noWhatsapp).replace(/\D/g, '').replace(/^0+/, '').replace(/^62/, '');
+      data.noWhatsapp = cleanDigits ? `+62${cleanDigits}` : '';
+    }
 
     try {
       const wasEditing = modalMode === 'edit';
