@@ -52,6 +52,9 @@ function h_kuser_tambah(array $p): void
     $u = me();
     $err = [];
     $nim = f_nim('nim', $err);
+    if ($nim !== null && !preg_match('/^\d{12}$/', $nim)) {
+        $err['nim'] = 'NIM tidak valid';
+    }
     $nama = f_str('namaPengguna', $err, true, 100, 'Nama pengguna');
     $role = f_enum('role', $err, ROLE_PENGGUNA, false, 'Peminjam', 'Role');
     $wa = f_str('noWhatsapp', $err, false, 30, 'Nomor WhatsApp');
@@ -77,6 +80,9 @@ function h_kuser_ubah(array $p): void
     $b = body();
     $err = [];
     $nimBaru = array_key_exists('nim', $b) ? f_nim('nim', $err) : $lama['nim'];
+    if (array_key_exists('nim', $b) && $nimBaru !== null && !preg_match('/^\d{12}$/', $nimBaru)) {
+        $err['nim'] = 'NIM tidak valid';
+    }
     $nama = array_key_exists('namaPengguna', $b) ? f_str('namaPengguna', $err, true, 100, 'Nama pengguna') : $lama['nama_pengguna'];
     $role = array_key_exists('role', $b) ? f_enum('role', $err, ROLE_PENGGUNA, true, null, 'Role') : $lama['role'];
     $wa = array_key_exists('noWhatsapp', $b) ? f_str('noWhatsapp', $err, false, 30, 'Nomor WhatsApp') : ($lama['no_whatsapp'] ?? null);
@@ -98,6 +104,9 @@ function h_kuser_status(array $p): void
 {
     $u = me();
     $nim = path_nim($p);
+    if ($nim === $u['nim']) {
+        fail(400, 'SELF_DISABLE_FORBIDDEN', 'Tidak dapat menonaktifkan akun sendiri');
+    }
     pengguna_milik_oki($nim);
     $err = [];
     $aktif = f_bool('statusAkun', $err, true, 'Status akun');
