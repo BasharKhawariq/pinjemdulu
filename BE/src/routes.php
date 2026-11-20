@@ -11,11 +11,14 @@ return [
     ['GET',  '/api/health',                       'h_health',               'public'],
     ['POST', '/api/login',                        'h_login',                'public'],
     ['POST', '/api/lupa-password',                'h_lupa_password',        'public'],
+    ['GET',  '/api/reset-password/cek',           'h_cek_token_reset',      'public'],
     ['POST', '/api/reset-password',               'h_reset_password',       'public'],
     ['GET',  '/api/berkas/{path}',                'h_berkas',               'public'],
 
     // ---- Akun & referensi (semua role)
     ['GET',  '/api/me',                           'h_me',                   'user'],
+    ['POST', '/api/cek-password',                 'h_cek_password',         'user'],
+    ['POST', '/api/check-password',               'h_cek_password',         'user'],
     ['POST', '/api/ubah-password',                'h_ubah_password',        'user'],
     ['POST', '/api/ubah-whatsapp',                'h_ubah_whatsapp',        'user'],
     ['GET',  '/api/organisasi',                   'h_organisasi',           'user'],

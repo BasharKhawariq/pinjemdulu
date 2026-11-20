@@ -69,6 +69,12 @@ let selectedUser = null;
 let toastMessage = '';
 let toastType = 'success';
 let toastTimer = null;
+let pendingStatusChange = null;
+let pendingAddUser = null;
+let pendingEditUser = null;
+let userFormError = '';
+let nameFieldError = '';
+let waFieldError = '';
 
 let rootElement = null;
 let clickHandler = null;
@@ -223,7 +229,7 @@ function renderRpRows() {
         : `<span class="inline-flex whitespace-nowrap rounded-lg bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">Dikonfirmasi</span>`;
 
       const actionButton = isMenunggu
-        ? `<button type="button" data-action="rp-start-approve" data-id="${escapeHtml(row.idRequestPassword)}" title="Setujui perubahan password" aria-label="Setujui perubahan password" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-primary hover:bg-blue-50 transition">${renderIcon('Send', 'h-4 w-4')}</button>`
+        ? `<button type="button" data-action="rp-start-approve" data-id="${escapeHtml(row.idRequestPassword)}" title="Setujui perubahan password" aria-label="Setujui perubahan password" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition">${renderIcon('Send', 'h-4 w-4')}</button>`
         : `<button type="button" data-action="rp-view-detail" data-id="${escapeHtml(row.idRequestPassword)}" title="Detail request password" aria-label="Detail request password" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition">${renderIcon('Info', 'h-4 w-4')}</button>`;
 
       const tglStr = row.tanggalRequest ? formatTanggal(String(row.tanggalRequest).slice(0, 10)) : '—';
@@ -279,33 +285,25 @@ function renderRpPagination() {
 // ----------------- MODAL RENDERING -----------------
 
 function renderRpConfirmApproveModal() {
-  return `
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-[2px] p-4 sm:p-6" data-modal-backdrop>
-      <section role="dialog" aria-modal="true" class="w-full max-w-sm rounded-3xl bg-white p-6 sm:p-8 shadow-2xl text-center">
-        <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-primary">
-          ${renderIcon('Send', 'h-8 w-8')}
-        </div>
-        <h2 class="text-lg font-bold text-slate-900">Setujui perubahan password?</h2>
-        <p class="mt-2 text-xs sm:text-sm text-slate-500">Apakah anda yakin untuk merubah password pengguna?</p>
-        <div class="mt-6 flex items-center justify-center gap-3">
-          <button
-            type="button"
-            data-action="close-modal"
-            class="flex-1 rounded-xl border border-slate-200 bg-white py-2.5 text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"
-          >
-            Kembali
-          </button>
-          <button
-            type="button"
-            data-action="rp-do-approve"
-            class="flex-1 rounded-xl bg-primary py-2.5 text-xs sm:text-sm font-semibold text-white shadow-sm hover:brightness-110 transition"
-          >
-            Setujui
-          </button>
-        </div>
-      </section>
-    </div>
-  `;
+  return renderModalComponent({
+    id: 'modal-rp-confirm-approve',
+    title: 'Setujui perubahan password?',
+    description: 'Apakah anda yakin untuk merubah password pengguna?',
+    variant: 'send',
+    actions: [
+      {
+        label: 'Kembali',
+        action: 'close-modal',
+        variant: 'outline',
+        className: 'w-1/2 rounded-xl',
+      },
+      {
+        label: 'Setujui',
+        action: 'rp-do-approve',
+        className: 'w-1/2 rounded-xl bg-primary text-primary-foreground transition hover:brightness-110',
+      },
+    ],
+  }).toString();
 }
 
 function renderRpPreviewModal() {
@@ -536,14 +534,112 @@ function renderModal() {
   if (modalMode === 'rp-success') return renderRpSuccessModal();
   if (modalMode === 'rp-detail') return renderRpDetailModal();
 
-  if (modalMode === 'success-edit') {
+  if (modalMode === 'status-confirm') {
+    return renderModalComponent({
+      id: 'modal-status-confirm-user',
+      title: 'Ubah status akun pengguna?',
+      description: 'Apakah anda yakin untuk merubah akun pengguna?',
+      variant: 'send',
+      actions: [
+        {
+          label: 'Kembali',
+          action: 'cancel-status-change',
+          variant: 'outline',
+          className: 'w-1/2 rounded-xl',
+        },
+        {
+          label: 'Ya, saya yakin',
+          action: 'confirm-status-change',
+          className: 'w-1/2 rounded-xl bg-primary text-primary-foreground transition hover:brightness-110',
+        },
+      ],
+    }).toString();
+  }
+
+  if (modalMode === 'status-success') {
+    return renderModalComponent({
+      id: 'modal-status-success-user',
+      title: 'Ubah status akun pengguna berhasil!',
+      description: 'Status akun pengguna berhasil diubah',
+      variant: 'success',
+      actions: [{
+        label: 'Kembali',
+        action: 'close-modal',
+        className: 'w-full rounded-xl bg-primary text-primary-foreground transition hover:brightness-110',
+      }],
+    }).toString();
+  }
+
+  if (modalMode === 'edit-confirm') {
+    return renderModalComponent({
+      id: 'modal-edit-user-confirm',
+      title: 'Edit Data Pengguna ?',
+      description: 'Periksa kembali data pengajuan yang akan anda kirim',
+      variant: 'send',
+      actions: [
+        {
+          label: 'Kembali',
+          action: 'back-edit-form',
+          variant: 'outline',
+          className: 'w-1/2 rounded-xl',
+        },
+        {
+          label: 'Kirim',
+          action: 'confirm-edit-user',
+          className: 'w-1/2 rounded-xl bg-primary text-primary-foreground transition hover:brightness-110',
+        },
+      ],
+    }).toString();
+  }
+
+  if (modalMode === 'add-confirm') {
+    return renderModalComponent({
+      id: 'modal-add-user-confirm',
+      title: 'Tambah Data Pengguna ?',
+      description: 'Periksa kembali data pengajuan yang akan anda kirim',
+      variant: 'send',
+      actions: [
+        {
+          label: 'Kembali',
+          action: 'back-add-form',
+          variant: 'outline',
+          className: 'w-1/2 rounded-xl',
+        },
+        {
+          label: 'Kirim',
+          action: 'confirm-add-user',
+          className: 'w-1/2 rounded-xl bg-primary text-primary-foreground transition hover:brightness-110',
+        },
+      ],
+    }).toString();
+  }
+
+  if (modalMode === 'add-success') {
+    return renderModalComponent({
+      id: 'modal-add-user-success',
+      title: 'Tambah Data Berhasil!',
+      description: 'Berhasil menambah data pengguna',
+      variant: 'success',
+      actions: [{
+        label: 'Kembali',
+        action: 'close-modal',
+        className: 'w-full rounded-xl bg-primary text-primary-foreground transition hover:brightness-110',
+      }],
+    }).toString();
+  }
+
+  if (modalMode === 'edit-success' || modalMode === 'success-edit') {
     return renderModalComponent({
       id: 'modal-success-edit-user',
-      title: 'Data Pengguna Berhasil Diperbarui!',
-      description: 'Perubahan data pengguna telah berhasil disimpan ke dalam sistem.',
+      title: 'Edit Berhasil!',
+      description: 'Data pengguna berhasil disimpan.',
       variant: 'success',
-      actions: [{ label: 'Tutup', action: 'close-modal', variant: 'default' }],
-    });
+      actions: [{
+        label: 'Kembali',
+        action: 'close-modal',
+        className: 'w-full rounded-xl bg-primary text-primary-foreground transition hover:brightness-110',
+      }],
+    }).toString();
   }
 
   if (!selectedUser && modalMode !== 'add') return '';
@@ -553,11 +649,12 @@ function renderModal() {
     const roleClass =
       normalizeRole(u.role) === ROLES.PENANGGUNG_JAWAB ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-700';
     const waDisplay = formatWaDisplay(u.noWhatsapp || u.no_whatsapp);
-    return `<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-[2px] p-4 sm:p-6" data-modal-backdrop><section role="dialog" aria-modal="true" class="w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white p-6 sm:p-8 shadow-2xl transition-all"><h2 class="text-xl font-semibold tracking-tight text-slate-900">Detail Pengguna</h2><div class="mt-6 space-y-4"><div><span class="mb-2 block text-sm font-medium text-slate-900">Nama Peminjam</span><div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-white px-4 py-3.5 shadow-[0_1px_3px_rgba(0,0,0,0.03)]"><span class="text-sm font-medium text-slate-800 break-words">${escapeHtml(nameOf(u))}</span><div class="flex shrink-0 items-center gap-1.5 text-xs font-semibold text-slate-600">${renderOrgLogo(u)}<span>${escapeHtml(organizationOf(u))}</span></div></div></div><div><span class="mb-2 block text-sm font-medium text-slate-900">NIM</span><div class="rounded-2xl border border-slate-100 bg-white px-4 py-3.5 text-sm font-medium text-slate-800 shadow-[0_1px_3px_rgba(0,0,0,0.03)] break-all">${escapeHtml(u.nim || '—')}</div></div><div><span class="mb-2 block text-sm font-medium text-slate-900">Nomor Whatsapp</span><div class="rounded-2xl border border-slate-100 bg-white px-4 py-3.5 text-sm font-medium text-slate-800 shadow-[0_1px_3px_rgba(0,0,0,0.03)] break-all">${escapeHtml(waDisplay)}</div></div><div><div class="flex items-center justify-between gap-4"><span class="text-sm font-medium text-slate-900">Role</span><span class="inline-flex rounded-xl px-4 py-1.5 text-xs font-medium ${roleClass}">${escapeHtml(roleLabel(u.role))}</span></div></div></div><div class="mt-8 flex justify-end"><button type="button" data-action="close-modal" class="rounded-xl bg-primary px-8 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90">Tutup</button></div></section></div>`;
+    return `<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-[2px] p-4 sm:p-6" data-modal-backdrop><section role="dialog" aria-modal="true" class="w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white p-6 sm:p-8 shadow-2xl transition-all"><h2 class="text-xl font-semibold tracking-tight text-slate-900">Detail Pengguna</h2><div class="mt-6 space-y-4"><div><span class="mb-2 block text-sm font-medium text-slate-900">Nama Peminjam</span><div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-white px-4 py-3.5 shadow-[0_1px_3px_rgba(0,0,0,0.03)]"><span class="text-sm font-medium text-slate-800 break-words">${escapeHtml(nameOf(u))}</span><div class="flex shrink-0 items-center gap-1.5 text-xs font-semibold text-slate-600">${renderOrgLogo(u)}<span>${escapeHtml(organizationOf(u))}</span></div></div></div><div><span class="mb-2 block text-sm font-medium text-slate-900">NIM</span><div class="rounded-2xl border border-slate-100 bg-white px-4 py-3.5 text-sm font-medium text-slate-800 shadow-[0_1px_3px_rgba(0,0,0,0.03)] break-all">${escapeHtml(u.nim || '—')}</div></div><div><span class="mb-2 block text-sm font-medium text-slate-900">Nomor Whatsapp</span><div class="rounded-2xl border border-slate-100 bg-white px-4 py-3.5 text-sm font-medium text-slate-800 shadow-[0_1px_3px_rgba(0,0,0,0.03)] break-all">${escapeHtml(waDisplay)}</div></div><div><div class="flex items-center justify-between gap-4"><span class="text-sm font-medium text-slate-900">Role</span><span class="inline-flex rounded-xl px-4 py-1.5 text-xs font-medium ${roleClass}">${escapeHtml(roleLabel(u.role))}</span></div></div></div>
+    <div class="mt-8 flex justify-end"><button type="button" data-action="close-modal" class="rounded-xl bg-primary px-8 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90">Tutup</button></div></section></div>`;
   }
 
   const editing = modalMode === 'edit';
-  const currentRole = editing ? normalizeRole(u?.role) : ROLES.PEMINJAM;
+  const currentRole = u?.role ? normalizeRole(u.role) : ROLES.PEMINJAM;
   const isPeminjam = currentRole === ROLES.PEMINJAM;
   const isPj = currentRole === ROLES.PENANGGUNG_JAWAB;
 
@@ -569,9 +666,9 @@ function renderModal() {
     (typeof currentUser?.organisasi === 'string' ? currentUser.organisasi : null) ||
     currentUser?.displayOrganization ||
     'HMTI';
-  const selectedOrg = editing ? organizationOf(u) : pjOrg;
+  const selectedOrg = editing ? organizationOf(u) : (u?.displayOrganization || pjOrg);
 
-  return `<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-[2px] p-4 sm:p-6" data-modal-backdrop><section role="dialog" aria-modal="true" aria-labelledby="user-form-title" class="w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white p-6 sm:p-8 shadow-2xl transition-all"><h2 id="user-form-title" class="text-xl font-semibold tracking-tight text-slate-900">${editing ? 'Edit Pengguna' : 'Tambah Pengguna'}</h2><form id="user-form" class="mt-6 space-y-4"><div><label class="mb-2 block text-sm font-medium text-slate-900">Nama Pengguna</label><input name="nama" type="text" value="${escapeHtml(editing ? (u.nama || '') : '')}" placeholder="${editing ? 'Nama Pengguna' : 'Nama Pengguna'}" required class="w-full rounded-2xl border border-slate-100 bg-white px-4 py-3.5 text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.03)]" /></div><div><div class="mb-2 flex items-center justify-between"><label class="flex items-center gap-1.5 text-sm font-medium text-slate-900"><span>NIM</span><span class="inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full bg-slate-100 text-[10px] font-semibold text-slate-500 transition hover:bg-slate-200 hover:text-slate-700" title="NIM harus 12 digit (tidak boleh lebih atau kurang)">?</span></label><span id="nim-digit-counter" class="text-xs ${((editing ? u.nim : '') || '').length === 12 ? 'font-semibold text-emerald-600' : 'font-medium text-slate-400'}">${((editing ? u.nim : '') || '').length}/12</span></div><input name="nim" type="text" inputmode="numeric" maxlength="12" value="${escapeHtml(editing ? (u.nim || '') : '')}" placeholder="NIM" required class="w-full rounded-2xl border border-slate-100 bg-white px-4 py-3.5 text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.03)]" /><p id="nim-field-error" class="mt-1.5 text-xs text-rose-500 hidden">NIM tidak valid</p></div><div><label class="mb-2 block text-sm font-medium text-slate-900">Nomor Whatsapp</label><div class="flex items-center overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.03)] focus-within:border-slate-300 focus-within:ring-2 focus-within:ring-slate-100"><span class="inline-flex h-12 items-center border-r border-slate-100 bg-slate-50 px-4 text-sm font-medium text-slate-600">+62</span><input name="noWhatsapp" type="tel" value="${escapeHtml(formatNomorWa(editing ? (u.noWhatsapp || u.no_whatsapp || '') : ''))}" placeholder="812-3456-7890" class="h-12 flex-1 border-0 border-none bg-transparent px-4 text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none ring-0 shadow-none focus:border-0 focus:border-none focus:outline-none focus:ring-0 focus:shadow-none" style="border: none !important; outline: none !important; box-shadow: none !important;" /><span class="pr-4 flex items-center justify-center"><svg class="h-5 w-5 shrink-0 rounded-full border border-slate-200 overflow-hidden" viewBox="0 0 24 24"><path d="M0,0 H24 V12 H0 Z" class="fill-rose-600" /><path d="M0,12 H24 V24 H0 Z" class="fill-white" /></svg></span></div></div><div><label class="mb-2 block text-sm font-medium text-slate-900">Organisasi</label><div class="relative"><select name="displayOrganizationSelect" disabled class="${selectClass('appearance-none pr-10 cursor-not-allowed bg-slate-50 text-slate-500 opacity-90')}"><option value="${escapeHtml(selectedOrg)}" selected>${escapeHtml(selectedOrg)}</option></select><input type="hidden" name="displayOrganization" value="${escapeHtml(selectedOrg)}" /><span class="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 flex items-center">${renderIcon('Lock', 'h-4 w-4 stroke-[2]')}</span></div><p class="mt-1 text-xs text-slate-400">Organisasi otomatis disesuaikan dengan organisasi Anda (${escapeHtml(selectedOrg)}).</p></div><div><span class="mb-3 block text-sm font-medium text-slate-900">Role</span><div class="space-y-3" id="role-radio-group"><label class="flex cursor-pointer items-center gap-3" data-role-label><input type="radio" name="role" value="${ROLES.PEMINJAM}" ${isPeminjam ? 'checked' : ''} class="sr-only" /><span data-role-indicator class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${isPeminjam ? 'border-primary bg-primary text-white' : 'border-slate-300 bg-white text-transparent'}"><svg data-role-check class="h-3 w-3 stroke-[3] ${isPeminjam ? 'block' : 'hidden'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span class="text-sm font-medium text-slate-800">Peminjam</span></label><label class="flex cursor-pointer items-center gap-3" data-role-label><input type="radio" name="role" value="${ROLES.PENANGGUNG_JAWAB}" ${isPj ? 'checked' : ''} class="sr-only" /><span data-role-indicator class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${isPj ? 'border-primary bg-primary text-white' : 'border-slate-300 bg-white text-transparent'}"><svg data-role-check class="h-3 w-3 stroke-[3] ${isPj ? 'block' : 'hidden'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span class="text-sm font-medium text-slate-800">Penanggung Jawab</span></label></div></div><div id="user-form-error" class="hidden rounded-xl bg-red-50 px-4 py-2 text-sm text-red-700"></div><div class="mt-8 flex items-center justify-end gap-4"><button type="button" data-action="close-modal" class="cancel-form-button rounded-xl px-6 py-2.5 text-sm font-semibold text-slate-500 transition hover:bg-slate-50">Batal</button><button type="submit" class="rounded-xl bg-primary px-8 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90">${editing ? 'Edit' : 'Tambah'}</button></div></form></section></div>`;
+  return `<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-[2px] p-4 sm:p-6" data-modal-backdrop><section role="dialog" aria-modal="true" aria-labelledby="user-form-title" class="w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white p-6 sm:p-8 shadow-2xl transition-all"><h2 id="user-form-title" class="text-xl font-semibold tracking-tight text-slate-900">${editing ? 'Edit Pengguna' : 'Tambah Pengguna'}</h2><form id="user-form" class="mt-6 space-y-4"><div><label class="mb-2 block text-sm font-medium text-slate-900">Nama Pengguna</label><input name="nama" type="text" value="${escapeHtml(u.nama || '')}" placeholder="Nama Pengguna" class="w-full rounded-2xl border border-slate-100 bg-white px-4 py-3.5 text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.03)]" /><p id="name-field-error" class="mt-1.5 text-xs text-rose-500 ${nameFieldError ? '' : 'hidden'}">${escapeHtml(nameFieldError)}</p></div><div><div class="mb-2 flex items-center justify-between"><label class="text-sm font-medium text-slate-900">NIM</label><span id="nim-digit-counter" class="text-xs ${((u.nim || '')).length === 12 ? 'font-semibold text-emerald-600' : 'font-medium text-slate-400'}">${((u.nim || '')).length}/12</span></div><input name="nim" type="text" inputmode="numeric" maxlength="12" value="${escapeHtml(u.nim || '')}" placeholder="NIM" class="w-full rounded-2xl border border-slate-100 bg-white px-4 py-3.5 text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.03)]" /><p id="nim-field-error" class="mt-1.5 text-xs text-rose-500 hidden">NIM tidak valid</p></div><div><label class="mb-2 block text-sm font-medium text-slate-900">Nomor Whatsapp</label><div class="flex items-center overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.03)] focus-within:border-slate-300 focus-within:ring-2 focus-within:ring-slate-100"><span class="inline-flex h-12 items-center border-r border-slate-100 bg-slate-50 px-4 text-sm font-medium text-slate-600">+62</span><input name="noWhatsapp" type="tel" value="${escapeHtml(formatNomorWa(u.noWhatsapp || u.no_whatsapp || ''))}" placeholder="812-3456-7890" class="h-12 flex-1 border-0 border-none bg-transparent px-4 text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none ring-0 shadow-none focus:border-0 focus:border-none focus:outline-none focus:ring-0 focus:shadow-none" style="border: none !important; outline: none !important; box-shadow: none !important;" /><span class="flex items-center justify-center pr-4" style="padding-right:16px;"><svg class="h-4 w-4 shrink-0 rounded-full border border-slate-200 overflow-hidden" viewBox="0 0 24 24"><path d="M0,0 H24 V12 H0 Z" class="fill-rose-600" style="fill:#e11d48;" /><path d="M0,12 H24 V24 H0 Z" class="fill-white" style="fill:#ffffff;" /></svg></span></div><p id="wa-field-error" class="mt-1.5 text-xs text-rose-500 ${waFieldError ? '' : 'hidden'}">${escapeHtml(waFieldError)}</p></div><div><label class="mb-2 block text-sm font-medium text-slate-900">Organisasi</label><div class="relative"><select name="displayOrganizationSelect" disabled class="${selectClass('appearance-none pr-10 cursor-not-allowed bg-slate-50 text-slate-500 opacity-90')}"><option value="${escapeHtml(selectedOrg)}" selected>${escapeHtml(selectedOrg)}</option></select><input type="hidden" name="displayOrganization" value="${escapeHtml(selectedOrg)}" /><span class="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 flex items-center">${renderIcon('Lock', 'h-4 w-4 stroke-[2]')}</span></div><p class="mt-1 text-xs text-slate-400">Organisasi otomatis disesuaikan dengan organisasi Anda (${escapeHtml(selectedOrg)}).</p></div><div><span class="mb-3 block text-sm font-medium text-slate-900">Role</span><div class="space-y-3" id="role-radio-group"><label class="flex cursor-pointer items-center gap-3" data-role-label><input type="radio" name="role" value="${ROLES.PEMINJAM}" ${isPeminjam ? 'checked' : ''} class="sr-only" /><span data-role-indicator class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${isPeminjam ? 'border-primary bg-primary text-white' : 'border-slate-300 bg-white text-transparent'}"><svg data-role-check class="h-3 w-3 stroke-[3] ${isPeminjam ? 'block' : 'hidden'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span class="text-sm font-medium text-slate-800">Peminjam</span></label><label class="flex cursor-pointer items-center gap-3" data-role-label><input type="radio" name="role" value="${ROLES.PENANGGUNG_JAWAB}" ${isPj ? 'checked' : ''} class="sr-only" /><span data-role-indicator class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${isPj ? 'border-primary bg-primary text-white' : 'border-slate-300 bg-white text-transparent'}"><svg data-role-check class="h-3 w-3 stroke-[3] ${isPj ? 'block' : 'hidden'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span class="text-sm font-medium text-slate-800">Penanggung Jawab</span></label></div></div><div id="user-form-error" class="${userFormError ? '' : 'hidden'} rounded-xl bg-red-50 px-4 py-2 text-sm text-red-700">${escapeHtml(userFormError)}</div><div class="mt-8 flex items-center justify-end gap-4"><button type="button" data-action="close-modal" class="cancel-form-button rounded-xl px-6 py-2.5 text-sm font-semibold text-slate-500 transition hover:bg-slate-50" style="height:40px; min-height:40px; max-height:40px; padding-top:0; padding-bottom:0; line-height:20px; box-sizing:border-box;">Batal</button><button type="submit" class="inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-xl bg-primary px-8 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:brightness-110" style="display:inline-flex; flex-shrink:0; align-items:center; justify-content:center; white-space:nowrap; width:auto; min-width:92px; height:40px; min-height:40px; max-height:40px; padding:0 32px; line-height:20px; box-sizing:border-box;">${editing ? 'Edit' : 'Tambah'}</button></div></form></section></div>`;
 }
 
 function renderContent() {
@@ -799,6 +896,12 @@ export async function mount(root, ctx = {}) {
 
   modalMode = null;
   selectedUser = null;
+  pendingStatusChange = null;
+  pendingAddUser = null;
+  pendingEditUser = null;
+  userFormError = '';
+  nameFieldError = '';
+  waFieldError = '';
   toastMessage = '';
 
   if (toastTimer) {
@@ -852,6 +955,7 @@ export async function mount(root, ctx = {}) {
         modalMode = null;
         selectedUser = null;
         selectedRp = null;
+        pendingEditUser = null;
         refresh();
       }
       return;
@@ -878,6 +982,12 @@ export async function mount(root, ctx = {}) {
       modalMode = null;
       selectedUser = null;
       selectedRp = null;
+      pendingStatusChange = null;
+      pendingAddUser = null;
+      pendingEditUser = null;
+      userFormError = '';
+      nameFieldError = '';
+      waFieldError = '';
       refresh();
       return;
     }
@@ -886,12 +996,18 @@ export async function mount(root, ctx = {}) {
     if (action === 'add') {
       modalMode = 'add';
       selectedUser = {};
+      pendingAddUser = null;
+      pendingEditUser = null;
+      userFormError = '';
+      nameFieldError = '';
+      waFieldError = '';
       refresh();
       return;
     }
 
     if (action === 'edit' || action === 'detail') {
       selectedUser = users.find((user) => String(user.id) === String(id)) || null;
+      pendingEditUser = null;
       modalMode = action;
       refresh();
       return;
@@ -999,22 +1115,118 @@ export async function mount(root, ctx = {}) {
         return;
       }
       const nextStatus = isActive(user) ? STATUS_AKUN.NONAKTIF : STATUS_AKUN.AKTIF;
-      try {
-        await updateMockUser(id, { statusAkun: nextStatus });
-        toastMessage = `Akun ${user.nama} sekarang ${nextStatus === STATUS_AKUN.AKTIF ? 'aktif' : 'nonaktif'}.`;
-        toastType = 'success';
-        users = await getUsers();
-      } catch (error) {
-        toastMessage = error.message || 'Status akun gagal diperbarui.';
-        toastType = 'error';
-      }
-      if (toastTimer) clearTimeout(toastTimer);
+      pendingStatusChange = {
+        id: user.id,
+        nama: nameOf(user),
+        nextStatus,
+      };
+      modalMode = 'status-confirm';
       refresh();
-      toastTimer = setTimeout(() => {
+      return;
+    }
+
+    if (action === 'cancel-status-change') {
+      pendingStatusChange = null;
+      modalMode = null;
+      refresh();
+      return;
+    }
+
+    if (action === 'confirm-status-change') {
+      if (!pendingStatusChange) return;
+      const statusChange = pendingStatusChange;
+      try {
+        await updateMockUser(statusChange.id, { statusAkun: statusChange.nextStatus });
+        users = await getUsers();
+        pendingStatusChange = null;
+        modalMode = 'status-success';
         toastMessage = '';
-        toastTimer = null;
+        toastType = 'success';
+      } catch (error) {
+        pendingStatusChange = null;
+        modalMode = null;
+        toastMessage = error?.message || 'Status akun gagal diperbarui.';
+        toastType = 'error';
+        if (toastTimer) clearTimeout(toastTimer);
         refresh();
-      }, 3000);
+        toastTimer = setTimeout(() => {
+          toastMessage = '';
+          toastTimer = null;
+          refresh();
+        }, 3000);
+        return;
+      }
+      refresh();
+      return;
+    }
+
+    if (action === 'back-edit-form') {
+      if (!pendingEditUser) return;
+      selectedUser = { ...(selectedUser || {}), ...pendingEditUser.data };
+      pendingEditUser = null;
+      userFormError = '';
+      nameFieldError = '';
+      waFieldError = '';
+      modalMode = 'edit';
+      refresh();
+      return;
+    }
+
+    if (action === 'confirm-edit-user') {
+      if (!pendingEditUser) return;
+      const editPayload = pendingEditUser;
+      try {
+        await updateMockUser(editPayload.id, editPayload.data);
+        users = await getUsers();
+        pendingEditUser = null;
+        selectedUser = null;
+        userFormError = '';
+        nameFieldError = '';
+        waFieldError = '';
+        toastMessage = '';
+        toastType = 'success';
+        modalMode = 'edit-success';
+      } catch (error) {
+        selectedUser = { ...(selectedUser || {}), ...editPayload.data };
+        pendingEditUser = null;
+        userFormError = error?.message || 'Data pengguna gagal disimpan.';
+        modalMode = 'edit';
+      }
+      refresh();
+      return;
+    }
+
+    if (action === 'back-add-form') {
+      modalMode = 'add';
+      selectedUser = pendingAddUser ? { ...pendingAddUser } : (selectedUser || {});
+      pendingAddUser = null;
+      userFormError = '';
+      nameFieldError = '';
+      waFieldError = '';
+      refresh();
+      return;
+    }
+
+    if (action === 'confirm-add-user') {
+      if (!pendingAddUser) return;
+      const payload = { ...pendingAddUser };
+      try {
+        await addMockUser(payload);
+        users = await getUsers();
+        pendingAddUser = null;
+        selectedUser = null;
+        userFormError = '';
+        waFieldError = '';
+        toastMessage = '';
+        toastType = 'success';
+        modalMode = 'add-success';
+      } catch (error) {
+        pendingAddUser = null;
+        selectedUser = { ...payload };
+        userFormError = error?.message || 'Data pengguna gagal ditambahkan.';
+        modalMode = 'add';
+      }
+      refresh();
       return;
     }
 
@@ -1150,9 +1362,43 @@ export async function mount(root, ctx = {}) {
   };
 
   inputHandler = async (event) => {
+    if (event.target.name === 'nama') {
+      const input = event.target;
+      const errorEl = rootElement.querySelector('#name-field-error');
+      if (errorEl && !errorEl.classList.contains('hidden')) {
+        if (input.value.trim()) {
+          nameFieldError = '';
+          errorEl.textContent = '';
+          errorEl.classList.add('hidden');
+          input.classList.remove('border-rose-400');
+        } else {
+          nameFieldError = 'Nama Pengguna wajib diisi.';
+          errorEl.textContent = nameFieldError;
+        }
+      }
+      return;
+    }
     if (event.target.name === 'noWhatsapp') {
       const input = event.target;
       input.value = formatNomorWa(input.value);
+      const digits = input.value.replace(/\D/g, '').replace(/^0+/, '').replace(/^62/, '');
+      const errorEl = rootElement.querySelector('#wa-field-error');
+      const isAddForm = modalMode === 'add';
+
+      if (errorEl && !errorEl.classList.contains('hidden')) {
+        if (!digits && isAddForm) {
+          waFieldError = 'No WhatsApp wajib diisi.';
+          errorEl.textContent = waFieldError;
+        } else if (digits.length > 0 && digits.length < 10 && isAddForm) {
+          waFieldError = 'Nomor WhatsApp minimal 10 angka.';
+          errorEl.textContent = waFieldError;
+        } else if (digits.length >= 10 || (!digits && !isAddForm)) {
+          waFieldError = '';
+          errorEl.textContent = '';
+          errorEl.classList.add('hidden');
+          input.closest('.flex.items-center')?.classList.remove('border-rose-400');
+        }
+      }
       return;
     }
     if (event.target.name === 'nim') {
@@ -1166,7 +1412,17 @@ export async function mount(root, ctx = {}) {
           : 'text-xs font-medium text-slate-400';
       }
       const errEl = rootElement.querySelector('#nim-field-error');
-      if (input.value.length === 12) {
+      if (errEl && !errEl.classList.contains('hidden')) {
+        if (!input.value) {
+          errEl.textContent = 'NIM wajib diisi.';
+        } else if (input.value.length === 12) {
+          errEl.textContent = '';
+          errEl.classList.add('hidden');
+          input.classList.remove('border-rose-400');
+        } else {
+          errEl.textContent = 'NIM tidak valid';
+        }
+      } else if (input.value.length === 12) {
         errEl?.classList.add('hidden');
         input.classList.remove('border-rose-400');
       }
@@ -1209,56 +1465,84 @@ export async function mount(root, ctx = {}) {
     const data = Object.fromEntries(new FormData(form).entries());
 
     const errorBox = rootElement.querySelector('#user-form-error');
+    const nameFieldErr = rootElement.querySelector('#name-field-error');
     const nimFieldErr = rootElement.querySelector('#nim-field-error');
+    const nameInput = form.querySelector('input[name="nama"]');
     const nimInput = form.querySelector('input[name="nim"]');
+    const waInput = form.querySelector('input[name="noWhatsapp"]');
+    const wasEditing = modalMode === 'edit';
 
+    userFormError = '';
+    if (errorBox) {
+      errorBox.textContent = '';
+      errorBox.classList.add('hidden');
+    }
+
+    const nameVal = String(data.nama || '').trim();
     const nimVal = String(data.nim || '').trim();
-    if (!/^\d{12}$/.test(nimVal)) {
-      if (errorBox) {
-        errorBox.textContent = 'NIM tidak valid';
-        errorBox.classList.remove('hidden');
-      }
-      if (nimFieldErr) {
-        nimFieldErr.textContent = 'NIM tidak valid';
-        nimFieldErr.classList.remove('hidden');
-      }
-      if (nimInput) {
-        nimInput.classList.add('border-rose-400');
-        nimInput.focus();
-      }
+    const rawWhatsapp = String(data.noWhatsapp || '').trim();
+    const cleanWhatsappDigits = rawWhatsapp.replace(/\D/g, '').replace(/^0+/, '').replace(/^62/, '');
+
+    const nameMessage = !nameVal ? 'Nama Pengguna wajib diisi.' : '';
+    const nimIsValid = /^\d{12}$/.test(nimVal);
+    const nimMessage = !nimVal ? 'NIM wajib diisi.' : (!nimIsValid ? 'NIM tidak valid' : '');
+    const waMessage = !wasEditing
+      ? (!cleanWhatsappDigits ? 'No WhatsApp wajib diisi.' : (cleanWhatsappDigits.length < 10 ? 'Nomor WhatsApp minimal 10 angka.' : ''))
+      : (cleanWhatsappDigits && cleanWhatsappDigits.length < 10 ? 'Nomor WhatsApp minimal 10 angka.' : '');
+
+    // Tampilkan pesan ketiga field sekaligus, tepat di bawah masing-masing input.
+    nameFieldError = nameMessage;
+    if (nameFieldErr) {
+      nameFieldErr.textContent = nameMessage;
+      nameFieldErr.classList.toggle('hidden', !nameMessage);
+    }
+    if (nameInput) nameInput.classList.toggle('border-rose-400', Boolean(nameMessage));
+
+    if (nimFieldErr) {
+      nimFieldErr.textContent = nimMessage;
+      nimFieldErr.classList.toggle('hidden', !nimMessage);
+    }
+    if (nimInput) nimInput.classList.toggle('border-rose-400', Boolean(nimMessage));
+
+    waFieldError = waMessage;
+    const waErrorEl = rootElement.querySelector('#wa-field-error');
+    if (waErrorEl) {
+      waErrorEl.textContent = waMessage;
+      waErrorEl.classList.toggle('hidden', !waMessage);
+    }
+    const waWrapper = waInput?.closest('.flex.items-center');
+    waWrapper?.classList.toggle('border-rose-400', Boolean(waMessage));
+
+    data.nama = nameVal;
+    if (nameMessage || nimMessage || waMessage) {
+      if (nameMessage) nameInput?.focus();
+      else if (nimMessage) nimInput?.focus();
+      else waInput?.focus();
       return;
-    } else {
-      if (nimFieldErr) nimFieldErr.classList.add('hidden');
-      if (nimInput) nimInput.classList.remove('border-rose-400');
     }
 
-    if (data.noWhatsapp) {
-      const cleanDigits = String(data.noWhatsapp).replace(/\D/g, '').replace(/^0+/, '').replace(/^62/, '');
-      data.noWhatsapp = cleanDigits ? `+62${cleanDigits}` : '';
-    }
+    data.noWhatsapp = cleanWhatsappDigits ? `+62${cleanWhatsappDigits}` : '';
 
-    try {
-      const wasEditing = modalMode === 'edit';
-      if (wasEditing) await updateMockUser(selectedUser.id, data);
-      else await addMockUser(data);
-      users = await getUsers();
-      if (wasEditing) {
-        modalMode = 'success-edit';
-        toastType = 'success';
-        toastMessage = '';
-      } else {
-        modalMode = null;
-        selectedUser = null;
-        toastType = 'success';
-        toastMessage = 'Pengguna berhasil ditambahkan.';
-      }
+    if (wasEditing) {
+      pendingEditUser = {
+        id: selectedUser.id,
+        data: { ...data },
+      };
+      selectedUser = { ...(selectedUser || {}), ...data };
+      userFormError = '';
+      nameFieldError = '';
+      waFieldError = '';
+      modalMode = 'edit-confirm';
       refresh();
-    } catch (error) {
-      if (errorBox) {
-        errorBox.textContent = error.message || 'Data pengguna gagal disimpan.';
-        errorBox.classList.remove('hidden');
-      }
+      return;
     }
+
+    pendingAddUser = { ...data };
+    selectedUser = { ...data };
+    waFieldError = '';
+    userFormError = '';
+    modalMode = 'add-confirm';
+    refresh();
   };
 
   changeHandler = (event) => {
@@ -1342,6 +1626,12 @@ export function unmount() {
   changeHandler = null;
   selectedRp = null;
   rpProsesData = null;
+  pendingStatusChange = null;
+  pendingAddUser = null;
+  pendingEditUser = null;
+  userFormError = '';
+  nameFieldError = '';
+  waFieldError = '';
   isUsersLoading = false;
   isRpLoading = false;
 }

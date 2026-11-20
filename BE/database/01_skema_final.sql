@@ -603,6 +603,9 @@ BEGIN
     RAISE EXCEPTION 'Password saat ini salah';
   END IF;
   IF length(p_password_baru) < 8 THEN RAISE EXCEPTION 'Password baru minimal 8 karakter'; END IF;
+  IF p_password_lama = p_password_baru THEN
+    RAISE EXCEPTION 'Password baru tidak boleh sama dengan password saat ini';
+  END IF;
   UPDATE pengguna SET password_hash = crypt(p_password_baru, gen_salt('bf', 10)) WHERE nim = p_nim;
   UPDATE request_password SET token_dipakai_pada = now() WHERE nim = p_nim AND token_dipakai_pada IS NULL;
 END $$;

@@ -6,7 +6,7 @@ import { escapeHtml } from '../ui/html.js';
 import { renderIcon } from '../ui/icons.js';
 import { ROLES } from '../lib/constants.js';
 import { renderModal as renderModalComponent } from '../ui/modal.js';
-import { ubahPassword, ubahWhatsapp } from '../services/auth.js';
+import { ubahPassword, ubahWhatsapp, cekPassword } from '../services/auth.js';
 import { renderOrganisasiLogo } from '../ui/organisasi-badge.js';
 
 let rootElement = null;
@@ -80,7 +80,7 @@ function renderModals(user) {
       title: 'Ubah Password berhasil!',
       description: 'Anda telah berhasil merubah password',
       variant: 'success',
-      actions: [{ label: 'Kembali', action: 'close-modal', className: 'w-full rounded-xl bg-primary text-primary-foreground transition-colors hover:bg-primary/90' }],
+      actions: [{ label: 'Kembali', action: 'close-modal', className: 'w-full rounded-xl bg-primary text-primary-foreground transition hover:brightness-110' }],
     }).toString();
   }
 
@@ -93,7 +93,7 @@ function renderModals(user) {
       variant: 'send',
       actions: [
         { label: 'Kembali', action: 'back-password-form', variant: 'outline', className: 'w-1/2 rounded-xl' },
-        { label: 'Kirim', action: 'confirm-password', className: 'w-1/2 rounded-xl bg-primary text-primary-foreground transition-colors hover:bg-primary/90' },
+        { label: 'Kirim', action: 'confirm-password', className: 'w-1/2 rounded-xl bg-primary text-primary-foreground transition hover:brightness-110' },
       ],
     }).toString();
   }
@@ -107,7 +107,7 @@ function renderModals(user) {
       variant: 'error',
       actions: [
         { label: 'Kembali', action: 'back-password-form', variant: 'outline', className: 'w-1/2 rounded-xl' },
-        { label: 'Batalkan', action: 'close-modal', className: 'w-1/2 rounded-xl bg-primary text-primary-foreground transition-colors hover:bg-primary/90' },
+        { label: 'Batalkan', action: 'close-modal', className: 'w-1/2 rounded-xl bg-primary text-primary-foreground transition hover:brightness-110' },
       ],
     }).toString();
   }
@@ -125,11 +125,11 @@ function renderModals(user) {
             <p id="password-form-error" class="text-xs text-rose-600 ${passwordError ? '' : 'hidden'}">${escapeHtml(passwordError)}</p>
             <div class="flex items-center justify-end gap-3 pt-3">
               <button type="button" data-action="cancel-password-modal"
-                class="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50">
+                class="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 text-sm font-semibold text-slate-600 transition-colors hover:border-rose-700 hover:bg-rose-700 hover:text-white">
                 Batal
               </button>
               <button type="submit"
-                class="inline-flex h-10 items-center justify-center rounded-xl bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90">
+                class="inline-flex h-10 items-center justify-center rounded-xl bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-sm transition hover:brightness-110">
                 Kirim
               </button>
             </div>
@@ -162,10 +162,10 @@ function renderModals(user) {
                   class="h-11 flex-1 border-0 border-none bg-transparent px-3 text-sm text-slate-800 outline-none ring-0 shadow-none focus:border-0 focus:border-none focus:outline-none focus:ring-0 focus:shadow-none"
                   style="border: none !important; outline: none !important; box-shadow: none !important;"
                 />
-                <span class="pr-3 flex items-center justify-center">
+                <span class="flex items-center justify-center pr-4">
                   <svg class="h-4 w-4 shrink-0 rounded-full border border-slate-200 overflow-hidden" viewBox="0 0 24 24">
-                    <path d="M0,0 H24 V12 H0 Z" class="fill-rose-600" />
-                    <path d="M0,12 H24 V24 H0 Z" class="fill-white" />
+                    <path d="M0,0 H24 V12 H0 Z" class="fill-rose-600" style="fill: #e11d48;" />
+                    <path d="M0,12 H24 V24 H0 Z" class="fill-white" style="fill: #ffffff;" />
                   </svg>
                 </span>
               </div>
@@ -173,11 +173,11 @@ function renderModals(user) {
             </div>
             <div class="flex items-center justify-end gap-3 pt-3">
               <button type="button" data-action="close-modal"
-                class="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50">
+                class="inline-flex h-10 w-[108px] items-center justify-center rounded-xl border border-slate-200 bg-white px-6 text-sm font-semibold text-slate-600 transition-colors hover:border-rose-700 hover:bg-rose-700 hover:text-white">
                 Batal
               </button>
               <button type="submit"
-                class="inline-flex h-10 items-center justify-center rounded-xl bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90">
+                class="inline-flex h-10 w-[108px] items-center justify-center rounded-xl bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-sm transition hover:brightness-110">
                 Edit
               </button>
             </div>
@@ -196,7 +196,7 @@ function renderModals(user) {
       variant: 'send',
       actions: [
         { label: 'Kembali', action: 'back-wa-form', variant: 'outline', className: 'w-1/2 rounded-xl' },
-        { label: 'Kirim', action: 'confirm-wa', className: 'w-1/2 rounded-xl bg-primary text-primary-foreground transition-colors hover:bg-primary/90' },
+        { label: 'Kirim', action: 'confirm-wa', className: 'w-1/2 rounded-xl bg-primary text-primary-foreground transition hover:brightness-110' },
       ],
     }).toString();
   }
@@ -208,7 +208,7 @@ function renderModals(user) {
       title: 'Nomor Whatsapp berhasil diubah!',
       description: 'Nomor WhatsApp Anda telah berhasil diperbarui.',
       variant: 'success',
-      actions: [{ label: 'Kembali', action: 'close-modal', className: 'w-full rounded-xl bg-primary text-primary-foreground transition-colors hover:bg-primary/90' }],
+      actions: [{ label: 'Kembali', action: 'close-modal', className: 'w-full rounded-xl bg-primary text-primary-foreground transition hover:brightness-110' }],
     }).toString();
   }
 
@@ -235,7 +235,7 @@ export function render(ctx = {}) {
   const waDisplay = formatWaDisplay(user.noWhatsapp || user.no_whatsapp);
 
   return `
-    <section class="mx-auto w-full max-w-[1080px] pb-10">
+    <section class="w-full pb-10">
       <!-- Banner Header -->
       <div class="relative h-36 overflow-visible rounded-[24px] bg-gradient-to-br from-blue-700 via-primary to-blue-950 sm:h-40">
         <span class="absolute -right-4 -top-8 h-28 w-28 rounded-full bg-white/10"></span>
@@ -366,7 +366,7 @@ export function mount(root, ctx = {}) {
     }
   };
 
-  submitHandler = (event) => {
+  submitHandler = async (event) => {
     if (event.target.id === 'password-form') {
       event.preventDefault();
       const form = new FormData(event.target);
@@ -375,16 +375,34 @@ export function mount(root, ctx = {}) {
       const confirmation = String(form.get('konfirmasi-password') || '').trim();
       if (!current || !next || !confirmation) {
         passwordError = 'Semua field password wajib diisi.';
-      } else if (next.length < 8) {
+        rootElement.innerHTML = render(ctx);
+        return;
+      }
+      if (next === current) {
+        passwordError = 'Password baru tidak boleh sama dengan password saat ini.';
+        rootElement.innerHTML = render(ctx);
+        return;
+      }
+      if (next.length < 8) {
         passwordError = 'Password baru minimal 8 karakter.';
-      } else if (next !== confirmation) {
+        rootElement.innerHTML = render(ctx);
+        return;
+      }
+      if (next !== confirmation) {
         passwordError = 'Konfirmasi password baru tidak cocok.';
-      } else {
+        rootElement.innerHTML = render(ctx);
+        return;
+      }
+
+      try {
+        await cekPassword({ passwordLama: current, passwordBaru: next });
         pendingPasswordLama = current;
         pendingPasswordBaru = next;
         pendingKonfirmasiPassword = confirmation;
         passwordError = '';
         modalMode = 'password-confirm';
+      } catch (err) {
+        passwordError = err?.message || 'Password baru tidak boleh sama dengan password saat ini.';
       }
       rootElement.innerHTML = render(ctx);
     } else if (event.target.id === 'whatsapp-form') {
@@ -392,8 +410,15 @@ export function mount(root, ctx = {}) {
       const form = new FormData(event.target);
       const waRaw = String(form.get('noWhatsapp') || '').trim();
       const digits = waRaw.replace(/\D/g, '').replace(/^0+/, '').replace(/^62/, '');
+      const currentWa = String(ctx.user?.noWhatsapp || ctx.user?.no_whatsapp || '');
+      const currentDigits = currentWa.replace(/\D/g, '').replace(/^0+/, '').replace(/^62/, '');
       if (!digits || digits.length < 8) {
         whatsappError = 'Nomor WhatsApp tidak valid (minimal 8 angka).';
+        rootElement.innerHTML = render(ctx);
+        return;
+      }
+      if (digits === currentDigits) {
+        whatsappError = 'Nomor WhatsApp baru tidak boleh sama dengan nomor saat ini.';
         rootElement.innerHTML = render(ctx);
         return;
       }

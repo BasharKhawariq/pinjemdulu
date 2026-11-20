@@ -106,6 +106,7 @@ export function getModalVariantConfig(variant) {
  * @param {string} [props.customBadgeClass=''] Kelas badge kustom jika variant='custom'
  * @param {boolean} [props.useGif=true] Menggunakan animasi GIF dari LottieFiles jika tersedia
  * @param {boolean} [props.plainGif=false] Menampilkan GIF langsung tanpa container pembungkus
+ * @param {string} [props.gifSize='6rem'] Ukuran lebar dan tinggi GIF modal
  * @param {string|import('./html.js').SafeHtml} [props.content=''] Konten opsional (misal data ringkasan)
  * @param {Array<{ label: string, action?: string, id?: string, dataId?: string, variant?: string, className?: string, disabled?: boolean, type?: string }>|string|import('./html.js').SafeHtml} [props.actions=[]]
  * @param {boolean} [props.asDialog=false] Apakah merender tag <dialog> native
@@ -125,6 +126,7 @@ export function renderModal({
   customBadgeClass = '',
   useGif = true,
   plainGif = false,
+  gifSize = '6rem',
   content = '',
   actions = [],
   primaryAction = null,
@@ -177,10 +179,10 @@ export function renderModal({
       `
     : useGif && gifSrc
       ? (plainGif
-          ? html`<span class="sr-only ${badgeClass}">${variant}</span><img src="${gifSrc}" alt="${title || 'Animasi'}" class="mb-4 h-24 w-24 object-contain select-none pointer-events-none" loading="eager" />`
+          ? html`<span class="sr-only ${badgeClass}">${variant}</span><img src="${gifSrc}" alt="${title || 'Animasi'}" style="width: ${escapeHtml(gifSize)}; height: ${escapeHtml(gifSize)};" class="mb-4 object-contain select-none pointer-events-none" loading="eager" />`
           : html`
               <span class="sr-only ${badgeClass}">${variant}</span>
-              <div class="mb-4 inline-flex h-24 w-24 items-center justify-center p-0">
+              <div class="mb-4 inline-flex items-center justify-center p-0" style="width: ${escapeHtml(gifSize)}; height: ${escapeHtml(gifSize)};">
                 <img
                   src="${gifSrc}"
                   alt="${title || 'Animasi'}"

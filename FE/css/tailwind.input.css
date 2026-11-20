@@ -97,3 +97,12 @@
   text-decoration: underline !important;
   text-underline-offset: 4px;
 }
+
+/* Penyelarasan teks untuk seluruh switch tab di semua halaman. */
+[role="tab"],
+button[data-tab],
+a[data-tab],
+button[data-action="switch-tab"],
+nav[aria-label="Pilihan Kelola"] > a {
+  text-align: center !important;
+}

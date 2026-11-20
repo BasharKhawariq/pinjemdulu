@@ -28,6 +28,7 @@ Akses: **publik**, **user** (semua role), **peminjam** (hanya Peminjam), **pj** 
 | `GET /api/health` | | `{status, waktu}` |
 | `POST /api/login` | `nim`, `password`, `captchaToken` | `{token, expiresAt, user}` |
 | `POST /api/lupa-password` | `nim`, `noWhatsapp`, `captchaToken` | 201 `{message}` |
+| `GET /api/reset-password/cek` | query `token` | `{valid: true}`; 400 `TAUTAN_TIDAK_VALID` bila tautan salah/sudah dipakai/kedaluwarsa. Hanya memeriksa, token **tidak** dikonsumsi |
 | `POST /api/reset-password` | `token`, `passwordBaru`, `konfirmasiPassword` | `{message}` |
 
 `user` = `{nim, namaPengguna, role, isPj, idOrganisasi, organisasi:{nama, singkatan, logoUrl}}`.

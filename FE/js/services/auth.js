@@ -263,6 +263,57 @@ export async function getCurrentUser(userId) {
 }
 
 /**
+ * Layanan Cek Password Sebelum Mengubah Password.
+ * Memastikan password baru tidak sama dengan password saat ini dan password saat ini valid.
+ * @param {{ passwordLama: string, passwordBaru: string }} payload
+ * @returns {Promise<{ valid: boolean, message: string }>}
+ */
+export async function cekPassword(payload) {
+  const { passwordLama, passwordBaru } = payload || {};
+  const current = String(passwordLama || '').trim();
+  const next = String(passwordBaru || '').trim();
+
+  if (!current) {
+    const err = new Error('Password saat ini wajib diisi');
+    err.statusCode = 422;
+    err.errors = { passwordLama: 'Password saat ini wajib diisi' };
+    throw err;
+  }
+  if (!next) {
+    const err = new Error('Password baru wajib diisi');
+    err.statusCode = 422;
+    err.errors = { passwordBaru: 'Password baru minimal 8 karakter' };
+    throw err;
+  }
+  if (next.length < 8) {
+    const err = new Error('Password baru minimal 8 karakter');
+    err.statusCode = 422;
+    err.errors = { passwordBaru: 'Password baru minimal 8 karakter' };
+    throw err;
+  }
+  if (next === current) {
+    const err = new Error('Password baru tidak boleh sama dengan password saat ini.');
+    err.statusCode = 422;
+    err.code = 'PASSWORD_SAMA';
+    err.errors = { passwordBaru: 'Password baru tidak boleh sama dengan password saat ini.' };
+    throw err;
+  }
+
+  if (isMockEnabled()) {
+    await delay(30);
+    return { valid: true, message: 'Password valid dan dapat digunakan' };
+  }
+
+  return await apiFetch('/api/cek-password', {
+    method: 'POST',
+    body: {
+      passwordLama: current,
+      passwordBaru: next,
+    },
+  });
+}
+
+/**
  * Layanan Ubah Password.
  * @param {{ passwordLama: string, passwordBaru: string, konfirmasiPassword: string }} payload
  * @returns {Promise<{ message: string, token?: string, user?: object }>}
@@ -286,6 +337,13 @@ export async function ubahPassword(payload) {
     const err = new Error('Konfirmasi password harus sama dengan password baru');
     err.statusCode = 422;
     err.errors = { konfirmasiPassword: 'Konfirmasi password harus sama dengan password baru' };
+    throw err;
+  }
+  if (passwordBaru === passwordLama) {
+    const err = new Error('Password baru tidak boleh sama dengan password saat ini.');
+    err.statusCode = 422;
+    err.code = 'PASSWORD_SAMA';
+    err.errors = { passwordBaru: 'Password baru tidak boleh sama dengan password saat ini.' };
     throw err;
   }
 
@@ -376,22 +434,41 @@ export async function lupaPassword(payload) {
     err.errors = { noWhatsapp: 'Nomor WhatsApp wajib diisi' };
     throw err;
   }
-  if (!/^[0-9+]{8,20}$/.test(waStr)) {
-    const err = new Error('No WhatsApp hanya boleh angka dan +, 8 sampai 20 karakter');
+  const whatsappDigits = waStr.replace(/\D/g, '');
+  const normalizedWhatsappDigits = whatsappDigits.startsWith('62')
+    ? whatsappDigits.slice(2)
+    : whatsappDigits.replace(/^0+/, '');
+  if (!/^[0-9+\s()-]+$/.test(waStr) || normalizedWhatsappDigits.length < 10 || normalizedWhatsappDigits.length > 20) {
+    const message = 'Nomor WhatsApp harus terdiri dari minimal 10 angka.';
+    const err = new Error(message);
     err.statusCode = 422;
-    err.errors = { noWhatsapp: 'No WhatsApp hanya boleh angka dan +, 8 sampai 20 karakter' };
+    err.errors = { noWhatsapp: message };
     throw err;
   }
 
   if (isMockEnabled()) {
     await delay(30);
-    const exists = getUsersMock().some((u) => String(u.nim || '').trim() === nimStr);
-    if (!exists) {
+    const user = getUsersMock().find((u) => String(u.nim || '').trim() === nimStr);
+    if (!user) {
       const err = new Error('NIM tidak terdaftar');
       err.statusCode = 404;
       err.code = 'NIM_TIDAK_TERDAFTAR';
       throw err;
     }
+
+    const savedWhatsapp = String(user.noWhatsapp || user.no_whatsapp || '').replace(/\D/g, '');
+    const normalizeWhatsapp = (digits) => (
+      digits.startsWith('62') ? digits.slice(2) : digits.replace(/^0+/, '')
+    );
+    if (!savedWhatsapp || normalizeWhatsapp(savedWhatsapp) !== normalizeWhatsapp(whatsappDigits)) {
+      const message = 'Nomor WhatsApp tidak sesuai dengan NIM tersebut.';
+      const err = new Error(message);
+      err.statusCode = 422;
+      err.code = 'WHATSAPP_TIDAK_SESUAI';
+      err.errors = { noWhatsapp: message };
+      throw err;
+    }
+
     return { message: 'Permintaan ubah password dikirim ke penanggung jawab OKI Anda' };
   }
 
@@ -402,6 +479,42 @@ export async function lupaPassword(payload) {
       noWhatsapp: waStr,
     },
   });
+}
+
+const PESAN_TAUTAN_TIDAK_VALID = 'Tautan tidak valid, sudah dipakai atau kedaluwarsa';
+
+function tautanTidakValidError() {
+  const err = new Error(PESAN_TAUTAN_TIDAK_VALID);
+  err.statusCode = 400;
+  err.code = 'TAUTAN_TIDAK_VALID';
+  return err;
+}
+
+/**
+ * Layanan Cek Token Reset Password.
+ * Dipanggil saat halaman ubah password pertama kali dibuka. Hanya MEMERIKSA token
+ * (GET /api/reset-password/cek) tanpa mengonsumsinya, sehingga tautan yang sudah
+ * dipakai/kedaluwarsa bisa langsung ditolak sebelum user mengisi form.
+ * Mode mock: token berawalan "dipakai", "expired", "kedaluwarsa" atau "invalid" dianggap tidak valid.
+ * @param {{ token: string }} payload
+ * @returns {Promise<{ valid: boolean }>}
+ * @throws {Error} statusCode 400 + code TAUTAN_TIDAK_VALID bila tautan tidak bisa dipakai
+ */
+export async function cekTokenReset(payload) {
+  const tokenStr = String(payload?.token || '').trim();
+  if (!tokenStr) {
+    throw tautanTidakValidError();
+  }
+
+  if (isMockEnabled()) {
+    await delay(30);
+    if (/^(dipakai|used|expired|kedaluwarsa|invalid)/i.test(tokenStr)) {
+      throw tautanTidakValidError();
+    }
+    return { valid: true };
+  }
+
+  return await apiFetch(`/api/reset-password/cek?token=${encodeURIComponent(tokenStr)}`);
 }
 
 /**

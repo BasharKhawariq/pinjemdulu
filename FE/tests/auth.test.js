@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { ROLES, STATUS_AKUN } from '../js/lib/constants.js';
-import { login, getCurrentUser, createCaptcha, _resetAuthMockState } from '../js/services/auth.js';
+import { login, getCurrentUser, createCaptcha, _resetAuthMockState, cekPassword, ubahPassword } from '../js/services/auth.js';
 import { mockOrganisasi } from '../js/data/index.js';
 
 // Pastikan mock mode aktif (fallback default 'true' jika env tidak diset).
@@ -224,4 +224,37 @@ test('getCurrentUser: id user aktif ditemukan, nonaktif tidak ditemukan', async 
   // id tidak ada → null
   const tidakAda = await getCurrentUser('user-tidak-ada');
   assert.equal(tidakAda.user, null);
+});
+
+/* ========================================================================== */
+/*                 cekPassword & ubahPassword — cegah password sama           */
+/* ========================================================================== */
+
+test('cekPassword: tolak jika password baru sama dengan password saat ini', async () => {
+  await assert.rejects(
+    () => cekPassword({ passwordLama: '12345678', passwordBaru: '12345678' }),
+    (err) => {
+      assert.equal(err.statusCode, 422);
+      assert.equal(err.code, 'PASSWORD_SAMA');
+      assert.match(err.message, /Password baru tidak boleh sama dengan password saat ini/);
+      return true;
+    }
+  );
+});
+
+test('cekPassword: lolos jika password baru beda dan minimal 8 karakter', async () => {
+  const res = await cekPassword({ passwordLama: '12345678', passwordBaru: '87654321' });
+  assert.equal(res.valid, true);
+});
+
+test('ubahPassword: tolak jika password baru sama dengan password saat ini', async () => {
+  await assert.rejects(
+    () => ubahPassword({ passwordLama: '12345678', passwordBaru: '12345678', konfirmasiPassword: '12345678' }),
+    (err) => {
+      assert.equal(err.statusCode, 422);
+      assert.equal(err.code, 'PASSWORD_SAMA');
+      assert.match(err.message, /Password baru tidak boleh sama dengan password saat ini/);
+      return true;
+    }
+  );
 });

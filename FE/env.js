@@ -7,3 +7,4 @@ window.__ENV__ = {
   // true  = Gunakan mode simulasi mock lokal
   ENABLE_MOCK: false, //pake ini cuma buat nembak ke be lokal, kalo udah bisa consume jangan diidupin ini
 };
+

@@ -2,6 +2,21 @@ import { mockUsers } from '../data/users.js';
 import { ROLES, STATUS_AKUN } from '../lib/constants.js';
 import { delay, isMockEnabled, apiFetch } from './client.js';
 
+
+// Data mockup List Request Password untuk pengembangan frontend.
+const mockRequestPasswords = [
+  { idRequestPassword: 1, namaPengguna: 'Ahmad Fauzan', nim: '254107020001', okiPemohon: 'HMTI', logoUrl: null, tanggalRequest: '2026-11-18T08:30:00', status: 'Menunggu' },
+  { idRequestPassword: 2, namaPengguna: 'Siti Nurhaliza', nim: '254107020002', okiPemohon: 'HIMANIA', logoUrl: null, tanggalRequest: '2026-11-18T09:15:00', status: 'Dikonfirmasi' },
+  { idRequestPassword: 3, namaPengguna: 'Rizky Ramadhan', nim: '254107020003', okiPemohon: 'BEM', logoUrl: null, tanggalRequest: '2026-11-18T10:20:00', status: 'Menunggu' },
+  { idRequestPassword: 4, namaPengguna: 'Dinda Maharani', nim: '254107020004', okiPemohon: 'HME', logoUrl: null, tanggalRequest: '2026-11-17T13:45:00', status: 'Dikonfirmasi' },
+  { idRequestPassword: 5, namaPengguna: 'Fajar Maulana', nim: '254107020005', okiPemohon: 'RISPOL', logoUrl: null, tanggalRequest: '2026-11-17T14:10:00', status: 'Menunggu' },
+  { idRequestPassword: 6, namaPengguna: 'Nabila Putri', nim: '254107020006', okiPemohon: 'HMS', logoUrl: null, tanggalRequest: '2026-11-16T08:00:00', status: 'Dikonfirmasi' },
+  { idRequestPassword: 7, namaPengguna: 'Bagas Pratama', nim: '254107020007', okiPemohon: 'THEATRISIC', logoUrl: null, tanggalRequest: '2026-11-16T11:30:00', status: 'Menunggu' },
+  { idRequestPassword: 8, namaPengguna: 'Citra Lestari', nim: '254107020008', okiPemohon: 'PP', logoUrl: null, tanggalRequest: '2026-11-15T09:25:00', status: 'Dikonfirmasi' },
+  { idRequestPassword: 9, namaPengguna: 'Dimas Arya', nim: '254107020009', okiPemohon: 'HMTI', logoUrl: null, tanggalRequest: '2026-11-14T15:40:00', status: 'Menunggu' },
+  { idRequestPassword: 10, namaPengguna: 'Intan Permata', nim: '254107020010', okiPemohon: 'HIMANIA', logoUrl: null, tanggalRequest: '2026-11-14T16:20:00', status: 'Dikonfirmasi' },
+];
+
 export async function getUsers(params = {}) {
   if (!isMockEnabled()) {
     const queryParams = new URLSearchParams();
@@ -146,7 +161,32 @@ export async function getRequestPasswordList(params = {}) {
   }
 
   await delay(50);
-  return { data: [], meta: { page: 1, limit: 10, total: 0, totalPages: 1 } };
+
+  const page = Math.max(1, Number(params.page) || 1);
+  const limit = Math.max(1, Number(params.limit) || 10);
+  const query = String(params.q || '').trim().toLowerCase();
+  const status = String(params.status || 'all').toLowerCase();
+
+  const filtered = mockRequestPasswords.filter((item) => {
+    const matchesQuery = !query
+      || item.namaPengguna.toLowerCase().includes(query)
+      || item.nim.includes(query);
+    const matchesStatus = status === 'all'
+      || item.status.toLowerCase() === status;
+    return matchesQuery && matchesStatus;
+  });
+
+  const total = filtered.length;
+  const start = (page - 1) * limit;
+  return {
+    data: filtered.slice(start, start + limit).map((item) => ({ ...item })),
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    },
+  };
 }
 
 /**
@@ -158,7 +198,8 @@ export async function getRequestPasswordDetail(id) {
     return await apiFetch(`/api/kelola-pengguna/request-password/${id}`);
   }
   await delay(50);
-  return null;
+  const item = mockRequestPasswords.find((row) => String(row.idRequestPassword) === String(id));
+  return item ? { ...item } : null;
 }
 
 /**
@@ -197,6 +238,8 @@ export async function konfirmasiRequestPassword(id, pesan) {
   }
 
   await delay(50);
+  const item = mockRequestPasswords.find((row) => String(row.idRequestPassword) === String(id));
+  if (item) item.status = 'Dikonfirmasi';
   return { message: 'Request password dikonfirmasi' };
 }
 

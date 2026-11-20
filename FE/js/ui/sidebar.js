@@ -29,53 +29,56 @@ function getStoredGroupOpen(groupKey) {
  */
 function renderSidebarBrand(collapsed) {
   if (collapsed) {
-    return `
-      <div class="flex flex-col w-full items-center justify-center gap-3 px-2 pt-5 pb-5">
-        <a href="#/inventaris" aria-label="PinjemDulu beranda" title="PinjemDulu beranda" class="inline-flex items-center justify-center transition hover:opacity-90">
-          <img
-            src="assets/img/Logo-PinjemDulu.png"
-            alt="Logo PinjemDulu"
-            class="h-10 w-10 shrink-0 rounded-[12px] object-contain shadow-sm"
-          />
-        </a>
-        <button
-          type="button"
-          data-action="toggle-sidebar"
-          aria-label="Lebarkan sidebar"
-          title="Lebarkan sidebar"
-          aria-expanded="false"
-          class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-zinc-200 bg-white text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-800"
-        >
-          ${renderIcon('PanelLeft', 'h-5 w-5')}
-        </button>
-      </div>
-    `;
-  }
-
   return `
-    <div class="flex w-full items-center justify-between px-4 pt-6 pb-5">
-      <a href="#/inventaris" aria-label="PinjemDulu beranda" class="inline-flex min-w-0 items-center gap-3 transition hover:opacity-90">
+    <div class="mx-auto flex w-fit flex-col items-center gap-3 pt-5 pb-5">
+      <div aria-label="Logo PinjemDulu" title="PinjemDulu" class="inline-flex items-center justify-center">
         <img
           src="assets/img/Logo-PinjemDulu.png"
           alt="Logo PinjemDulu"
-          class="h-[42px] w-[42px] shrink-0 rounded-[14px] object-contain shadow-sm sm:h-[44px] sm:w-[44px]"
+          class="h-11 w-11 shrink-0 rounded-[12px] object-contain shadow-sm"
+        />
+      </div>
+      <button
+        type="button"
+        data-action="toggle-sidebar"
+        aria-label="Lebarkan sidebar"
+        title="Lebarkan sidebar"
+        aria-expanded="false"
+        class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-800"
+      >
+        ${renderIcon('PanelLeft', 'h-5 w-5')}
+      </button>
+    </div>
+  `;
+}
+
+  return `
+    <div class="flex w-full items-center justify-between px-4 pt-5 pb-5">
+      <div aria-label="Logo PinjemDulu" class="inline-flex min-w-0 items-center gap-3">
+        <img
+          src="assets/img/Logo-PinjemDulu.png"
+          alt="Logo PinjemDulu"
+          class="h-11 w-11 shrink-0 rounded-[12px] object-contain shadow-sm"
         />
         <div class="flex min-w-0 flex-col leading-none">
           <span class="truncate text-[20px] font-bold tracking-tight sm:text-[24px]">
             <span class="text-zinc-900">Pinjem</span><span class="text-primary">Dulu</span>
           </span>
-          <span class="mt-1.5 truncate text-[8px] font-semibold uppercase tracking-[0.26em] text-zinc-500">
+          <span
+            style="letter-spacing: 0.24em;"
+            class="mt-0.5 truncate text-[8px] font-semibold uppercase text-zinc-500"
+          >
             INVENTARIS OKI KAMPUS
           </span>
         </div>
-      </a>
+      </div>
       <button
         type="button"
         data-action="toggle-sidebar"
         aria-label="Persempit sidebar"
         title="Persempit sidebar"
         aria-expanded="true"
-        class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-zinc-200 bg-white text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-800"
+        class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-800"
       >
         ${renderIcon('PanelLeft', 'h-5 w-5')}
       </button>
@@ -106,8 +109,8 @@ function renderSidebarNav(items, collapsed, currentHash, role = '', idPrefix = '
         // Jika belum ada preferensi, buka otomatis ketika salah satu submenu aktif.
         const storedOpen = getStoredGroupOpen(item.key);
         const isOpen = storedOpen ?? (hasActiveChild || isDashboardOpen);
-        const icon = item.icon ? renderIcon(item.icon, 'h-6 w-6 text-zinc-400 transition-colors sidebar-nav-group-icon-svg') : '';
-        const chevron = isOpen ? renderIcon('ChevronUp', 'h-4 w-4 text-zinc-400 transition-colors sidebar-nav-group-chevron-svg') : renderIcon('ChevronDown', 'h-4 w-4 text-zinc-400 transition-colors sidebar-nav-group-chevron-svg');
+        const icon = item.icon ? renderIcon(item.icon, 'h-6 w-6 transition-colors sidebar-nav-group-icon-svg') : '';
+        const chevron = isOpen ? renderIcon('ChevronUp', 'h-4 w-4 transition-colors sidebar-nav-group-chevron-svg') : renderIcon('ChevronDown', 'h-4 w-4 transition-colors sidebar-nav-group-chevron-svg');
         const tooltip = collapsed ? `title="${escapeHtml(item.label)}"` : '';
         const groupBadge = item.badge
           ? `<span class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-semibold text-white">${escapeHtml(String(item.badge))}</span>`
@@ -122,7 +125,7 @@ function renderSidebarNav(items, collapsed, currentHash, role = '', idPrefix = '
                 data-group="${escapeHtml(item.key)}"
                 ${tooltip}
                 aria-expanded="${isOpen}"
-                class="group flex w-full items-center justify-center rounded-2xl px-0 py-3 text-[15px] transition text-zinc-500 hover:bg-zinc-50/60 hover:text-zinc-900"
+                class="group flex w-full items-center justify-center rounded-2xl px-3 py-3 text-[15px] transition text-zinc-500 hover:bg-zinc-50/60 hover:text-zinc-900"
               >
                 <span class="inline-flex h-6 w-6 shrink-0 items-center justify-center">
                   ${icon}
@@ -175,7 +178,7 @@ function renderSidebarNav(items, collapsed, currentHash, role = '', idPrefix = '
               data-group="${escapeHtml(item.key)}"
               aria-expanded="${isOpen}"
               aria-controls="${escapeHtml(subId)}"
-              class="group flex w-full items-center justify-between rounded-2xl px-3 py-3 text-[15px] text-zinc-400 transition hover:bg-zinc-50/60 hover:text-zinc-900 font-medium"
+              class="group sidebar-nav-group flex w-full items-center justify-between rounded-2xl px-3 py-3 text-[15px] text-zinc-400 transition hover:bg-zinc-50/60 hover:text-zinc-900 font-medium"
             >
               <div class="flex items-center gap-3">
                 <span class="inline-flex h-6 w-6 shrink-0 items-center justify-center">
@@ -212,7 +215,7 @@ function renderSidebarNav(items, collapsed, currentHash, role = '', idPrefix = '
               href="${escapeHtml(item.href)}"
               ${tooltip}
               aria-current="${active ? 'page' : 'false'}"
-              class="group flex w-full items-center justify-center rounded-2xl px-0 py-3 text-[15px] transition ${
+              class="group flex w-full items-center justify-center rounded-2xl px-3 py-3 text-[15px] transition ${
                 active
                   ? 'bg-zinc-50 font-semibold text-primary'
                   : 'text-zinc-500 hover:bg-zinc-50/60 hover:text-zinc-900'
@@ -364,22 +367,25 @@ export function renderMobileDrawer({ user = null, currentHash = '#/dashboard-pem
         open ? 'translate-x-0' : '-translate-x-full'
       }"
     >
-      <div class="flex w-full items-center justify-between px-4 pt-6 pb-5">
-        <a href="#/inventaris" aria-label="PinjemDulu beranda" class="inline-flex min-w-0 items-center gap-3 transition hover:opacity-90">
+      <div class="flex w-full items-center justify-between px-4 pt-5 pb-5">
+        <div aria-label="Logo PinjemDulu" class="inline-flex min-w-0 items-center gap-3">
           <img
             src="assets/img/Logo-PinjemDulu.png"
             alt="Logo PinjemDulu"
-            class="h-[42px] w-[42px] shrink-0 rounded-[14px] object-contain shadow-sm"
+            class="h-11 w-11 shrink-0 rounded-[12px] object-contain shadow-sm"
           />
           <div class="flex min-w-0 flex-col leading-none">
-            <span class="truncate text-[20px] font-bold tracking-tight">
+            <span class="whitespace-nowrap font-bold tracking-tight" style="font-size: 24px; line-height: 1;">
               <span class="text-zinc-900">Pinjem</span><span class="text-primary">Dulu</span>
             </span>
-            <span class="mt-1.5 truncate text-[8px] font-semibold uppercase tracking-[0.26em] text-zinc-500">
+            <span
+              style="letter-spacing: 0.24em;"
+              class="mt-0.5 truncate text-[8px] font-semibold uppercase text-zinc-500"
+            >
               INVENTARIS OKI KAMPUS
             </span>
           </div>
-        </a>
+        </div>
         <button
           type="button"
           data-action="close-drawer"

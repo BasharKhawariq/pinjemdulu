@@ -13,6 +13,7 @@ import { formatTanggal } from '../lib/format.js';
 import { renderIcon } from '../ui/icons.js';
 import { escapeHtml } from '../ui/html.js';
 import { renderOrganisasiLogo } from '../ui/organisasi-badge.js';
+import { renderStatusChip } from '../ui/status-chip.js';
 import { renderEmptyState } from '../ui/empty-state.js';
 import { renderTableLoadingRow } from '../ui/loading-state.js';
 import * as PlaceholderPage from './placeholder.js';
@@ -113,6 +114,7 @@ function getPeminjamanTableRows() {
       tanggalDiajukan: row.tanggalPengajuan || row.createdAt || row.startDate,
       tanggalMulai: row.startDate || row.mulai || row.tanggalMulai,
       tanggalSelesai: row.endDate || row.selesai || row.tanggalSelesai,
+      tanggalPengambilan: row.tanggalPengambilan || null,
       jumlahUnit: row.jumlahPinjam ?? 1,
       status: row.status,
       keperluan: row.keperluan || '—',
@@ -131,7 +133,10 @@ function getPengembalianTableRows() {
       logoUrl: row.logoPemilikUrl || row.inventaris?.logoUrl || row.logoUrl || null,
       tanggalMulai: row.tanggalMulai,
       tanggalSelesai: row.tanggalSelesai,
+      tanggalPengambilan: row.tanggalPengambilan || null,
       tanggalDikembalikan: row.tanggalDikembalikan,
+      waktuTerlambat: row.waktuTerlambat || null,
+      diprosesOleh: row.diprosesOleh || null,
       jumlahUnit: row.jumlahUnit ?? row.jumlahPinjam ?? 1,
       status: row.status,
       keperluan: row.keperluan || '—',
@@ -304,72 +309,75 @@ function renderTable() {
 
 function renderDetailModal() {
   if (!detailRow) return '';
-  const badge = getStatusBadge(detailRow.status);
   const isPengembalian = activeTab === 'pengembalian';
+  const statusKey = String(detailRow.status || '').toLowerCase();
+  const isTerlambat = statusKey === 'terlambat' || statusKey === STATUS_PEMINJAMAN.TERLAMBAT;
+  const isDikembalikan = statusKey === 'dikembalikan' || statusKey === 'selesai' || statusKey === STATUS_PEMINJAMAN.DIKEMBALIKAN;
+  const isDitolak = statusKey === 'ditolak' || statusKey === STATUS_PEMINJAMAN.DITOLAK;
+  const showPickup = !isPengembalian && (statusKey === 'dipinjam' || statusKey === STATUS_PEMINJAMAN.DIPINJAM);
+  const daysLate = detailRow.waktuTerlambat || 3;
+  const dateColumns = isPengembalian
+    ? [
+        { label: 'Tanggal Mulai', value: formatDateEnOrId(detailRow.tanggalMulai) },
+        { label: 'Tanggal Pengambilan', value: detailRow.tanggalPengambilan ? formatDateEnOrId(detailRow.tanggalPengambilan) : '–' },
+        { label: 'Tanggal Selesai', value: formatDateEnOrId(detailRow.tanggalSelesai) },
+        { label: 'Tanggal Pengembalian', value: detailRow.tanggalDikembalikan ? formatDateEnOrId(detailRow.tanggalDikembalikan) : '–' },
+      ]
+    : [
+        { label: 'Tanggal Pengajuan', value: formatDateEnOrId(detailRow.tanggalDiajukan) },
+        { label: 'Tanggal Mulai', value: formatDateEnOrId(detailRow.tanggalMulai) },
+        ...(showPickup ? [{ label: 'Tanggal Pengambilan', value: detailRow.tanggalPengambilan ? formatDateEnOrId(detailRow.tanggalPengambilan) : '–' }] : []),
+        { label: 'Tanggal Selesai', value: formatDateEnOrId(detailRow.tanggalSelesai) },
+      ];
+  const title = isPengembalian ? (isDitolak ? 'Detail Penolakan' : 'Detail Pengembalian') : 'Detail Peminjaman';
 
   return `
     <div class="fixed inset-0 z-[9999] isolate flex items-center justify-center bg-slate-900/35 backdrop-blur-sm p-4" data-modal-overlay>
-      <section role="dialog" aria-modal="true" aria-labelledby="dash-detail-title" class="relative z-10 isolate w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+      <section role="dialog" aria-modal="true" aria-labelledby="dash-detail-title" class="relative z-10 isolate max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl sm:p-8">
         <div class="flex items-start justify-between gap-4">
-          <div>
-            <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">
-              Detail ${isPengembalian ? 'Pengembalian' : 'Peminjaman'}
-            </p>
-            <h2 id="dash-detail-title" class="mt-1 text-lg font-semibold text-slate-900">${escapeHtml(detailRow.namaBarang)}</h2>
-          </div>
-          <button type="button" data-action="close-detail" aria-label="Tutup detail" class="rounded-lg p-2 text-slate-400 hover:bg-slate-100">
-            ${renderIcon('X', 'h-4 w-4')}
-          </button>
+          <h2 id="dash-detail-title" class="text-2xl font-semibold tracking-tight text-slate-900">${title}</h2>
+          <button type="button" data-action="close-detail" aria-label="Tutup detail" class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700">${renderIcon('X', 'h-5 w-5')}</button>
         </div>
-        <dl class="mt-5 grid grid-cols-2 gap-x-4 gap-y-4 text-sm">
-          <div>
-            <dt class="text-xs text-slate-400">Organisasi</dt>
-            <dd class="mt-1 font-medium text-slate-700 inline-flex items-center gap-1.5">${renderOrganisasiLogo(detailRow.organisasi, detailRow.logoUrl, 'h-4 w-4')}<span>${escapeHtml(detailRow.organisasi)}</span></dd>
+
+        <div class="mt-6 space-y-6 text-sm">
+          <div class="flex items-center justify-between gap-6">
+            <p class="text-base font-semibold text-slate-900">Barang Dipinjam</p>
+            <div class="text-right">
+              <p class="text-base font-medium text-slate-800">${escapeHtml(detailRow.namaBarang)}</p>
+              <p class="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-slate-600">${renderOrganisasiLogo(detailRow.organisasi, detailRow.logoUrl, 'h-4 w-4')}<span>${escapeHtml(detailRow.organisasi)}</span></p>
+            </div>
           </div>
-          <div>
-            <dt class="text-xs text-slate-400">Status</dt>
-            <dd class="mt-1 font-medium text-slate-700">${escapeHtml(badge.label)}</dd>
+          <div class="flex items-center justify-between gap-6"><p class="text-base font-semibold text-slate-900">Jumlah Unit</p><p class="text-base font-medium text-slate-800">${escapeHtml(detailRow.jumlahUnit || 1)}</p></div>
+
+          <div class="grid grid-cols-2 gap-4 ${dateColumns.length === 4 ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} sm:gap-0 sm:divide-x sm:divide-slate-300">
+            ${dateColumns.map((date, index) => `<div class="text-center ${index === 0 ? 'sm:px-2' : 'sm:px-4'}"><p class="text-sm font-semibold text-slate-900 sm:text-base">${date.label}</p><p class="mt-3 text-sm font-medium text-slate-800 sm:text-base">${escapeHtml(date.value)}</p></div>`).join('')}
           </div>
-          <div>
-            <dt class="text-xs text-slate-400">Tanggal mulai</dt>
-            <dd class="mt-1 font-medium text-slate-700">${escapeHtml(formatDateEnOrId(detailRow.tanggalMulai))}</dd>
+
+          <div class="flex items-center justify-between gap-6">
+            <p class="text-base font-semibold text-slate-900">Status</p>
+            <div class="flex items-center gap-2">
+              ${isPengembalian && isTerlambat ? `
+                <div class="relative group inline-flex items-center">
+                  <span class="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-rose-700 transition-colors hover:bg-rose-50 hover:text-rose-800" aria-label="Informasi keterlambatan">
+                    ${renderIcon('AlertCircle', 'h-6 w-6')}
+                  </span>
+                  <div class="pointer-events-none absolute bottom-full mb-2 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-30 whitespace-nowrap rounded-xl bg-white px-4 py-3 text-sm font-medium text-slate-900 shadow-xl border border-slate-200">
+                    Waktu Terlambat: ${daysLate} Hari
+                    <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-white"></div>
+                  </div>
+                </div>
+              ` : ''}
+              ${renderStatusChip({ status: detailRow.status })}
+            </div>
           </div>
-          <div>
-            <dt class="text-xs text-slate-400">Tanggal selesai</dt>
-            <dd class="mt-1 font-medium text-slate-700">${escapeHtml(formatDateEnOrId(detailRow.tanggalSelesai))}</dd>
-          </div>
-          ${
-            isPengembalian
-              ? `<div>
-                  <dt class="text-xs text-slate-400">Tanggal dikembalikan</dt>
-                  <dd class="mt-1 font-medium text-slate-700">${detailRow.tanggalDikembalikan ? escapeHtml(formatDateEnOrId(detailRow.tanggalDikembalikan)) : '-'}</dd>
-                </div>`
-              : `<div>
-                  <dt class="text-xs text-slate-400">Tanggal diajukan</dt>
-                  <dd class="mt-1 font-medium text-slate-700">${escapeHtml(formatDateEnOrId(detailRow.tanggalDiajukan))}</dd>
-                </div>`
-          }
-          <div>
-            <dt class="text-xs text-slate-400">Jumlah unit</dt>
-            <dd class="mt-1 font-medium text-slate-700">${escapeHtml(detailRow.jumlahUnit)} unit</dd>
-          </div>
-          <div class="col-span-2">
-            <dt class="text-xs text-slate-400">Keperluan</dt>
-            <dd class="mt-1 font-medium text-slate-700">${escapeHtml(detailRow.keperluan || '—')}</dd>
-          </div>
-          ${
-            detailRow.alasanPenolakan
-              ? `<div class="col-span-2">
-                  <dt class="text-xs text-slate-400">Alasan penolakan</dt>
-                  <dd class="mt-1 font-medium text-rose-700">${escapeHtml(detailRow.alasanPenolakan)}</dd>
-                </div>`
-              : ''
-          }
-        </dl>
+
+          ${isPengembalian && (isDikembalikan || isTerlambat) && detailRow.diprosesOleh ? `<div class="flex items-center justify-between gap-6"><p class="text-base font-semibold text-slate-900">Diproses Oleh</p><p class="text-base font-medium text-slate-800">${escapeHtml(detailRow.diprosesOleh)}</p></div>` : ''}
+          ${isDitolak ? `<div><p class="mb-2 text-base font-semibold text-slate-900">${isPengembalian ? 'Alasan Penolakan' : 'Alasan Ditolak'}</p><div class="rounded-2xl border border-slate-100 bg-white px-5 py-4 text-base font-medium text-slate-700">${escapeHtml(detailRow.alasanPenolakan || (isPengembalian ? 'Pengembalian ditolak oleh pengelola.' : 'Peminjaman tidak dapat diproses karena alasan operasional'))}</div></div>` : ''}
+          <div><p class="mb-2 text-base font-semibold text-slate-900">Keperluan Peminjaman Barang</p><div class="rounded-2xl border border-slate-100 bg-white px-5 py-4 text-base font-medium text-slate-800">${escapeHtml(detailRow.keperluan || '—')}</div></div>
+        </div>
+
         <div class="mt-6 flex justify-end">
-          <button type="button" data-action="close-detail" class="rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white hover:opacity-90">
-            Tutup
-          </button>
+          <button type="button" data-action="close-detail" data-autofocus class="rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:brightness-110">Tutup</button>
         </div>
       </section>
     </div>

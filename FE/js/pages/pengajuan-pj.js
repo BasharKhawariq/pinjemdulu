@@ -240,7 +240,7 @@ function renderForm(state) {
         </div>
 
         <div class="mt-6 flex items-center justify-end gap-3">
-          <button type="button" data-action="cancel-form" class="rounded-xl px-5 py-3 text-sm font-medium text-slate-500 transition-colors hover:bg-slate-50">Batal</button>
+          <button type="button" data-action="cancel-form" class="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-medium text-slate-600 transition-colors hover:border-rose-700 hover:bg-rose-700 hover:text-white">Batal</button>
           <button type="button" data-action="submit-form" class="rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:brightness-110">Ajukan</button>
         </div>
       </section>
