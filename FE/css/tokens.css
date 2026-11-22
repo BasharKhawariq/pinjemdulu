@@ -10,13 +10,11 @@
 
   --primary: #142C52;
   --primary-foreground: #FFFFFF;
-  /* Hover tombol primary: satu tingkat lebih terang dari --primary. */
   --primary-hover: #24497F;
   --primary-active: #142C52;
 
   --secondary: #F3F4F6;
   --secondary-foreground: #111827;
-  /* Hover tombol abu/outline: cukup lebih gelap dari --secondary, bukan warna primary. */
   --secondary-hover: #E4E4E7;
   --secondary-hover-foreground: #18181B;
 
