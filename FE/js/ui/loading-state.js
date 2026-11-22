@@ -22,21 +22,42 @@ export function renderSpinner({
   `.trim();
 }
 
+/** Path animasi Lottie "businessman flies up with rocket" untuk indikator loading. */
+export const LOADING_LOTTIE_SRC = 'assets/animations/loading-rocket.json';
+
 /**
- * Render baris tabel dengan spinner di tengah untuk status data sedang dimuat.
+ * Render kontainer animasi Lottie untuk indikator loading.
+ * Elemen ber-atribut `data-pd-lottie` akan dipasangkan player oleh main.js.
+ * Spinner CSS di dalamnya hanya menjadi fallback bila player belum/gagal termuat.
+ * @param {{ className?: string, label?: string }} [options]
+ * @returns {string}
+ */
+export function renderLottieAnimation({
+  className = 'h-16 w-28 sm:h-20 sm:w-36',
+  label = 'Memuat',
+} = {}) {
+  return `
+    <span class="inline-flex items-center justify-center ${className}" data-pd-lottie="${LOADING_LOTTIE_SRC}" role="img" aria-label="${escapeHtml(label)}">
+      ${renderSpinner({ size: 'h-7 w-7' })}
+    </span>
+  `.trim();
+}
+
+/**
+ * Render baris tabel dengan animasi loading di tengah untuk status data sedang dimuat.
  * @param {{ colspan?: number, message?: string, minHeight?: string }} [options]
  * @returns {string}
  */
 export function renderTableLoadingRow({
   colspan = 8,
   message = 'Memuat data...',
-  minHeight = 'py-14',
+  minHeight = 'py-10 sm:py-14',
 } = {}) {
   return `
     <tr class="border-b-0">
-      <td colspan="${colspan}" class="${minHeight} text-center">
-        <div class="flex flex-col items-center justify-center gap-3" role="status" aria-live="polite">
-          ${renderSpinner({ size: 'h-7 w-7' })}
+      <td colspan="${colspan}" class="${minHeight} px-4 text-center">
+        <div class="pd-fade-in flex flex-col items-center justify-center gap-2" role="status" aria-live="polite">
+          ${renderLottieAnimation({ className: 'h-16 w-28 sm:h-20 sm:w-36' })}
           <p class="text-xs font-medium text-slate-400">${escapeHtml(message)}</p>
           <span class="sr-only">Sedang memuat data dari server...</span>
         </div>
@@ -46,17 +67,17 @@ export function renderTableLoadingRow({
 }
 
 /**
- * Render kontainer vertikal (untuk grid kartu / halaman kosong) dengan spinner.
+ * Render kontainer vertikal (untuk grid kartu / halaman kosong) dengan animasi loading.
  * @param {{ message?: string, minHeight?: string }} [options]
  * @returns {string}
  */
 export function renderContainerLoading({
   message = 'Memuat data...',
-  minHeight = 'min-h-[260px]',
+  minHeight = 'min-h-[220px] sm:min-h-[260px]',
 } = {}) {
   return `
-    <div class="flex ${minHeight} w-full flex-col items-center justify-center gap-3 py-12 text-center" role="status" aria-live="polite">
-      <div class="inline-flex h-9 w-9 animate-spin rounded-full border-2 border-slate-200 border-t-primary" aria-hidden="true"></div>
+    <div class="pd-fade-in flex ${minHeight} w-full flex-col items-center justify-center gap-2 px-4 py-10 text-center sm:py-12" role="status" aria-live="polite">
+      ${renderLottieAnimation({ className: 'h-24 w-40 sm:h-28 sm:w-48' })}
       <p class="text-sm font-medium text-slate-500">${escapeHtml(message)}</p>
       <span class="sr-only">Sedang memuat data...</span>
     </div>

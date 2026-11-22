@@ -63,6 +63,8 @@ test('pages-render: DashboardPage merender sapaan peminjam, 4 kartu status, ring
   assert.ok(html.includes('Total Peminjaman'));
   assert.ok(html.includes('Pengajuan PJ'));
   assert.ok(html.includes('Pengajuan Saya'));
+  assert.ok(html.includes('data-card-list'), 'Dashboard peminjam menampilkan daftar card untuk mobile');
+  assert.ok(html.includes('hidden overflow-x-auto md:block'), 'Tabel desktop tetap tersedia');
   assert.ok(!html.includes('undefined'));
   assert.ok(!html.includes('[object Object]'));
   assertNoEscapedMarkup(html, 'DashboardPage');

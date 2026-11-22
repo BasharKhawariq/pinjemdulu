@@ -9,7 +9,7 @@ import { renderSearchInput } from '../ui/search-input.js';
 import { renderModal as renderModalComponent } from '../ui/modal.js';
 import { renderOrganisasiLogo } from '../ui/organisasi-badge.js';
 import { renderEmptyState } from '../ui/empty-state.js';
-import { renderTableLoadingRow } from '../ui/loading-state.js';
+import { renderContainerLoading, renderTableLoadingRow } from '../ui/loading-state.js';
 
 let rows = [];
 let isLoading = false;
@@ -41,39 +41,107 @@ function statusInfo(status) {
   if (value === STATUS_REQUEST_PJ.DITOLAK) return { label: 'Ditolak', cls: 'bg-danger text-danger-foreground' };
   return { label: status || '—', cls: 'bg-zinc-100 text-zinc-700' };
 }
+function organizationName(row) {
+  return (typeof row.organisasi === 'string' ? row.organisasi : row.organisasi?.namaOrganisasi) || row.okiPemohon || row.pemohon?.organisasi?.namaOrganisasi || row.pemohon?.displayOrganization || '';
+}
 function visibleRows() {
   const q = searchTerm.trim().toLowerCase();
   return rows.filter((row) => {
     const name = personName(row);
-    const organization = (typeof row.organisasi === 'string' ? row.organisasi : row.organisasi?.namaOrganisasi) || row.okiPemohon || row.pemohon?.organisasi?.namaOrganisasi || row.pemohon?.displayOrganization || '';
+    const organization = organizationName(row);
     const nim = row.pemohon?.nim || row.nimPemohon || row.nim || '';
     return String(row.status).toLowerCase() === activeTab && (!q || `${name} ${organization} ${nim}`.toLowerCase().includes(q));
   });
+}
+/**
+ * Hitung daftar baris yang tampil pada halaman saat ini (dipakai tabel & kartu).
+ */
+function getVisiblePageRows() {
+  const filtered = visibleRows();
+  const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  currentPage = Math.min(currentPage, pages);
+  const start = (currentPage - 1) * PAGE_SIZE;
+  return { filtered, start, pageRows: filtered.slice(start, start + PAGE_SIZE) };
+}
+function isPending(row) {
+  return String(row.status || '').toLowerCase() === 'menunggu';
+}
+/**
+ * Render grup tombol aksi baris/kartu pengajuan (Detail / Setujui / Tolak).
+ * @param {object} row
+ * @param {string} [sizeClass='h-8 w-8'] Ukuran tombol ikon (h-8 w-8 di tabel, h-10 w-10 di kartu).
+ */
+function renderActions(row, sizeClass = 'h-8 w-8') {
+  const id = String(row.id);
+  const baseClass = `inline-flex ${sizeClass} shrink-0 items-center justify-center rounded-xl transition-colors active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`;
+  return `<div class="flex items-center justify-center gap-0" role="group" aria-label="Aksi pengajuan">
+    <button type="button" data-action="detail" data-id="${escapeHtml(id)}" title="Lihat detail" aria-label="Lihat detail" class="${baseClass} text-slate-400 hover:bg-slate-100 hover:text-slate-700">${renderIcon('Info', 'h-4 w-4')}</button>
+    ${
+      isPending(row)
+        ? `<button type="button" data-action="approve" data-id="${escapeHtml(id)}" title="Setujui pengajuan" aria-label="Setujui pengajuan" class="${baseClass} text-green-600 hover:bg-green-50">${renderIcon('CircleCheck', 'h-4 w-4')}</button>
+      <button type="button" data-action="reject" data-id="${escapeHtml(id)}" title="Tolak pengajuan" aria-label="Tolak pengajuan" class="${baseClass} text-red-600 hover:bg-red-50">${renderIcon('CircleX', 'h-4 w-4')}</button>`
+        : ''
+    }
+  </div>`;
+}
+/**
+ * Render baris tunggal dalam tabel pengajuan (desktop >= md).
+ */
+function renderTableRow(row, index, start) {
+  const name = personName(row);
+  const org = organizationName(row);
+  const status = statusInfo(row.status);
+  return `<tr class="border-b border-slate-100 transition-colors last:border-0 hover:bg-slate-50/60">
+      <td class="whitespace-nowrap px-4 py-3.5 text-center text-xs text-slate-400">${start + index + 1}</td>
+      <td class="min-w-[220px] px-4 py-3"><div class="flex items-center gap-2.5"><span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-xs font-semibold text-white">${escapeHtml(initials(name))}</span><div class="min-w-0"><span class="block truncate text-xs font-medium text-slate-500">${escapeHtml(name)}</span>${org ? `<span class="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500">${renderOrganisasiLogo(org, row.pemohon?.logoUrl || row.logoUrl, 'h-3.5 w-3.5')}<span>${escapeHtml(org)}</span></span>` : ''}</div></div></td>
+      <td class="w-[190px] whitespace-nowrap px-4 py-3.5 text-center text-xs text-slate-400">${escapeHtml(dateLabel(row.tanggalPengajuan || row.tanggalRequest || row.createdAt))}</td>
+      <td class="w-[140px] px-4 py-3.5 text-center"><span class="inline-flex whitespace-nowrap rounded-xl px-2.5 py-1 text-xs font-semibold ${status.cls}">${escapeHtml(status.label)}</span></td>
+      <td class="whitespace-nowrap px-4 py-3.5">${renderActions(row, 'h-8 w-8')}</td>
+    </tr>`;
+}
+/**
+ * Render kartu pengajuan untuk tampilan mobile (< md).
+ */
+function renderCard(row, index, start) {
+  const name = personName(row);
+  const org = organizationName(row);
+  const status = statusInfo(row.status);
+  const delay = Math.min(index, 11) * 40;
+  return `<article class="pd-rise-in rounded-xl border border-slate-100 bg-white p-4 shadow-sm" style="animation-delay:${delay}ms">
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex min-w-0 items-center gap-2.5">
+          <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-xs font-semibold text-white">${escapeHtml(initials(name))}</span>
+          <span class="min-w-0">
+            <span class="block truncate text-sm font-semibold text-slate-800">${escapeHtml(name)}</span>
+            ${org ? `<span class="mt-0.5 flex items-center gap-1.5 text-[11px] text-slate-500">${renderOrganisasiLogo(org, row.pemohon?.logoUrl || row.logoUrl, 'h-3.5 w-3.5')}<span>${escapeHtml(org)}</span></span>` : ''}
+          </span>
+        </div>
+        <div class="shrink-0"><span class="inline-flex whitespace-nowrap rounded-xl px-2.5 py-1 text-xs font-semibold ${status.cls}">${escapeHtml(status.label)}</span></div>
+      </div>
+      <div class="mt-3 border-t border-slate-100 pt-3">
+        <span class="text-xs text-slate-400">Tanggal Pengajuan</span>
+        <span class="mt-0.5 block text-sm font-medium text-slate-700">${escapeHtml(dateLabel(row.tanggalPengajuan || row.tanggalRequest || row.createdAt))}</span>
+      </div>
+      <div class="mt-3 flex justify-end gap-1 border-t border-slate-100 pt-3">
+        ${renderActions(row, 'h-10 w-10')}
+      </div>
+    </article>`;
 }
 function renderTableRows() {
   if (isLoading) {
     return renderTableLoadingRow({ colspan: 5, message: 'Memuat data pengajuan...' });
   }
-  const filtered = visibleRows();
-  const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  currentPage = Math.min(currentPage, pages);
-  const start = (currentPage - 1) * PAGE_SIZE;
-  const pageRows = filtered.slice(start, start + PAGE_SIZE);
+  const { start, pageRows } = getVisiblePageRows();
   if (!pageRows.length) return renderEmptyState({ colspan: 5 });
-  return pageRows.map((row, index) => {
-    const id = String(row.id);
-    const name = personName(row);
-    const org = (typeof row.organisasi === 'string' ? row.organisasi : row.organisasi?.namaOrganisasi) || row.okiPemohon || row.pemohon?.organisasi?.namaOrganisasi || row.pemohon?.displayOrganization || '';
-    const status = statusInfo(row.status);
-    const pending = String(row.status || '').toLowerCase() === 'menunggu';
-    return `<tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50/60">
-      <td class="whitespace-nowrap px-4 py-3.5 text-center text-xs text-slate-400">${start + index + 1}</td>
-      <td class="min-w-[220px] px-4 py-3"><div class="flex items-center gap-2.5"><span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-xs font-semibold text-white">${escapeHtml(initials(name))}</span><div class="min-w-0"><span class="block truncate text-xs font-medium text-slate-500">${escapeHtml(name)}</span>${org ? `<span class="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500">${renderOrganisasiLogo(org, row.pemohon?.logoUrl || row.logoUrl, 'h-3.5 w-3.5')}<span>${escapeHtml(org)}</span></span>` : ''}</div></div></td>
-      <td class="w-[190px] whitespace-nowrap px-4 py-3.5 text-center text-xs text-slate-400">${escapeHtml(dateLabel(row.tanggalPengajuan || row.tanggalRequest || row.createdAt))}</td>
-      <td class="w-[140px] px-4 py-3.5 text-center"><span class="inline-flex whitespace-nowrap rounded-xl px-2.5 py-1 text-xs font-semibold ${status.cls}">${escapeHtml(status.label)}</span></td>
-      <td class="whitespace-nowrap px-4 py-3.5"><div class="flex items-center justify-center gap-0"><button type="button" data-action="detail" data-id="${escapeHtml(id)}" title="Lihat detail" aria-label="Lihat detail" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100">${renderIcon('Info', 'h-4 w-4')}</button>${pending ? `<button type="button" data-action="approve" data-id="${escapeHtml(id)}" title="Setujui pengajuan" aria-label="Setujui pengajuan" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-green-600 hover:bg-green-50">${renderIcon('CircleCheck', 'h-4 w-4')}</button><button type="button" data-action="reject" data-id="${escapeHtml(id)}" title="Tolak pengajuan" aria-label="Tolak pengajuan" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-red-600 hover:bg-red-50">${renderIcon('CircleX', 'h-4 w-4')}</button>` : ''}</div></td>
-    </tr>`;
-  }).join('');
+  return pageRows.map((row, index) => renderTableRow(row, index, start)).join('');
+}
+function renderCards() {
+  if (isLoading) {
+    return renderContainerLoading({ message: 'Memuat data pengajuan...' });
+  }
+  const { start, pageRows } = getVisiblePageRows();
+  if (!pageRows.length) return renderEmptyState({});
+  return pageRows.map((row, index) => renderCard(row, index, start)).join('');
 }
 import { renderPagination as renderSharedPagination } from '../ui/pagination.js';
 
@@ -97,18 +165,18 @@ function renderModal() {
       : 'Apakah anda yakin ingin menolak permohonan ini ?';
     const actionLabel = approve ? 'Setujui' : 'Tolak';
     const actionClass = approve
-      ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-      : 'bg-rose-600 text-white hover:bg-rose-700';
+      ? 'bg-emerald-600 text-white button-hover-soft-green'
+      : 'bg-rose-600 text-white button-hover-soft-red';
     const gif = approve ? 'assets/animations/modal-approve.gif' : 'assets/animations/modal-reject.gif';
     const action = approve ? 'confirm-approve' : 'confirm-reject';
-    return `<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4" data-modal-backdrop>
-      <section role="dialog" aria-modal="true" aria-labelledby="request-pj-confirm-title" class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+    return `<div class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4" data-modal-backdrop>
+      <section role="dialog" aria-modal="true" aria-labelledby="request-pj-confirm-title" class="pd-pop-in max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
         <div class="flex flex-col items-center text-center">
           <img src="${gif}" alt="" class="mb-4 h-24 w-24 object-contain" />
           <h2 id="request-pj-confirm-title" class="text-xl font-bold tracking-tight text-slate-900">${title}</h2>
           <p class="mt-2 text-sm font-normal text-slate-400">${description}</p>
           <div class="mt-6 flex w-full items-center gap-3">
-            <button type="button" data-action="back-confirm" class="h-12 flex-1 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 transition-colors hover:bg-secondary-hover hover:text-secondary-hover-foreground hover:border-secondary-hover">Kembali</button>
+            <button type="button" data-action="back-confirm" class="h-12 flex-1 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 button-hover-soft-neutral">Kembali</button>
             <button type="button" data-action="${action}" class="h-12 flex-1 rounded-xl ${actionClass} px-4 text-sm font-semibold transition-colors">${actionLabel}</button>
           </div>
         </div>
@@ -117,8 +185,8 @@ function renderModal() {
   }
   if (feedbackModal?.stage === 'reject-form') {
     const showError = rejectionValidationCount > 0;
-    return `<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4" data-modal-backdrop>
-      <section role="dialog" aria-modal="true" aria-labelledby="request-pj-reject-title" class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+    return `<div class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4" data-modal-backdrop>
+      <section role="dialog" aria-modal="true" aria-labelledby="request-pj-reject-title" class="pd-pop-in max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
         <h2 id="request-pj-reject-title" class="text-xl font-bold tracking-tight text-slate-900">Permohonan Ditolak</h2>
         <div class="mt-5 space-y-2">
           <label for="rejection-reason" class="block text-sm font-semibold text-slate-900">Alasan Penolakan</label>
@@ -126,8 +194,8 @@ function renderModal() {
           ${showError ? `<div id="rejection-reason-error" role="alert" class="rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-700 ${rejectionValidationCount > 0 ? 'validation-blink' : ''}">Alasan penolakan wajib diisi.</div>` : ''}
         </div>
         <div class="mt-6 flex items-center justify-end gap-3">
-          <button type="button" data-action="cancel-reject-form" class="h-12 rounded-xl border border-slate-200 bg-white px-5 text-sm font-medium text-slate-600 transition-colors hover:border-rose-700 hover:bg-rose-700 hover:text-white">Batal</button>
-          <button type="button" data-action="submit-rejection-reason" class="h-12 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition hover:brightness-110">Kirim</button>
+          <button type="button" data-action="cancel-reject-form" class="h-12 rounded-xl border border-slate-200 bg-white px-5 text-sm font-medium text-slate-600 button-hover-soft-red">Batal</button>
+          <button type="button" data-action="submit-rejection-reason" class="h-12 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground button-hover-soft-primary">Kirim</button>
         </div>
       </section>
     </div>`;
@@ -138,7 +206,7 @@ function renderModal() {
       title: feedbackModal.title,
       description: feedbackModal.message,
       variant: feedbackModal.type,
-      actions: [{ label: 'Tutup', action: 'close-feedback-modal', variant: 'default', className: 'w-full rounded-xl hover:brightness-110' }],
+      actions: [{ label: 'Tutup', action: 'close-feedback-modal', variant: 'default', className: 'w-full rounded-xl button-hover-soft-neutral' }],
     });
   }
   if (!modalRow) return '';
@@ -150,11 +218,11 @@ function renderModal() {
   const statusClass = status.label === 'Menunggu' ? 'bg-amber-50 text-amber-600' : status.label === 'Disetujui' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600';
   const rejectionReasonText = row.alasanPenolakan || row.alasan_penolakan || '';
   return `
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4" data-modal-backdrop>
-      <section role="dialog" aria-modal="true" aria-labelledby="request-pj-detail-title" class="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl sm:p-8">
+    <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4" data-modal-backdrop>
+      <section role="dialog" aria-modal="true" aria-labelledby="request-pj-detail-title" class="pd-pop-in max-h-[90dvh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl sm:p-8">
         <div class="flex items-start justify-between gap-4">
           <h2 id="request-pj-detail-title" class="text-2xl font-semibold tracking-tight text-slate-900">Informasi Pemohon</h2>
-          <button type="button" data-action="close-modal" aria-label="Tutup detail" class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700">${renderIcon('X', 'h-5 w-5')}</button>
+          <button type="button" data-action="close-modal" aria-label="Tutup detail" class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition-colors active:scale-95 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">${renderIcon('X', 'h-5 w-5')}</button>
         </div>
 
         <div class="mt-6 space-y-6 text-sm">
@@ -181,7 +249,7 @@ function renderModal() {
           </div>
         </div>
 
-        <div class="mt-6 flex justify-end"><button type="button" data-action="close-modal" class="rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:brightness-110">Tutup</button></div>
+        <div class="mt-6 flex justify-end"><button type="button" data-action="close-modal" class="rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground button-hover-soft-neutral">Tutup</button></div>
       </section>
     </div>`;
 }
@@ -192,13 +260,20 @@ function renderContent() {
     [STATUS_REQUEST_PJ.DISETUJUI, 'Disetujui'],
     [STATUS_REQUEST_PJ.DITOLAK, 'Ditolak'],
   ];
-  return `<section class="w-full px-5 pb-8 pt-8 sm:px-6 lg:px-7">
+  return `<section class="pd-page-in w-full px-5 pb-8 pt-8 sm:px-6 lg:px-7">
     <div class="mb-9"><h1 class="text-3xl font-semibold tracking-tight text-slate-900">List Pengajuan Penanggung Jawab</h1><p class="mt-1 text-sm text-slate-400">Pantau dan kelola proses pengajuan penanggung jawab inventaris.</p></div>
-    <div class="mb-3 inline-flex items-center gap-1 rounded-xl bg-white p-1.5">${tabs.map(([value, label]) => `<button type="button" data-action="tab" data-tab="${value}" class="rounded-lg px-4 py-2 text-[11px] font-medium transition ${activeTab === value ? 'bg-blue-100 text-slate-900' : 'text-slate-600 hover:bg-slate-50'}">${label}</button>`).join('')}</div>
+    <div class="mb-3 inline-flex items-center gap-1 rounded-xl bg-white p-1.5">${tabs.map(([value, label]) => `<button type="button" data-action="tab" data-tab="${value}" class="rounded-lg px-4 py-2 text-[11px] font-medium transition-colors active:scale-95 ${activeTab === value ? 'bg-blue-100 text-slate-900' : 'text-slate-600 hover:bg-slate-50'}">${label}</button>`).join('')}</div>
     <div class="rounded-xl bg-white p-4 shadow-[0_1px_4px_rgba(15,23,42,0.025)] sm:p-6">
       <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><h2 class="text-lg font-semibold text-slate-900">List ${activeTab === STATUS_REQUEST_PJ.MENUNGGU ? 'Menunggu' : activeTab === STATUS_REQUEST_PJ.DISETUJUI ? 'Disetujui' : 'Ditolak'}</h2><div class="flex items-center gap-3">${renderSearchInput({ id: 'search-pemohon-pj', value: searchTerm, placeholder: 'Cari nama pemohon', ariaLabel: 'Cari nama pemohon', className: 'w-full sm:w-64' })}</div></div>
       ${toastMessage ? `<div role="status" class="mb-3 rounded-lg px-4 py-2 text-sm ${toastType === 'error' ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}">${escapeHtml(toastMessage)}</div>` : ''}
-      <div class="w-full overflow-x-auto"><table class="w-full min-w-[650px] border-collapse text-left">
+      <div class="space-y-4">
+        <!-- Daftar Kartu (mobile < md) -->
+        <div class="space-y-3 md:hidden" data-card-list>
+          ${renderCards()}
+        </div>
+
+        <!-- Tabel (desktop >= md) -->
+        <div class="hidden w-full overflow-x-auto md:block"><table class="w-full min-w-[650px] border-collapse text-left">
         <thead>
           <tr class="border-b border-slate-100 text-sm leading-[140%] tracking-normal text-slate-400">
             <th class="px-4 py-3.5 text-center font-semibold">No</th>
@@ -211,6 +286,7 @@ function renderContent() {
         <tbody>
           ${renderTableRows()}
         </tbody></table>
+        </div>
       </div>
       <div class="mt-5 flex items-center justify-between gap-3"><p class="text-xs text-slate-500">Menampilkan ${count ? Math.min((currentPage - 1) * PAGE_SIZE + 1, count) : 0}–${Math.min(currentPage * PAGE_SIZE, count)} dari ${count} pengajuan</p>${renderPagination()}</div>
     </div>
@@ -350,6 +426,8 @@ export async function mount(root) {
     currentPage = 1;
     const tbody = rootElement.querySelector('tbody');
     if (tbody) tbody.innerHTML = renderTableRows();
+    const cardList = rootElement.querySelector('[data-card-list]');
+    if (cardList) cardList.innerHTML = renderCards();
     const footer = rootElement.querySelector('.mt-5.flex.items-center.justify-between');
     if (footer) footer.innerHTML = `<p class="text-[11px] text-slate-400">Menampilkan ${visibleRows().length ? 1 : 0}–${Math.min(PAGE_SIZE, visibleRows().length)} dari ${visibleRows().length} pengajuan</p>${renderPagination()}`;
   };

@@ -89,6 +89,84 @@ function initApp() {
 
   setupModalScrollLock();
 
+  // Pasang animasi Lottie pada setiap indikator loading ([data-pd-lottie]) di seluruh
+  // aplikasi, termasuk konten yang dirender ulang secara dinamis oleh tiap halaman.
+  // Animasi dihancurkan saat elemennya dilepas dari DOM agar tidak bocor (memori/CPU).
+  function setupLottieLoading() {
+    const lottie = window.lottie;
+    if (!lottie || typeof lottie.loadAnimation !== 'function') return;
+
+    const collect = (node) => {
+      if (!node || node.nodeType !== 1) return [];
+      const nodes = [];
+      if (node.matches('[data-pd-lottie]')) nodes.push(node);
+      nodes.push(...node.querySelectorAll('[data-pd-lottie]'));
+      return nodes;
+    };
+
+    const mount = (el) => {
+      if (el.dataset.pdLottieReady === '1') return;
+      const path = el.getAttribute('data-pd-lottie');
+      if (!path) return;
+
+      // Hormati preferensi pengguna: bila animasi diminta diminimalkan, cukup
+      // tampilkan spinner CSS statis bawaan tanpa memutar animasi.
+      if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+        el.dataset.pdLottieReady = '1';
+        return;
+      }
+
+      el.dataset.pdLottieReady = '1';
+      const fallbackMarkup = el.innerHTML;
+      const restoreFallback = () => {
+        el.innerHTML = fallbackMarkup;
+        el.dataset.pdLottieReady = '0';
+      };
+
+      try {
+        el.innerHTML = '';
+        const anim = lottie.loadAnimation({
+          container: el,
+          renderer: 'svg',
+          loop: true,
+          autoplay: true,
+          path,
+          rendererSettings: { preserveAspectRatio: 'xMidYMid meet' },
+        });
+        // Bila aset animasi gagal dimuat (offline atau dibuka via file://),
+        // kembalikan spinner CSS agar indikator loading tidak kosong.
+        anim.addEventListener('data_failed', restoreFallback);
+        el._pdLottieAnim = anim;
+      } catch {
+        restoreFallback();
+      }
+    };
+
+    const unmount = (el) => {
+      if (el._pdLottieAnim) {
+        try {
+          el._pdLottieAnim.destroy();
+        } catch {
+          /* abaikan */
+        }
+        el._pdLottieAnim = null;
+      }
+      el.dataset.pdLottieReady = '0';
+    };
+
+    const observer = new MutationObserver((records) => {
+      for (const record of records) {
+        record.addedNodes?.forEach((node) => collect(node).forEach(mount));
+        record.removedNodes?.forEach((node) => collect(node).forEach(unmount));
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    collect(document.body).forEach(mount);
+  }
+
+  setupLottieLoading();
+
   const shellRoot = document.getElementById('shell-root');
   const sidebarContainer = document.getElementById('sidebar-container');
   const contentContainer = document.getElementById('content-container');
@@ -108,6 +186,15 @@ function initApp() {
 
   let drawerOpen = false;
 
+  // Mainkan animasi masuk halaman setiap kali rute berubah.
+  // Class dihapus dan ditambah ulang dengan pemaksaan reflow agar animasi tidak terlewat.
+  function playPageEnter(el) {
+    if (!el) return;
+    el.classList.remove('pd-page-in');
+    void el.offsetWidth;
+    el.classList.add('pd-page-in');
+  }
+
   function renderShell() {
     // Simpan posisi scroll navigasi sebelum sidebar dirender ulang.
     const previousNavScrollTop = sidebarContainer
@@ -123,9 +210,9 @@ function initApp() {
       if (navbarContainer) navbarContainer.innerHTML = '';
       if (footerContainer) footerContainer.innerHTML = '';
       if (drawerContainer) drawerContainer.innerHTML = '';
-      if (shellRoot) shellRoot.className = 'w-full min-h-screen bg-white';
-      if (contentContainer) contentContainer.className = 'w-full min-h-screen';
-      if (mainEl) mainEl.className = 'w-full min-h-screen p-0';
+      if (shellRoot) shellRoot.className = 'w-full min-h-[100dvh] bg-white';
+      if (contentContainer) contentContainer.className = 'w-full min-h-[100dvh]';
+      if (mainEl) mainEl.className = 'w-full min-h-[100dvh] p-0';
       document.title = 'Masuk | PinjemDulu - Inventaris OKI Kampus';
       return;
     }
@@ -153,6 +240,36 @@ function initApp() {
 
     if (footerContainer) {
       footerContainer.innerHTML = renderFooter();
+    }
+  }
+
+  // Terapkan status collapsed langsung ke DOM tanpa membangun ulang sidebar,
+  // supaya transisi lebar CSS beranimasi mulus dan posisi logo/ikon tidak bergeser.
+  function setSidebarCollapsed(nextCollapsed, { persist = false } = {}) {
+    collapsed = nextCollapsed;
+
+    if (persist) {
+      try {
+        window.localStorage.setItem(STORAGE_KEY_SIDEBAR, collapsed ? '1' : '0');
+      } catch {
+        /* abaikan jika localStorage tidak tersedia */
+      }
+    }
+
+    const aside = sidebarContainer?.querySelector('#app-sidebar');
+    if (!aside) {
+      renderShell();
+      return;
+    }
+
+    aside.setAttribute('data-collapsed', collapsed ? 'true' : 'false');
+
+    const toggle = aside.querySelector('[data-action="toggle-sidebar"]');
+    if (toggle) {
+      const label = collapsed ? 'Lebarkan sidebar' : 'Persempit sidebar';
+      toggle.setAttribute('aria-label', label);
+      toggle.setAttribute('title', label);
+      toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
     }
   }
 
@@ -185,6 +302,7 @@ function initApp() {
     }
     await handleRouteChange(mainEl, { user });
     renderShell();
+    playPageEnter(mainEl);
   }
 
   // Event delegation untuk tombol aksi di seluruh dokumen
@@ -200,13 +318,7 @@ function initApp() {
 
     const action = actionEl.getAttribute('data-action');
     if (action === 'toggle-sidebar') {
-      collapsed = !collapsed;
-      try {
-        window.localStorage.setItem(STORAGE_KEY_SIDEBAR, collapsed ? '1' : '0');
-      } catch {
-        /* abaikan */
-      }
-      renderShell();
+      setSidebarCollapsed(!collapsed, { persist: true });
     } else if (action === 'open-drawer') {
       drawerOpen = true;
       renderShell();
@@ -218,13 +330,7 @@ function initApp() {
     } else if (action === 'toggle-group') {
       const groupKey = actionEl.getAttribute('data-group');
       if (collapsed && !drawerOpen) {
-        collapsed = false;
-        try {
-          window.localStorage.setItem(STORAGE_KEY_SIDEBAR, '0');
-        } catch {
-          /* abaikan */
-        }
-        renderShell();
+        setSidebarCollapsed(false, { persist: true });
         return;
       }
       const targetId = actionEl.getAttribute('aria-controls');

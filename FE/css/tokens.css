@@ -10,11 +10,15 @@
 
   --primary: #142C52;
   --primary-foreground: #FFFFFF;
+  /* Hover tombol primary: satu tingkat lebih terang dari --primary. */
+  --primary-hover: #24497F;
+  --primary-active: #142C52;
 
   --secondary: #F3F4F6;
   --secondary-foreground: #111827;
-  --secondary-hover: #0D1E38;
-  --secondary-hover-foreground: #FFFFFF;
+  /* Hover tombol abu/outline: cukup lebih gelap dari --secondary, bukan warna primary. */
+  --secondary-hover: #E4E4E7;
+  --secondary-hover-foreground: #18181B;
 
   --muted: #F4F4F5;
   --muted-foreground: #71717A;
@@ -42,6 +46,13 @@
 
   --danger: #FEE2E2;
   --danger-foreground: #7F1D1D;
+
+  /* Konvensi hover tombol berdasarkan makna aksi (Bagian B.6). */
+  --neutral-hover: #E4E4E7;
+  --neutral-hover-foreground: #18181B;
+
+  --positive-solid: #16A34A;
+  --positive-solid-foreground: #FFFFFF;
 
   --chart-1: #1E4E9A;
   --chart-2: #22C55E;

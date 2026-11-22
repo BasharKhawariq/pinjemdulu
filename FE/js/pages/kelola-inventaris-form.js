@@ -208,12 +208,14 @@ export function renderConfirmSubmitModal({ mode = 'tambah', formData = {}, isSub
         label: 'Kembali',
         action: 'close-submit-dialog',
         variant: 'outline',
+        className: 'flex-1 rounded-xl button-hover-soft-neutral',
         disabled: isSubmitting,
       },
       {
         label: submitText,
         action: 'confirm-submit',
         variant: 'default',
+        className: 'flex-1 rounded-xl button-hover-soft-primary',
         disabled: isSubmitting,
       },
     ],
@@ -241,11 +243,13 @@ export function renderConfirmCancelModal({ mode = 'tambah' } = {}) {
         label: 'Kembali',
         action: 'close-cancel-dialog',
         variant: 'outline',
+        className: 'flex-1 rounded-xl button-hover-soft-neutral',
       },
       {
         label: 'Batalkan',
         action: 'confirm-discard',
         variant: 'destructive',
+        className: 'flex-1 rounded-xl button-hover-soft-red',
       },
     ],
   });
@@ -278,7 +282,7 @@ export function renderFeedbackModal(feedback) {
         label: 'Kembali ke Kelola Inventaris',
         action: 'close-feedback-dialog',
         variant: 'default',
-        className: 'w-full rounded-xl',
+        className: 'w-full rounded-xl button-hover-soft-neutral',
       },
     ],
   });
@@ -319,7 +323,7 @@ export function renderFormPageContent(state = {}) {
         <h1 class="text-xl font-bold text-foreground">Barang Tidak Ditemukan</h1>
         <p class="text-sm text-muted-foreground">Barang inventaris yang ingin Anda ubah tidak ada atau telah dihapus.</p>
         <div class="pt-2">
-          <a href="#/kelola/inventaris" class="${buttonClass({ variant: 'default', size: 'default' })}">
+          <a href="#/kelola/inventaris" class="${buttonClass({ variant: 'default', size: 'default', className: 'button-hover-soft-neutral' })}">
             Kembali ke Kelola Inventaris
           </a>
         </div>
@@ -336,7 +340,7 @@ export function renderFormPageContent(state = {}) {
         <h1 class="text-xl font-bold text-foreground">Akses Ditolak</h1>
         <p class="text-sm text-muted-foreground">${forbiddenMessage || 'Anda tidak dapat mengelola inventaris milik organisasi lain.'}</p>
         <div class="pt-2">
-          <a href="#/kelola/inventaris" class="${buttonClass({ variant: 'default', size: 'default' })}">
+          <a href="#/kelola/inventaris" class="${buttonClass({ variant: 'default', size: 'default', className: 'button-hover-soft-neutral' })}">
             Kembali ke Kelola Inventaris
           </a>
         </div>
@@ -358,14 +362,14 @@ export function renderFormPageContent(state = {}) {
   const selectedKat = kategoriList.find((k) => String(k.idKategori) === String(formData.idKategori));
 
   return html`
-    <div class="space-y-6 max-w-5xl mx-auto" id="kelola-form-root">
+    <div class="pd-page-in space-y-6 max-w-5xl mx-auto" id="kelola-form-root">
       <!-- Tombol Kembali Atas -->
       ${!isEdit ? html`
       <div>
         <a
           href="#/kelola/inventaris"
           data-action="back-to-list"
-          class="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors group"
+          class="inline-flex items-center gap-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground transition-colors active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group"
         >
           <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background group-hover:bg-accent transition-colors">
             ${renderIcon('ArrowLeft', 'h-4 w-4')}
@@ -642,7 +646,7 @@ export function renderFormPageContent(state = {}) {
                       data-action="remove-foto"
                       aria-label="Hapus foto"
                       title="Hapus foto"
-                      class="absolute top-2 right-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-rose-600 text-white shadow-md hover:bg-rose-700 transition"
+                      class="absolute top-2 right-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-rose-600 text-white shadow-md transition-colors active:scale-95 button-hover-soft-red focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
                     >
                       ${renderIcon('X', 'h-4 w-4')}
                     </button>
@@ -691,11 +695,11 @@ export function renderFormPageContent(state = {}) {
           </div>
 
           <!-- Baris Tombol Aksi Bawah -->
-          <div class="mt-8 flex items-center justify-end gap-3 border-t border-border pt-6">
+          <div class="mt-8 flex flex-col-reverse gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-end">
             <button
               type="button"
               data-action="cancel-form"
-              class="cancel-form-button ${buttonClass({ variant: 'outline', size: 'default' })}"
+              class="${buttonClass({ variant: 'outline', size: 'default', className: 'button-hover-soft-red' })}"
               ${isSubmitting ? 'disabled' : ''}
             >
               Batal
@@ -703,7 +707,7 @@ export function renderFormPageContent(state = {}) {
             <button
               type="button"
               data-action="submit-form"
-              class="${buttonClass({ variant: 'default', size: 'default', className: 'transition-colors hover:brightness-110' })}"
+              class="${buttonClass({ variant: 'default', size: 'default', className: 'button-hover-soft-primary' })}"
               ${isSubmitting ? 'disabled' : ''}
             >
               ${submitText}

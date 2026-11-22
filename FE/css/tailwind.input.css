@@ -30,6 +30,26 @@
   :focus-visible {
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
+
+  /* Sembunyikan tombol "x" bawaan browser pada input[type="search"] agar tidak
+     dobel dengan tombol bersihkan kustom dari komponen search-input. */
+  input[type='search']::-webkit-search-cancel-button,
+  input[type='search']::-webkit-search-decoration {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  /* Transisi halus dasar untuk elemen interaktif.
+     Utility Tailwind (transition-colors / transition-all / duration-*) tetap menimpa aturan ini. */
+  a,
+  button,
+  [role='button'],
+  [role='tab'],
+  [role='option'] {
+    transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+    transition-duration: 150ms;
+    transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
 }
 
 @layer components {
@@ -37,6 +57,8 @@
     @apply bg-zinc-950/40 backdrop-blur-sm;
   }
 
+  /* Dialog native selalu dipusatkan di viewport dan berada di top layer,
+     sehingga otomatis menutupi header, sidebar, dan footer. */
   dialog[open],
   dialog {
     position: fixed !important;
@@ -44,6 +66,14 @@
     left: 50% !important;
     transform: translate(-50%, -50%) !important;
     margin: 0 !important;
+    max-height: 90dvh;
+    overscroll-behavior: contain;
+  }
+
+  /* Saat dialog terbuka, kunci scroll latar belakang halaman di semua browser. */
+  html:has(dialog[open]) {
+    overflow: hidden;
+    scrollbar-gutter: stable;
   }
 
   /* Dropdown item hover global: background biru primary (biru tua), teks putih */
@@ -64,25 +94,49 @@
 /* Tombol Batal pada form inventaris: hover merah, mengalahkan style outline/primary. */
 .cancel-form-button:hover:not(:disabled) { background-color: rgb(225, 29, 72) !important; color: rgb(255, 255, 255) !important; border-color: rgb(225, 29, 72) !important; }
 
-/* Efek hover tombol aksi: perubahan warna saja, tanpa pergeseran atau perubahan ukuran. */
-.button-hover-soft-red {
+/* Konvensi hover tombol berdasarkan makna aksi (Bagian B.6 docs/prompt-ui-fix.md):
+   Batal = merah, Kembali = abu-abu netral, OK/Setujui/ACC = hijau.
+   Menetapkan background, border, dan warna teks agar kontras di semua varian.
+   Hanya mengubah warna; tidak menggeser layout atau ukuran. */
+.button-hover-soft-red,
+.button-hover-soft-neutral,
+.button-hover-soft-green {
   transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
 }
 .button-hover-soft-red:hover:not(:disabled) {
   background-color: rgb(201, 43, 43) !important;
+  border-color: rgb(201, 43, 43) !important;
+  color: var(--primary-foreground) !important;
 }
 .button-hover-soft-red:active:not(:disabled) {
   background-color: rgb(185, 28, 28) !important;
+  border-color: rgb(185, 28, 28) !important;
+}
+.button-hover-soft-neutral:hover:not(:disabled) {
+  background-color: var(--neutral-hover) !important;
+  border-color: var(--neutral-hover) !important;
+  color: var(--neutral-hover-foreground) !important;
+}
+.button-hover-soft-neutral:active:not(:disabled) {
+  filter: brightness(0.96);
+}
+.button-hover-soft-green:hover:not(:disabled) {
+  background-color: var(--positive-solid) !important;
+  border-color: var(--positive-solid) !important;
+  color: var(--positive-solid-foreground) !important;
+}
+.button-hover-soft-green:active:not(:disabled) {
+  filter: brightness(0.96);
 }
 
 .button-hover-soft-primary {
   transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
 }
 .button-hover-soft-primary:hover:not(:disabled) {
-  background-color: rgb(29, 59, 107) !important;
+  background-color: var(--primary-hover) !important;
 }
 .button-hover-soft-primary:active:not(:disabled) {
-  background-color: rgb(25, 52, 94) !important;
+  background-color: var(--primary-active) !important;
 }
 
 @keyframes validation-blink {
@@ -105,4 +159,178 @@ a[data-tab],
 button[data-action="switch-tab"],
 nav[aria-label="Pilihan Kelola"] > a {
   text-align: center !important;
+}
+
+/* ==========================================================================
+   Animasi & transisi halus PinjemDulu (fondasi global).
+   - Hanya memakai properti ramah performa: opacity & transform.
+   - Menghormati preferensi pengguna: prefers-reduced-motion.
+   ========================================================================== */
+
+@keyframes pd-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes pd-pop-in {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes pd-rise-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Animasi masuk halaman hanya mendefinisikan keadaan awal (from).
+   Keadaan akhir memakai nilai natural elemen sehingga TIDAK meninggalkan
+   `transform` permanen. Transform persisten membuat elemen menjadi containing
+   block + stacking context, yang menjebak modal `position: fixed` di dalamnya
+   sehingga tampil di bawah header/sidebar dan salah posisi di mobile. */
+@keyframes pd-page-in {
+  from { opacity: 0; transform: translateY(6px); }
+}
+
+@keyframes pd-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pd-fade-in { animation: pd-fade-in 180ms ease-out both; }
+  .pd-pop-in { animation: pd-pop-in 200ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+  .pd-rise-in { animation: pd-rise-in 220ms ease-out both; }
+  .pd-page-in { animation: pd-page-in 220ms ease-out backwards; }
+  .pd-spin-once { animation: pd-spin 500ms ease-out; }
+
+  /* Dialog native: isi muncul halus, latar memudar. */
+  dialog[open] { animation: pd-fade-in 180ms ease-out both; }
+  dialog[open]::backdrop { animation: pd-fade-in 180ms ease-out both; }
+}
+
+/* Kartu dashboard: efek angkat + bayangan saat hover.
+   Transform hanya diaktifkan bila pengguna mengizinkan animasi. */
+.pd-card-hover {
+  transition: transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .pd-card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 14px 28px -14px rgb(15 23 42 / 0.22);
+  }
+}
+
+/* ==========================================================================
+   Sidebar: animasi collapse/expand.
+   Keadaan collapsed & expanded memakai SATU markup (lihat js/ui/sidebar.js).
+   Lebar, label, badge, submenu, dan tombol toggle diatur lewat atribut
+   `data-collapsed` pada <aside class="pd-sidebar">. Karena DOM tidak dibangun
+   ulang saat toggle, hanya lebar container yang beranimasi — posisi logo dan
+   ikon menu tetap sama di kedua keadaan.
+   ========================================================================== */
+
+.pd-sidebar {
+  transition: width 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  overflow: hidden;
+}
+
+/* Lebar sebenarnya ditentukan di sini agar transisi selalu berjalan; aturan ini
+   mengalahkan utility w-[84px]/w-[280px] yang hanya menjadi lebar awal. */
+.pd-sidebar[data-collapsed='true'] {
+  width: 84px;
+}
+.pd-sidebar[data-collapsed='false'] {
+  width: 280px;
+}
+
+/* Padding kiri item nav dikunci sama di kedua keadaan sehingga ikon menu tidak
+   pernah bergeser horizontal saat sidebar collapse/expand. */
+.pd-sidebar .pd-sb-item {
+  padding-left: 18px;
+}
+
+/* Area nav tetap bisa scroll vertikal, tetapi tidak menampilkan scrollbar
+   horizontal akibat lebar ikon dan padding saat sidebar collapsed. */
+.pd-sidebar nav {
+  overflow-x: hidden;
+}
+
+/* Saat collapsed, tombol tetap tepat di atas logo. Saat expanded, geser sedikit
+   ke kanan agar jaraknya dari identitas aplikasi terasa lebih lega. */
+.pd-sb-toggle {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+  transition: opacity 180ms ease, color 150ms ease, background-color 150ms ease,
+    border-color 150ms ease;
+}
+
+.pd-sidebar[data-collapsed='false'] .pd-sb-toggle {
+  right: 0.75rem;
+}
+
+.pd-sb-brand-logo {
+  transition: opacity 180ms ease;
+}
+
+/* Label, badge/chevron, dan tombol keluar memudar saat collapsed. Saat expand
+   mereka muncul dengan sedikit jeda agar tidak bertabrakan dengan animasi lebar. */
+.pd-sidebar .pd-sb-label,
+.pd-sidebar .pd-sb-trailing {
+  transition: opacity 180ms ease;
+  transition-delay: 120ms;
+}
+
+.pd-sidebar[data-collapsed='true'] .pd-sb-label,
+.pd-sidebar[data-collapsed='true'] .pd-sb-trailing {
+  opacity: 0;
+  pointer-events: none;
+  transition-delay: 0ms;
+}
+
+/* Submenu tidak ditampilkan selama sidebar collapsed. */
+.pd-sidebar[data-collapsed='true'] .pd-sb-sub {
+  display: none;
+}
+
+/* Saat collapsed, tombol toggle hanya tampil ketika header sidebar di-hover
+   atau difokus (logo memudar, tombol muncul di posisi yang sama). */
+.pd-sidebar[data-collapsed='true'] .pd-sb-toggle {
+  opacity: 0;
+}
+
+@media (hover: hover) {
+  .pd-sidebar[data-collapsed='true'] .pd-sb-brand:hover .pd-sb-toggle,
+  .pd-sidebar[data-collapsed='true'] .pd-sb-brand:focus-within .pd-sb-toggle {
+    opacity: 1;
+  }
+  .pd-sidebar[data-collapsed='true'] .pd-sb-brand:hover .pd-sb-brand-logo,
+  .pd-sidebar[data-collapsed='true'] .pd-sb-brand:focus-within .pd-sb-brand-logo {
+    opacity: 0;
+  }
+}
+
+/* Perangkat tanpa hover: tombol toggle selalu tampil menggantikan logo agar
+   sidebar tetap bisa diperluas. */
+@media (hover: none) {
+  .pd-sidebar[data-collapsed='true'] .pd-sb-toggle {
+    opacity: 1;
+  }
+  .pd-sidebar[data-collapsed='true'] .pd-sb-brand-logo {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

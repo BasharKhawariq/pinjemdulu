@@ -1,5 +1,5 @@
 /**
- * search-input.js — Global Serach Input untuk PinjemDulu.
+ * search-input.js — Global Search Input untuk PinjemDulu.
  */
 
 import { html, raw, escapeHtml } from './html.js';
@@ -15,6 +15,36 @@ export function searchInputClass(extra = '') {
   const base =
     'flex h-11 w-full rounded-full border border-slate-200 bg-white pl-12 pr-4 text-sm text-slate-800 shadow-sm transition-colors placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60';
   return cn(base, extra);
+}
+
+/**
+ * Helper kelas tombol bersihkan pencarian (target sentuh 36px + focus ring).
+ * @param {string} [extra='']
+ * @returns {string}
+ */
+export function searchClearButtonClass(extra = '') {
+  const base =
+    'absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95';
+  return cn(base, extra);
+}
+
+/**
+ * Render tombol bersihkan pencarian (dipakai komponen & halaman kelola).
+ * @param {object} [props]
+ * @param {string} [props.clearAction='clear-search'] Nilai data-action tombol
+ * @returns {import('./html.js').SafeHtml}
+ */
+export function renderSearchClearButton({ clearAction = 'clear-search' } = {}) {
+  return html`
+    <button
+      type="button"
+      data-action="${escapeHtml(clearAction)}"
+      aria-label="Hapus kata kunci pencarian"
+      class="${searchClearButtonClass()}"
+    >
+      ${renderIcon('X', 'h-4 w-4')}
+    </button>
+  `;
 }
 
 /**
@@ -68,18 +98,7 @@ export function renderSearchInput({
         ${disabled ? raw('disabled') : ''}
         class="${searchInputClass(inputClassName)}"
       />
-      ${clearable && hasValue
-        ? html`
-            <button
-              type="button"
-              data-action="${escapeHtml(clearAction)}"
-              aria-label="Hapus kata kunci pencarian"
-              class="absolute right-3.5 top-1/2 -translate-y-1/2 inline-flex h-5 w-5 items-center justify-center rounded text-slate-400 hover:text-slate-600 transition"
-            >
-              ${renderIcon('X', 'h-3.5 w-3.5')}
-            </button>
-          `
-        : raw('')}
+      ${clearable && hasValue ? renderSearchClearButton({ clearAction }) : raw('')}
     </div>
   `;
 }

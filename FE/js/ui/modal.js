@@ -198,7 +198,7 @@ export function renderModal({
         `;
 
   const innerContent = html`
-    <div class="relative flex flex-col items-center p-6 text-center">
+    <div class="pd-pop-in relative flex flex-col items-center p-6 text-center">
       ${showCloseButton
         ? html`
             <button
@@ -242,7 +242,7 @@ export function renderModal({
       <dialog
         ${id ? raw(`id="${escapeHtml(id)}"`) : ''}
         aria-labelledby="${escapeHtml(tId)}"
-        class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 !m-0 z-[9999] w-full ${maxWidth} rounded-2xl border border-border bg-white p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
+        class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 !m-0 z-[9999] max-h-[90dvh] w-full ${maxWidth} overflow-y-auto rounded-2xl border border-border bg-white p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
         ${open ? raw('open') : ''}
       >
         ${innerContent}
@@ -253,14 +253,14 @@ export function renderModal({
   return html`
     <div
       ${id ? raw(`id="${escapeHtml(id)}"`) : ''}
-      class="fixed inset-0 z-[9999] isolate flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4"
+      class="pd-fade-in fixed inset-0 z-[9999] isolate flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4"
       data-modal-backdrop
     >
       <section
         role="dialog"
         aria-modal="true"
         aria-labelledby="${escapeHtml(tId)}"
-        class="relative z-10 isolate w-full ${maxWidth} rounded-2xl border border-slate-100 bg-white shadow-2xl transition-all"
+        class="relative z-10 isolate max-h-[90dvh] w-full ${maxWidth} overflow-y-auto rounded-2xl border border-slate-100 bg-white shadow-2xl transition-all"
       >
         ${innerContent}
       </section>

@@ -18,8 +18,8 @@ export function render(ctx = {}) {
   const displayTitle = title || 'Halaman';
 
   return html`
-    <section class="flex min-h-[60vh] w-full items-center justify-center p-4">
-      <div class="${cardClass('flex max-w-lg flex-col items-center p-8 text-center rounded-2xl shadow-sm')}">
+    <section class="pd-page-in flex min-h-[60dvh] w-full items-center justify-center p-4">
+      <div class="${cardClass('pd-rise-in flex max-w-lg flex-col items-center p-8 text-center rounded-2xl shadow-sm')}">
         <div class="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-600">
           ${renderIcon('Sparkles', 'h-7 w-7 text-primary')}
         </div>

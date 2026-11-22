@@ -64,7 +64,30 @@ export const HANDLED_KATEGORI_ACTIONS = [
 export function renderKategoriSkeleton() {
   return html`
     <div class="space-y-4 animate-pulse">
-      <div class="w-full overflow-x-auto">
+      <!-- Kartu skeleton (mobile < md) -->
+      <div class="space-y-3 md:hidden">
+        ${raw(
+          Array.from({ length: 4 })
+            .map(
+              () => `
+          <div class="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+            <div class="flex items-start justify-between gap-3">
+              <div class="h-4 w-1/2 rounded bg-muted"></div>
+              <div class="h-5 w-16 rounded-full bg-muted"></div>
+            </div>
+            <div class="mt-3 flex justify-end gap-1 border-t border-slate-100 pt-3">
+              <div class="h-10 w-10 rounded-xl bg-muted"></div>
+              <div class="h-10 w-10 rounded-xl bg-muted"></div>
+            </div>
+          </div>
+        `
+            )
+            .join('')
+        )}
+      </div>
+
+      <!-- Tabel skeleton (desktop >= md) -->
+      <div class="hidden w-full overflow-x-auto md:block">
         <table class="w-full min-w-full border-collapse text-left">
           <thead>
             <tr class="border-b border-slate-100 text-sm leading-[140%] tracking-normal text-slate-400">
@@ -112,17 +135,17 @@ export function renderFormModal({ dialog, editItem, inputNama = '', inputError =
     <dialog
       id="dialog-form-kategori"
       aria-labelledby="dialog-form-kategori-title"
-      class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 z-50 w-full max-w-md rounded-2xl border border-border bg-white p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
+      class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 z-50 w-full max-w-md max-h-[90dvh] overflow-y-auto rounded-2xl border border-border bg-white p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
       ${isOpen ? 'open' : ''}
     >
-      <form id="form-kategori" class="p-6" onsubmit="return false;">
+      <form id="form-kategori" class="pd-pop-in p-6" onsubmit="return false;">
         <div class="flex items-center justify-between pb-3 border-b border-border">
           <h2 id="dialog-form-kategori-title" class="text-lg font-bold text-foreground">${title}</h2>
           <button
             type="button"
             data-action="close-form-dialog"
             aria-label="Tutup form kategori"
-            class="text-muted-foreground hover:text-foreground rounded-lg p-1 transition-colors"
+            class="text-muted-foreground hover:text-foreground rounded-lg p-1 transition-colors active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             ${renderIcon('X', 'h-5 w-5')}
           </button>
@@ -154,7 +177,7 @@ export function renderFormModal({ dialog, editItem, inputNama = '', inputError =
           <button
             type="button"
             data-action="close-form-dialog"
-            class="cancel-form-button rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-sm font-semibold text-slate-600 transition-colors"
+            class="button-hover-soft-red rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-sm font-semibold text-slate-600 transition-colors active:scale-95"
             ${isSubmitting ? 'disabled' : ''}
           >
             Batal
@@ -162,7 +185,7 @@ export function renderFormModal({ dialog, editItem, inputNama = '', inputError =
           <button
             type="button"
             data-action="submit-form-dialog"
-            class="${buttonClass({ variant: 'default', size: 'default', className: 'transition-colors hover:brightness-110' })}"
+            class="${buttonClass({ variant: 'default', size: 'default', className: 'button-hover-soft-primary' })}"
             ${isSubmitting ? 'disabled' : ''}
           >
             ${submitText}
@@ -191,10 +214,10 @@ export function renderConfirmModal({ dialog, editItem, inputNama = '', isSubmitt
     <dialog
       id="dialog-confirm-kategori"
       aria-labelledby="dialog-confirm-kategori-title"
-      class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 z-50 w-full max-w-md rounded-2xl border border-border bg-white p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
+      class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 z-50 w-full max-w-md max-h-[90dvh] overflow-y-auto rounded-2xl border border-border bg-white p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
       ${isOpen ? 'open' : ''}
     >
-      <div class="flex flex-col p-6 text-center items-center">
+      <div class="pd-pop-in flex flex-col p-6 text-center items-center">
         <!-- Icon Send / Pesawat Kertas -->
         <div class="mb-4 inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 p-1">
           <img src="assets/animations/modal-send.gif" alt="Send" class="h-full w-full object-contain select-none pointer-events-none" loading="eager" />
@@ -211,7 +234,7 @@ export function renderConfirmModal({ dialog, editItem, inputNama = '', isSubmitt
           <button
             type="button"
             data-action="back-to-form"
-            class="${buttonClass({ variant: 'outline', size: 'default', className: 'flex-1 rounded-xl' })}"
+            class="${buttonClass({ variant: 'outline', size: 'default', className: 'flex-1 rounded-xl button-hover-soft-neutral' })}"
             ${isSubmitting ? 'disabled' : ''}
           >
             Kembali
@@ -219,7 +242,7 @@ export function renderConfirmModal({ dialog, editItem, inputNama = '', isSubmitt
           <button
             type="button"
             data-action="confirm-submit-kategori"
-            class="${buttonClass({ variant: 'default', size: 'default', className: 'flex-1 rounded-xl' })}"
+            class="${buttonClass({ variant: 'default', size: 'default', className: 'flex-1 rounded-xl button-hover-soft-primary' })}"
             ${isSubmitting ? 'disabled' : ''}
           >
             ${submitText}
@@ -245,10 +268,10 @@ export function renderDeleteModal(deleteItem, isSubmitting = false) {
     <dialog
       id="dialog-delete-kategori"
       aria-labelledby="dialog-delete-kategori-title"
-      class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 z-50 w-full max-w-md rounded-2xl border border-border bg-white p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
+      class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 z-50 w-full max-w-md max-h-[90dvh] overflow-y-auto rounded-2xl border border-border bg-white p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
       ${isOpen ? 'open' : ''}
     >
-      <div class="flex flex-col p-6 text-center items-center">
+      <div class="pd-pop-in flex flex-col p-6 text-center items-center">
         <!-- Icon Trash Merah -->
         <div class="mb-4 inline-flex h-24 w-24 items-center justify-center p-0">
           <img src="assets/animations/modal-delete.gif" alt="Hapus" class="h-full w-full object-contain select-none pointer-events-none drop-shadow-sm" loading="eager" />
@@ -261,7 +284,7 @@ export function renderDeleteModal(deleteItem, isSubmitting = false) {
           <button
             type="button"
             data-action="close-delete-dialog"
-            class="${buttonClass({ variant: 'outline', size: 'default', className: 'flex-1 rounded-xl transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600' })}"
+            class="${buttonClass({ variant: 'outline', size: 'default', className: 'flex-1 rounded-xl button-hover-soft-neutral' })}"
             ${isSubmitting ? 'disabled' : ''}
           >
             Kembali
@@ -300,10 +323,10 @@ export function renderFeedbackModal(feedback) {
     <dialog
       id="dialog-feedback-kategori"
       aria-labelledby="dialog-feedback-kategori-title"
-      class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 z-50 w-full max-w-md rounded-2xl border border-border bg-white p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
+      class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 z-50 w-full max-w-md max-h-[90dvh] overflow-y-auto rounded-2xl border border-border bg-white p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
       ${isOpen ? 'open' : ''}
     >
-      <div class="flex flex-col p-6 text-center items-center">
+      <div class="pd-pop-in flex flex-col p-6 text-center items-center">
         ${isDipakai || isError
           ? html`<img src="assets/animations/modal-reject.gif" alt="Galat" class="mb-4 h-24 w-24 object-contain select-none pointer-events-none" loading="eager" />`
           : html`<img src="assets/animations/modal-success.gif" alt="Sukses" class="mb-4 h-24 w-24 object-contain select-none pointer-events-none" loading="eager" />`}
@@ -315,13 +338,128 @@ export function renderFeedbackModal(feedback) {
           <button
             type="button"
             data-action="close-feedback-dialog"
-            class="${buttonClass({ variant: 'default', size: 'default', className: 'w-full rounded-xl transition-colors hover:bg-secondary-hover hover:text-secondary-hover-foreground hover:border-secondary-hover' })}"
+            class="${buttonClass({ variant: 'default', size: 'default', className: 'w-full rounded-xl button-hover-soft-neutral' })}"
           >
             Kembali
           </button>
         </div>
       </div>
     </dialog>
+  `;
+}
+
+/**
+ * Render grup tombol aksi baris/kartu kategori (Ubah / Hapus).
+ * @param {object} kat
+ * @param {string} [sizeClass='h-8 w-8'] Ukuran tombol ikon (h-8 w-8 di tabel, h-10 w-10 di kartu mobile)
+ * @returns {import('../ui/html.js').SafeHtml}
+ */
+export function renderKategoriActions(kat, sizeClass = 'h-8 w-8') {
+  const totalBarang = Number(kat.totalBarang || 0);
+  const isDipakai = totalBarang > 0;
+
+  return html`
+    <div class="flex items-center justify-center gap-0" role="group" aria-label="Aksi kategori ${kat.namaKategori}">
+      <button
+        type="button"
+        data-action="open-edit-dialog"
+        data-id="${kat.idKategori}"
+        data-nama="${kat.namaKategori}"
+        aria-label="Ubah kategori ${kat.namaKategori}"
+        title="Ubah ${kat.namaKategori}"
+        class="inline-flex ${sizeClass} items-center justify-center rounded-xl text-slate-400 transition-colors active:scale-95 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        ${renderIcon('Pencil', 'h-4 w-4')}
+      </button>
+
+      ${isDipakai
+        ? html`
+            <span class="sr-only">Dipakai ${totalBarang} barang</span>
+            <button
+              type="button"
+              disabled
+              aria-disabled="true"
+              aria-label="Hapus kategori ${kat.namaKategori} nonaktif karena masih digunakan (Dipakai ${totalBarang} barang)"
+              title="Dipakai ${totalBarang} barang"
+              class="inline-flex ${sizeClass} items-center justify-center rounded-xl text-slate-300 cursor-not-allowed opacity-50"
+            >
+              ${renderIcon('Trash2', 'h-4 w-4')}
+            </button>
+          `
+        : html`
+            <button
+              type="button"
+              data-action="open-delete-dialog"
+              data-id="${kat.idKategori}"
+              data-nama="${kat.namaKategori}"
+              data-count="${totalBarang}"
+              aria-label="Hapus kategori ${kat.namaKategori}"
+              title="Hapus ${kat.namaKategori}"
+              class="inline-flex ${sizeClass} items-center justify-center rounded-xl text-red-600 transition-colors active:scale-95 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              ${renderIcon('Trash2', 'h-4 w-4')}
+            </button>
+          `}
+    </div>
+  `;
+}
+
+/**
+ * Render baris tabel kategori.
+ * @param {object} kat
+ * @param {number} index
+ * @param {number} page
+ * @param {number} perPage
+ * @returns {import('../ui/html.js').SafeHtml}
+ */
+export function renderKategoriTableRow(kat, index, page = 1, perPage = 10) {
+  const no = (page - 1) * perPage + index + 1;
+  const totalBarang = Number(kat.totalBarang || 0);
+
+  return html`
+    <tr class="border-b border-slate-100 transition-colors last:border-0 hover:bg-slate-50/60">
+      <td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400 align-middle">${no}</td>
+      <td class="min-w-[200px] px-4 py-4 align-middle">
+        <span class="text-xs font-medium text-slate-500">${kat.namaKategori}</span>
+      </td>
+      <td class="whitespace-nowrap px-4 py-4 text-center tabular-nums text-xs text-slate-400 align-middle">
+        ${totalBarang}
+      </td>
+      <td class="whitespace-nowrap px-1 py-4 align-middle min-w-[160px]">
+        ${renderKategoriActions(kat, 'h-8 w-8')}
+      </td>
+    </tr>
+  `;
+}
+
+/**
+ * Render kartu kategori untuk tampilan mobile.
+ * @param {object} kat
+ * @param {number} index
+ * @param {number} page
+ * @param {number} perPage
+ * @returns {import('../ui/html.js').SafeHtml}
+ */
+export function renderKategoriCard(kat, index = 0, page = 1, perPage = 10) {
+  const no = (page - 1) * perPage + index + 1;
+  const totalBarang = Number(kat.totalBarang || 0);
+  const delay = Math.min(index, 11) * 40;
+
+  return html`
+    <article class="pd-rise-in rounded-xl border border-slate-100 bg-white p-4 shadow-sm" style="animation-delay:${delay}ms">
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <p class="text-[11px] font-medium text-slate-400">#${no}</p>
+          <p class="truncate text-sm font-semibold text-slate-800" title="${kat.namaKategori}">${kat.namaKategori}</p>
+        </div>
+        <span class="shrink-0 inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600 tabular-nums">
+          ${totalBarang} barang
+        </span>
+      </div>
+      <div class="mt-3 flex items-center justify-end gap-1 border-t border-slate-100 pt-3">
+        ${renderKategoriActions(kat, 'h-10 w-10')}
+      </div>
+    </article>
   `;
 }
 
@@ -401,13 +539,17 @@ export function renderKategoriTableContent({
     `;
   }
 
-  const startNo = (page - 1) * perPage;
   const pageList = buildPageList(page, totalPages);
 
   return html`
     <div class="space-y-4">
-      <!-- Tabel Pembungkus Overflow 360px safe -->
-      <div class="w-full overflow-x-auto">
+      <!-- Daftar Kartu (mobile < md) -->
+      <div class="space-y-3 md:hidden" data-card-list>
+        ${raw(items.map((kat, idx) => renderKategoriCard(kat, idx, page, perPage).toString()).join(''))}
+      </div>
+
+      <!-- Tabel Pembungkus Overflow 360px safe (desktop >= md) -->
+      <div class="hidden w-full overflow-x-auto md:block">
         <table class="w-full min-w-full border-collapse text-left">
           <thead>
             <tr class="border-b border-slate-100 text-sm leading-[140%] tracking-normal text-slate-400">
@@ -418,67 +560,9 @@ export function renderKategoriTableContent({
             </tr>
           </thead>
           <tbody>
-            ${items.map((kat, idx) => {
-              const no = startNo + idx + 1;
-              const totalBarang = Number(kat.totalBarang || 0);
-              const isDipakai = totalBarang > 0;
-
-              return html`
-                <tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50/60">
-                  <td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400 align-middle">${no}</td>
-                  <td class="min-w-[200px] px-4 py-4 align-middle">
-                    <span class="text-xs font-medium text-slate-500">${kat.namaKategori}</span>
-                  </td>
-                  <td class="whitespace-nowrap px-4 py-4 text-center tabular-nums text-xs text-slate-400 align-middle">
-                    ${totalBarang}
-                  </td>
-                  <td class="whitespace-nowrap px-1 py-4 align-middle min-w-[160px]">
-                    <div class="flex items-center justify-center gap-0" role="group" aria-label="Aksi kategori ${kat.namaKategori}">
-                      <button
-                        type="button"
-                        data-action="open-edit-dialog"
-                        data-id="${kat.idKategori}"
-                        data-nama="${kat.namaKategori}"
-                        aria-label="Ubah kategori ${kat.namaKategori}"
-                        title="Ubah ${kat.namaKategori}"
-                        class="inline-flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      >
-                        ${renderIcon('Pencil', 'h-4 w-4')}
-                      </button>
-
-                      ${isDipakai
-                        ? html`
-                            <span class="sr-only">Dipakai ${totalBarang} barang</span>
-                            <button
-                              type="button"
-                              disabled
-                              aria-disabled="true"
-                              aria-label="Hapus kategori ${kat.namaKategori} nonaktif karena masih digunakan (Dipakai ${totalBarang} barang)"
-                              title="Dipakai ${totalBarang} barang"
-                              class="inline-flex h-8 w-8 items-center justify-center rounded-xl text-slate-300 cursor-not-allowed opacity-50"
-                            >
-                              ${renderIcon('Trash2', 'h-4 w-4')}
-                            </button>
-                          `
-                        : html`
-                            <button
-                              type="button"
-                              data-action="open-delete-dialog"
-                              data-id="${kat.idKategori}"
-                              data-nama="${kat.namaKategori}"
-                              data-count="${totalBarang}"
-                              aria-label="Hapus kategori ${kat.namaKategori}"
-                              title="Hapus ${kat.namaKategori}"
-                              class="inline-flex h-8 w-8 items-center justify-center rounded-xl text-red-600 transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            >
-                              ${renderIcon('Trash2', 'h-4 w-4')}
-                            </button>
-                          `}
-                    </div>
-                  </td>
-                </tr>
-              `;
-            })}
+            ${raw(
+              items.map((kat, idx) => renderKategoriTableRow(kat, idx, page, perPage).toString()).join('')
+            )}
           </tbody>
         </table>
       </div>
@@ -520,7 +604,7 @@ export function renderKelolaKategoriContent(state = {}) {
   } = state;
 
   return html`
-    <div class="w-full space-y-6 px-5 pb-8 pt-8 sm:px-6 lg:px-7" id="kelola-kategori-root">
+    <div class="pd-page-in w-full space-y-6 px-5 pb-8 pt-8 sm:px-6 lg:px-7" id="kelola-kategori-root">
       <!-- Header Halaman -->
       <div class="space-y-1">
         <h1 class="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Kelola Inventaris</h1>

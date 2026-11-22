@@ -9,7 +9,7 @@ import {
   konfirmasiRequestPassword,
 } from '../services/users.js';
 import { ROLES, STATUS_AKUN } from '../lib/constants.js';
-import { renderIcon } from '../ui/icons.js';
+import { renderIcon, renderWhatsappFlag } from '../ui/icons.js';
 import { escapeHtml } from '../ui/html.js';
 import { renderSearchInput } from '../ui/search-input.js';
 import { renderModal as renderModalComponent } from '../ui/modal.js';
@@ -18,7 +18,7 @@ import { buttonClass, selectClass } from '../ui/classes.js';
 import { renderOrganisasiLogo } from '../ui/organisasi-badge.js';
 import { renderEmptyState } from '../ui/empty-state.js';
 import { renderPagination as renderSharedPagination } from '../ui/pagination.js';
-import { renderTableLoadingRow } from '../ui/loading-state.js';
+import { renderTableLoadingRow, renderContainerLoading } from '../ui/loading-state.js';
 import { formatTanggal } from '../lib/format.js';
 import { getUser } from '../state/session.js';
 
@@ -173,68 +173,144 @@ function visibleUsers() {
     .sort((a, b) => String(a.nama || '').localeCompare(String(b.nama || '')));
 }
 
-function renderUserRows() {
-  if (isUsersLoading) {
-    return renderTableLoadingRow({ colspan: 6, message: 'Memuat data pengguna...' });
-  }
+/**
+ * Hitung daftar pengguna yang tampil pada halaman saat ini (dipakai tabel & kartu).
+ */
+function getVisibleUserRows() {
   const filtered = visibleUsers();
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   currentPage = Math.min(currentPage, pages);
   const start = (currentPage - 1) * PAGE_SIZE;
-  const pageRows = filtered.slice(start, start + PAGE_SIZE);
+  return { filtered, start, pageRows: filtered.slice(start, start + PAGE_SIZE) };
+}
 
-  if (!pageRows.length) return renderEmptyState({ colspan: 6 });
-
+function isSelfUser(user) {
   const currentUser = getUser();
+  return Boolean(
+    currentUser &&
+      ((currentUser.nim && String(user.nim) === String(currentUser.nim)) ||
+        (currentUser.id && String(user.id) === String(currentUser.id)))
+  );
+}
 
-  return pageRows
-    .map((user, index) => {
-      const active = isActive(user);
-      const isSelf = currentUser && (
-        (currentUser.nim && String(user.nim) === String(currentUser.nim)) ||
-        (currentUser.id && String(user.id) === String(currentUser.id))
-      );
-      const roleClass =
-        user.role === ROLES.PENANGGUNG_JAWAB ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-700';
+function roleBadgeClass(user) {
+  return user.role === ROLES.PENANGGUNG_JAWAB
+    ? 'bg-red-50 text-red-600'
+    : 'bg-green-50 text-green-700';
+}
 
-      const toggleHtml = isSelf
-        ? `<button type="button" disabled title="Tidak dapat menonaktifkan akun sendiri" aria-label="Tidak dapat menonaktifkan akun sendiri" class="relative inline-flex h-5 w-9 items-center rounded-full bg-primary opacity-40 cursor-not-allowed"><span class="inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm translate-x-[18px]"></span></button>`
-        : `<button type="button" data-action="toggle" data-id="${escapeHtml(user.id)}" aria-label="${active ? 'Nonaktifkan' : 'Aktifkan'} akun ${escapeHtml(nameOf(user))}" aria-pressed="${active}" class="relative inline-flex h-5 w-9 items-center rounded-full transition ${active ? 'bg-primary' : 'bg-slate-200'}"><span class="inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition ${active ? 'translate-x-[18px]' : 'translate-x-[2px]'}"></span></button>`;
+/**
+ * Render tombol switch status akun (dipakai tabel & kartu).
+ */
+function renderUserToggle(user) {
+  const active = isActive(user);
+  if (isSelfUser(user)) {
+    return `<button type="button" disabled title="Tidak dapat menonaktifkan akun sendiri" aria-label="Tidak dapat menonaktifkan akun sendiri" class="relative inline-flex h-5 w-9 items-center rounded-full bg-primary opacity-40 cursor-not-allowed"><span class="inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm translate-x-[18px]"></span></button>`;
+  }
+  return `<button type="button" data-action="toggle" data-id="${escapeHtml(user.id)}" aria-label="${active ? 'Nonaktifkan' : 'Aktifkan'} akun ${escapeHtml(nameOf(user))}" aria-pressed="${active}" class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${active ? 'bg-primary' : 'bg-slate-200'}"><span class="inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition ${active ? 'translate-x-[18px]' : 'translate-x-[2px]'}"></span></button>`;
+}
 
-      return `<tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50/50">
+/**
+ * Render grup tombol aksi baris/kartu pengguna (Edit / Detail).
+ * @param {object} user
+ * @param {string} [sizeClass='h-8 w-8'] Ukuran tombol ikon (h-8 w-8 di tabel, h-10 w-10 di kartu).
+ */
+function renderUserActions(user, sizeClass = 'h-8 w-8') {
+  const baseClass = `inline-flex ${sizeClass} shrink-0 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`;
+  return `<div class="flex items-center justify-center gap-0" role="group" aria-label="Aksi pengguna">
+    <button type="button" data-action="edit" data-id="${escapeHtml(user.id)}" title="Edit pengguna" aria-label="Edit pengguna" class="${baseClass}">${renderIcon('Pencil', 'h-4 w-4')}</button>
+    <button type="button" data-action="detail" data-id="${escapeHtml(user.id)}" title="Detail pengguna" aria-label="Detail pengguna" class="${baseClass}">${renderIcon('Info', 'h-4 w-4')}</button>
+  </div>`;
+}
+
+/**
+ * Render baris tunggal dalam tabel pengguna (desktop >= md).
+ */
+function renderUserTableRow(user, index, start) {
+  return `<tr class="border-b border-slate-100 transition-colors last:border-0 hover:bg-slate-50/60">
       <td class="whitespace-nowrap px-4 py-3.5 text-center text-xs text-slate-500">${start + index + 1}</td>
       <td class="min-w-[190px] px-4 py-3"><div class="flex items-center gap-2.5"><span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-500 text-xs font-semibold text-white">${escapeHtml(initials(nameOf(user)))}</span><div class="min-w-0"><div class="truncate text-xs font-medium text-slate-500">${escapeHtml(nameOf(user))}</div><div class="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500">${renderOrgLogo(user)}<span class="truncate">${escapeHtml(organizationOf(user))}</span></div></div></div></td>
       <td class="whitespace-nowrap px-4 py-3.5 text-center text-xs text-slate-400">${escapeHtml(user.nim || '—')}</td>
-      <td class="px-4 py-3.5 text-center">${toggleHtml}</td>
-      <td class="px-4 py-3.5 text-center"><span class="inline-flex whitespace-nowrap rounded-lg px-2.5 py-1 text-xs font-medium ${roleClass}">${escapeHtml(roleLabel(user.role))}</span></td>
-      <td class="whitespace-nowrap px-4 py-3.5"><div class="flex items-center justify-center gap-0"><button type="button" data-action="edit" data-id="${escapeHtml(user.id)}" title="Edit pengguna" aria-label="Edit pengguna" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700">${renderIcon('Pencil', 'h-4 w-4')}</button><button type="button" data-action="detail" data-id="${escapeHtml(user.id)}" title="Detail pengguna" aria-label="Detail pengguna" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700">${renderIcon('Info', 'h-4 w-4')}</button></div></td>
+      <td class="px-4 py-3.5 text-center">${renderUserToggle(user)}</td>
+      <td class="px-4 py-3.5 text-center"><span class="inline-flex whitespace-nowrap rounded-lg px-2.5 py-1 text-xs font-medium ${roleBadgeClass(user)}">${escapeHtml(roleLabel(user.role))}</span></td>
+      <td class="whitespace-nowrap px-4 py-3.5">${renderUserActions(user, 'h-8 w-8')}</td>
     </tr>`;
-    })
-    .join('');
 }
 
-function renderRpRows() {
-  if (isRpLoading) {
-    return renderTableLoadingRow({ colspan: 6, message: 'Memuat data request password...' });
+/**
+ * Render kartu pengguna untuk tampilan mobile (< md).
+ */
+function renderUserCard(user, index) {
+  const delay = Math.min(index, 11) * 40;
+  return `<article class="pd-rise-in rounded-xl border border-slate-100 bg-white p-4 shadow-sm" style="animation-delay:${delay}ms">
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex min-w-0 items-center gap-2.5">
+          <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-500 text-xs font-semibold text-white">${escapeHtml(initials(nameOf(user)))}</span>
+          <div class="min-w-0">
+            <div class="truncate text-sm font-semibold text-slate-800">${escapeHtml(nameOf(user))}</div>
+            <div class="mt-0.5 flex items-center gap-1.5 text-[11px] text-slate-500">${renderOrgLogo(user)}<span class="truncate">${escapeHtml(organizationOf(user))}</span></div>
+          </div>
+        </div>
+        <span class="inline-flex shrink-0 whitespace-nowrap rounded-lg px-2.5 py-1 text-xs font-medium ${roleBadgeClass(user)}">${escapeHtml(roleLabel(user.role))}</span>
+      </div>
+      <dl class="mt-3 grid grid-cols-2 items-center gap-x-4 gap-y-2 text-xs">
+        <div>
+          <dt class="text-slate-400">NIM</dt>
+          <dd class="mt-0.5 font-medium text-slate-700 break-all">${escapeHtml(user.nim || '—')}</dd>
+        </div>
+        <div class="flex flex-col items-end">
+          <dt class="text-slate-400">Status</dt>
+          <dd class="mt-1">${renderUserToggle(user)}</dd>
+        </div>
+      </dl>
+      <div class="mt-3 flex justify-end gap-1 border-t border-slate-100 pt-3">${renderUserActions(user, 'h-10 w-10')}</div>
+    </article>`;
+}
+
+function renderUserRows() {
+  if (isUsersLoading) {
+    return renderTableLoadingRow({ colspan: 6, message: 'Memuat data pengguna...' });
   }
-  if (!requestPasswords.length) return renderEmptyState({ colspan: 6 });
+  const { start, pageRows } = getVisibleUserRows();
+  if (!pageRows.length) return renderEmptyState({ colspan: 6 });
+  return pageRows.map((user, index) => renderUserTableRow(user, index, start)).join('');
+}
 
-  const start = (rpCurrentPage - 1) * PAGE_SIZE;
+function renderUserCards() {
+  if (isUsersLoading) {
+    return renderContainerLoading({ message: 'Memuat data pengguna...' });
+  }
+  const { pageRows } = getVisibleUserRows();
+  if (!pageRows.length) return renderEmptyState({});
+  return pageRows.map((user, index) => renderUserCard(user, index)).join('');
+}
 
-  return requestPasswords
-    .map((row, index) => {
-      const isMenunggu = String(row.status || '').toLowerCase() === 'menunggu';
-      const statusBadge = isMenunggu
-        ? `<span class="inline-flex whitespace-nowrap rounded-lg bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">Menunggu</span>`
-        : `<span class="inline-flex whitespace-nowrap rounded-lg bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">Dikonfirmasi</span>`;
+function isRpMenunggu(row) {
+  return String(row.status || '').toLowerCase() === 'menunggu';
+}
 
-      const actionButton = isMenunggu
-        ? `<button type="button" data-action="rp-start-approve" data-id="${escapeHtml(row.idRequestPassword)}" title="Setujui perubahan password" aria-label="Setujui perubahan password" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition">${renderIcon('Send', 'h-4 w-4')}</button>`
-        : `<button type="button" data-action="rp-view-detail" data-id="${escapeHtml(row.idRequestPassword)}" title="Detail request password" aria-label="Detail request password" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition">${renderIcon('Info', 'h-4 w-4')}</button>`;
+function renderRpStatusBadge(row) {
+  return isRpMenunggu(row)
+    ? `<span class="inline-flex whitespace-nowrap rounded-lg bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">Menunggu</span>`
+    : `<span class="inline-flex whitespace-nowrap rounded-lg bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">Dikonfirmasi</span>`;
+}
 
-      const tglStr = row.tanggalRequest ? formatTanggal(String(row.tanggalRequest).slice(0, 10)) : '—';
+/**
+ * Render tombol aksi baris/kartu request password (Setujui / Detail).
+ * @param {object} row
+ * @param {string} [sizeClass='h-8 w-8'] Ukuran tombol ikon (h-8 w-8 di tabel, h-10 w-10 di kartu).
+ */
+function renderRpActions(row, sizeClass = 'h-8 w-8') {
+  const baseClass = `inline-flex ${sizeClass} shrink-0 items-center justify-center rounded-xl transition-colors active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`;
+  if (isRpMenunggu(row)) {
+    return `<button type="button" data-action="rp-start-approve" data-id="${escapeHtml(row.idRequestPassword)}" title="Setujui perubahan password" aria-label="Setujui perubahan password" class="${baseClass} text-green-600 hover:bg-green-50">${renderIcon('Send', 'h-4 w-4')}</button>`;
+  }
+  return `<button type="button" data-action="rp-view-detail" data-id="${escapeHtml(row.idRequestPassword)}" title="Detail request password" aria-label="Detail request password" class="${baseClass} text-slate-400 hover:bg-slate-100 hover:text-slate-700">${renderIcon('Info', 'h-4 w-4')}</button>`;
+}
 
-      return `<tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50/50">
+function renderRpTableRow(row, index, start) {
+  const tglStr = row.tanggalRequest ? formatTanggal(String(row.tanggalRequest).slice(0, 10)) : '—';
+  return `<tr class="border-b border-slate-100 transition-colors last:border-0 hover:bg-slate-50/60">
         <td class="whitespace-nowrap px-4 py-3.5 text-center text-xs text-slate-500">${start + index + 1}</td>
         <td class="min-w-[190px] px-4 py-3">
           <div class="flex items-center gap-2.5">
@@ -252,11 +328,54 @@ function renderRpRows() {
         </td>
         <td class="whitespace-nowrap px-4 py-3.5 text-center text-xs text-slate-400">${escapeHtml(row.nim || '—')}</td>
         <td class="whitespace-nowrap px-4 py-3.5 text-center text-xs text-slate-500">${escapeHtml(tglStr)}</td>
-        <td class="whitespace-nowrap px-4 py-3.5 text-center">${statusBadge}</td>
-        <td class="whitespace-nowrap px-4 py-3.5 text-center">${actionButton}</td>
+        <td class="whitespace-nowrap px-4 py-3.5 text-center">${renderRpStatusBadge(row)}</td>
+        <td class="whitespace-nowrap px-4 py-3.5 text-center">${renderRpActions(row, 'h-8 w-8')}</td>
       </tr>`;
-    })
-    .join('');
+}
+
+function renderRpCard(row, index) {
+  const delay = Math.min(index, 11) * 40;
+  const tglStr = row.tanggalRequest ? formatTanggal(String(row.tanggalRequest).slice(0, 10)) : '—';
+  return `<article class="pd-rise-in rounded-xl border border-slate-100 bg-white p-4 shadow-sm" style="animation-delay:${delay}ms">
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex min-w-0 items-center gap-2.5">
+          <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-500 text-xs font-semibold text-white">${escapeHtml(initials(row.namaPengguna || 'Pengguna'))}</span>
+          <div class="min-w-0">
+            <div class="truncate text-sm font-semibold text-slate-800">${escapeHtml(row.namaPengguna || 'Pengguna')}</div>
+            <div class="mt-0.5 flex items-center gap-1.5 text-[11px] text-slate-500">${renderOrganisasiLogo(row.okiPemohon, row.logoUrl, 'h-3.5 w-3.5')}<span class="truncate">${escapeHtml(row.okiPemohon || '—')}</span></div>
+          </div>
+        </div>
+        <div class="shrink-0">${renderRpStatusBadge(row)}</div>
+      </div>
+      <dl class="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+        <div>
+          <dt class="text-slate-400">NIM</dt>
+          <dd class="mt-0.5 font-medium text-slate-700 break-all">${escapeHtml(row.nim || '—')}</dd>
+        </div>
+        <div>
+          <dt class="text-slate-400">Tanggal Pengajuan</dt>
+          <dd class="mt-0.5 font-medium text-slate-700">${escapeHtml(tglStr)}</dd>
+        </div>
+      </dl>
+      <div class="mt-3 flex justify-end gap-1 border-t border-slate-100 pt-3">${renderRpActions(row, 'h-10 w-10')}</div>
+    </article>`;
+}
+
+function renderRpRows() {
+  if (isRpLoading) {
+    return renderTableLoadingRow({ colspan: 6, message: 'Memuat data request password...' });
+  }
+  if (!requestPasswords.length) return renderEmptyState({ colspan: 6 });
+  const start = (rpCurrentPage - 1) * PAGE_SIZE;
+  return requestPasswords.map((row, index) => renderRpTableRow(row, index, start)).join('');
+}
+
+function renderRpCards() {
+  if (isRpLoading) {
+    return renderContainerLoading({ message: 'Memuat data request password...' });
+  }
+  if (!requestPasswords.length) return renderEmptyState({});
+  return requestPasswords.map((row, index) => renderRpCard(row, index)).join('');
 }
 
 function renderUserPagination() {
@@ -295,12 +414,12 @@ function renderRpConfirmApproveModal() {
         label: 'Kembali',
         action: 'close-modal',
         variant: 'outline',
-        className: 'w-1/2 rounded-xl',
+        className: 'w-1/2 rounded-xl button-hover-soft-neutral',
       },
       {
         label: 'Setujui',
         action: 'rp-do-approve',
-        className: 'w-1/2 rounded-xl bg-primary text-primary-foreground transition hover:brightness-110',
+        className: 'w-1/2 rounded-xl button-hover-soft-green',
       },
     ],
   }).toString();
@@ -314,39 +433,40 @@ function renderRpPreviewModal() {
   const wa = selectedRp.noWhatsapp || selectedRp.no_whatsapp || '';
 
   return `
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-[2px] p-4 sm:p-6" data-modal-backdrop>
-      <section role="dialog" aria-modal="true" class="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl bg-white p-6 sm:p-8 shadow-2xl">
-        <h2 class="text-lg font-bold text-slate-900">Tautan Ubah Password</h2>
-        
-        <div class="mt-5 space-y-4">
-          <!-- Nama Pengguna -->
-          <div>
-            <span class="mb-1.5 block text-xs font-semibold text-slate-600">Nama Pengguna</span>
-            <div class="rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-800">
-              ${escapeHtml(nama)}
-            </div>
-          </div>
+    <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/30 backdrop-blur-[2px] p-4 sm:p-6" data-modal-backdrop>
+      <section role="dialog" aria-modal="true" class="pd-pop-in flex w-full max-w-lg max-h-[90dvh] flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">
+        <div class="flex-1 overflow-y-auto p-6 sm:p-8">
+          <h2 class="text-lg font-bold text-slate-900">Tautan Ubah Password</h2>
 
-          <!-- NIM -->
-          <div>
-            <span class="mb-1.5 block text-xs font-semibold text-slate-600">NIM</span>
-            <div class="rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-800">
-              ${escapeHtml(nim)}
+          <div class="mt-5 space-y-4">
+            <!-- Nama Pengguna -->
+            <div>
+              <span class="mb-1.5 block text-xs font-semibold text-slate-600">Nama Pengguna</span>
+              <div class="rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-800">
+                ${escapeHtml(nama)}
+              </div>
             </div>
-          </div>
 
-          <!-- Nomor Whatsapp -->
-          <div>
-            <span class="mb-1.5 block text-xs font-semibold text-slate-600">Nomor Whatsapp</span>
-            <div class="rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-800">
-              ${escapeHtml(formatWaDisplay(wa))}
+            <!-- NIM -->
+            <div>
+              <span class="mb-1.5 block text-xs font-semibold text-slate-600">NIM</span>
+              <div class="rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-800">
+                ${escapeHtml(nim)}
+              </div>
             </div>
-          </div>
 
-          <!-- Pesan dan Link URL -->
-          <div>
-            <span class="mb-1.5 block text-xs font-semibold text-slate-600">Pesan dan link URL</span>
-            <div id="rp-message-box" class="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 text-xs leading-relaxed text-slate-700 whitespace-pre-line select-all">
+            <!-- Nomor Whatsapp -->
+            <div>
+              <span class="mb-1.5 block text-xs font-semibold text-slate-600">Nomor Whatsapp</span>
+              <div class="rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-800">
+                ${escapeHtml(formatWaDisplay(wa))}
+              </div>
+            </div>
+
+            <!-- Pesan dan Link URL -->
+            <div>
+              <span class="mb-1.5 block text-xs font-semibold text-slate-600">Pesan dan link URL</span>
+              <div id="rp-message-box" class="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 text-xs leading-relaxed text-slate-700 whitespace-pre-line select-all">
 Halo <strong class="text-slate-900">${escapeHtml(nama)}! 👋</strong>
 
 Kami menerima permintaan ubah password untuk akun PinjemDulu Anda.
@@ -362,11 +482,12 @@ Untuk melanjutkan proses ubah password, silakan klik tautan berikut:
 Jika Anda tidak merasa mengajukan permintaan ini, silakan abaikan pesan ini.
 
 Terima kasih telah menggunakan <strong>PinjemDulu</strong>! 👋
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="mt-7 flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100">
+        <div class="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-6 py-4 sm:px-8">
           <button
             type="button"
             data-action="close-modal"
@@ -386,7 +507,7 @@ Terima kasih telah menggunakan <strong>PinjemDulu</strong>! 👋
             <button
               type="button"
               data-action="to-confirm-send"
-              class="rounded-xl bg-primary px-4 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-sm hover:brightness-110 transition"
+              class="rounded-xl bg-primary px-4 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-sm button-hover-soft-primary transition"
             >
               Konfirmasi Pengiriman
             </button>
@@ -399,8 +520,8 @@ Terima kasih telah menggunakan <strong>PinjemDulu</strong>! 👋
 
 function renderRpConfirmSendModal() {
   return `
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-[2px] p-4 sm:p-6" data-modal-backdrop>
-      <section role="dialog" aria-modal="true" class="w-full max-w-sm rounded-3xl bg-white p-6 sm:p-8 shadow-2xl text-center">
+    <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/30 backdrop-blur-[2px] p-4 sm:p-6" data-modal-backdrop>
+      <section role="dialog" aria-modal="true" class="pd-pop-in w-full max-w-sm max-h-[90dvh] overflow-y-auto rounded-3xl bg-white p-6 sm:p-8 shadow-2xl text-center">
         <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
           ${renderIcon('CircleCheck', 'h-8 w-8')}
         </div>
@@ -410,14 +531,14 @@ function renderRpConfirmSendModal() {
           <button
             type="button"
             data-action="back-to-rp-preview"
-            class="flex-1 rounded-xl border border-slate-200 bg-white py-2.5 text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"
+            class="flex-1 rounded-xl border border-slate-200 bg-white py-2.5 text-xs sm:text-sm font-semibold text-slate-700 button-hover-soft-neutral transition"
           >
             Kembali
           </button>
           <button
             type="button"
             data-action="do-confirm-send"
-            class="flex-1 rounded-xl bg-emerald-600 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition"
+            class="flex-1 rounded-xl bg-emerald-600 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-sm button-hover-soft-green transition"
           >
             Konfirmasi
           </button>
@@ -429,8 +550,8 @@ function renderRpConfirmSendModal() {
 
 function renderRpSuccessModal() {
   return `
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-[2px] p-4 sm:p-6" data-modal-backdrop>
-      <section role="dialog" aria-modal="true" class="w-full max-w-sm rounded-3xl bg-white p-6 sm:p-8 shadow-2xl text-center">
+    <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/30 backdrop-blur-[2px] p-4 sm:p-6" data-modal-backdrop>
+      <section role="dialog" aria-modal="true" class="pd-pop-in w-full max-w-sm max-h-[90dvh] overflow-y-auto rounded-3xl bg-white p-6 sm:p-8 shadow-2xl text-center">
         <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
           ${renderIcon('CircleCheck', 'h-8 w-8')}
         </div>
@@ -440,7 +561,7 @@ function renderRpSuccessModal() {
           <button
             type="button"
             data-action="close-modal"
-            class="w-full rounded-xl bg-primary py-2.5 text-xs sm:text-sm font-semibold text-white shadow-sm hover:brightness-110 transition"
+            class="w-full rounded-xl bg-primary py-2.5 text-xs sm:text-sm font-semibold text-white shadow-sm button-hover-soft-neutral transition"
           >
             Kembali
           </button>
@@ -465,57 +586,59 @@ function renderRpDetailModal() {
   );
 
   return `
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-[2px] p-4 sm:p-6" data-modal-backdrop>
-      <section role="dialog" aria-modal="true" class="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl bg-white p-6 sm:p-8 shadow-2xl">
-        <h2 class="text-lg font-bold text-slate-900">Detail Ubah Password</h2>
+    <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/30 backdrop-blur-[2px] p-4 sm:p-6" data-modal-backdrop>
+      <section role="dialog" aria-modal="true" class="pd-pop-in flex w-full max-w-lg max-h-[90dvh] flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">
+        <div class="flex-1 overflow-y-auto p-6 sm:p-8">
+          <h2 class="text-lg font-bold text-slate-900">Detail Ubah Password</h2>
 
-        <div class="mt-5 space-y-4">
-          <!-- Nama Pengguna -->
-          <div>
-            <span class="mb-1.5 block text-xs font-semibold text-slate-600">Nama Pengguna</span>
-            <div class="rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-800">
-              ${escapeHtml(nama)}
+          <div class="mt-5 space-y-4">
+            <!-- Nama Pengguna -->
+            <div>
+              <span class="mb-1.5 block text-xs font-semibold text-slate-600">Nama Pengguna</span>
+              <div class="rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-800">
+                ${escapeHtml(nama)}
+              </div>
             </div>
-          </div>
 
-          <!-- Tanggal Pengajuan -->
-          <div>
-            <span class="mb-1.5 block text-xs font-semibold text-slate-600">Tanggal Pengajuan</span>
-            <div class="rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-800">
-              ${escapeHtml(tgl)}
+            <!-- Tanggal Pengajuan -->
+            <div>
+              <span class="mb-1.5 block text-xs font-semibold text-slate-600">Tanggal Pengajuan</span>
+              <div class="rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-800">
+                ${escapeHtml(tgl)}
+              </div>
             </div>
-          </div>
 
-          <!-- NIM -->
-          <div>
-            <span class="mb-1.5 block text-xs font-semibold text-slate-600">NIM</span>
-            <div class="rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-800">
-              ${escapeHtml(nim)}
+            <!-- NIM -->
+            <div>
+              <span class="mb-1.5 block text-xs font-semibold text-slate-600">NIM</span>
+              <div class="rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-800">
+                ${escapeHtml(nim)}
+              </div>
             </div>
-          </div>
 
-          <!-- Nomor Whatsapp -->
-          <div>
-            <span class="mb-1.5 block text-xs font-semibold text-slate-600">Nomor Whatsapp</span>
-            <div class="rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-800">
-              ${escapeHtml(formatWaDisplay(wa))}
+            <!-- Nomor Whatsapp -->
+            <div>
+              <span class="mb-1.5 block text-xs font-semibold text-slate-600">Nomor Whatsapp</span>
+              <div class="rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-800">
+                ${escapeHtml(formatWaDisplay(wa))}
+              </div>
             </div>
-          </div>
 
-          <!-- Pesan dan Link URL -->
-          <div>
-            <span class="mb-1.5 block text-xs font-semibold text-slate-600">Pesan dan link URL</span>
-            <div class="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 text-xs leading-relaxed text-slate-700 whitespace-pre-line select-all">
-              ${formattedHtmlPesan}
+            <!-- Pesan dan Link URL -->
+            <div>
+              <span class="mb-1.5 block text-xs font-semibold text-slate-600">Pesan dan link URL</span>
+              <div class="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 text-xs leading-relaxed text-slate-700 whitespace-pre-line select-all">
+                ${formattedHtmlPesan}
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="mt-6 flex justify-end">
+        <div class="flex shrink-0 justify-end border-t border-slate-100 px-6 py-4 sm:px-8">
           <button
             type="button"
             data-action="close-modal"
-            class="rounded-xl bg-primary px-7 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-sm hover:brightness-110 transition"
+            class="rounded-xl bg-primary px-7 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-sm button-hover-soft-neutral transition"
           >
             tutup
           </button>
@@ -545,12 +668,12 @@ function renderModal() {
           label: 'Kembali',
           action: 'cancel-status-change',
           variant: 'outline',
-          className: 'w-1/2 rounded-xl',
+          className: 'w-1/2 rounded-xl button-hover-soft-neutral',
         },
         {
           label: 'Ya, saya yakin',
           action: 'confirm-status-change',
-          className: 'w-1/2 rounded-xl bg-primary text-primary-foreground transition hover:brightness-110',
+          className: 'w-1/2 rounded-xl button-hover-soft-green',
         },
       ],
     }).toString();
@@ -565,7 +688,7 @@ function renderModal() {
       actions: [{
         label: 'Kembali',
         action: 'close-modal',
-        className: 'w-full rounded-xl bg-primary text-primary-foreground transition hover:brightness-110',
+        className: 'w-full rounded-xl bg-primary text-primary-foreground button-hover-soft-neutral',
       }],
     }).toString();
   }
@@ -581,12 +704,12 @@ function renderModal() {
           label: 'Kembali',
           action: 'back-edit-form',
           variant: 'outline',
-          className: 'w-1/2 rounded-xl',
+          className: 'w-1/2 rounded-xl button-hover-soft-neutral',
         },
         {
           label: 'Kirim',
           action: 'confirm-edit-user',
-          className: 'w-1/2 rounded-xl bg-primary text-primary-foreground transition hover:brightness-110',
+          className: 'w-1/2 rounded-xl button-hover-soft-primary',
         },
       ],
     }).toString();
@@ -603,12 +726,12 @@ function renderModal() {
           label: 'Kembali',
           action: 'back-add-form',
           variant: 'outline',
-          className: 'w-1/2 rounded-xl',
+          className: 'w-1/2 rounded-xl button-hover-soft-neutral',
         },
         {
           label: 'Kirim',
           action: 'confirm-add-user',
-          className: 'w-1/2 rounded-xl bg-primary text-primary-foreground transition hover:brightness-110',
+          className: 'w-1/2 rounded-xl button-hover-soft-primary',
         },
       ],
     }).toString();
@@ -623,7 +746,7 @@ function renderModal() {
       actions: [{
         label: 'Kembali',
         action: 'close-modal',
-        className: 'w-full rounded-xl bg-primary text-primary-foreground transition hover:brightness-110',
+        className: 'w-full rounded-xl bg-primary text-primary-foreground button-hover-soft-neutral',
       }],
     }).toString();
   }
@@ -637,7 +760,7 @@ function renderModal() {
       actions: [{
         label: 'Kembali',
         action: 'close-modal',
-        className: 'w-full rounded-xl bg-primary text-primary-foreground transition hover:brightness-110',
+        className: 'w-full rounded-xl bg-primary text-primary-foreground button-hover-soft-neutral',
       }],
     }).toString();
   }
@@ -649,8 +772,8 @@ function renderModal() {
     const roleClass =
       normalizeRole(u.role) === ROLES.PENANGGUNG_JAWAB ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-700';
     const waDisplay = formatWaDisplay(u.noWhatsapp || u.no_whatsapp);
-    return `<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-[2px] p-4 sm:p-6" data-modal-backdrop><section role="dialog" aria-modal="true" class="w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white p-6 sm:p-8 shadow-2xl transition-all"><h2 class="text-xl font-semibold tracking-tight text-slate-900">Detail Pengguna</h2><div class="mt-6 space-y-4"><div><span class="mb-2 block text-sm font-medium text-slate-900">Nama Peminjam</span><div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-white px-4 py-3.5 shadow-[0_1px_3px_rgba(0,0,0,0.03)]"><span class="text-sm font-medium text-slate-800 break-words">${escapeHtml(nameOf(u))}</span><div class="flex shrink-0 items-center gap-1.5 text-xs font-semibold text-slate-600">${renderOrgLogo(u)}<span>${escapeHtml(organizationOf(u))}</span></div></div></div><div><span class="mb-2 block text-sm font-medium text-slate-900">NIM</span><div class="rounded-2xl border border-slate-100 bg-white px-4 py-3.5 text-sm font-medium text-slate-800 shadow-[0_1px_3px_rgba(0,0,0,0.03)] break-all">${escapeHtml(u.nim || '—')}</div></div><div><span class="mb-2 block text-sm font-medium text-slate-900">Nomor Whatsapp</span><div class="rounded-2xl border border-slate-100 bg-white px-4 py-3.5 text-sm font-medium text-slate-800 shadow-[0_1px_3px_rgba(0,0,0,0.03)] break-all">${escapeHtml(waDisplay)}</div></div><div><div class="flex items-center justify-between gap-4"><span class="text-sm font-medium text-slate-900">Role</span><span class="inline-flex rounded-xl px-4 py-1.5 text-xs font-medium ${roleClass}">${escapeHtml(roleLabel(u.role))}</span></div></div></div>
-    <div class="mt-8 flex justify-end"><button type="button" data-action="close-modal" class="rounded-xl bg-primary px-8 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90">Tutup</button></div></section></div>`;
+    return `<div class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/30 backdrop-blur-[2px] p-4 sm:p-6" data-modal-backdrop><section role="dialog" aria-modal="true" class="pd-pop-in w-full max-w-xl max-h-[90dvh] overflow-y-auto rounded-3xl bg-white p-6 sm:p-8 shadow-2xl transition-all"><h2 class="text-xl font-semibold tracking-tight text-slate-900">Detail Pengguna</h2><div class="mt-6 space-y-4"><div><span class="mb-2 block text-sm font-medium text-slate-900">Nama Peminjam</span><div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-white px-4 py-3.5 shadow-[0_1px_3px_rgba(0,0,0,0.03)]"><span class="text-sm font-medium text-slate-800 break-words">${escapeHtml(nameOf(u))}</span><div class="flex shrink-0 items-center gap-1.5 text-xs font-semibold text-slate-600">${renderOrgLogo(u)}<span>${escapeHtml(organizationOf(u))}</span></div></div></div><div><span class="mb-2 block text-sm font-medium text-slate-900">NIM</span><div class="rounded-2xl border border-slate-100 bg-white px-4 py-3.5 text-sm font-medium text-slate-800 shadow-[0_1px_3px_rgba(0,0,0,0.03)] break-all">${escapeHtml(u.nim || '—')}</div></div><div><span class="mb-2 block text-sm font-medium text-slate-900">Nomor Whatsapp</span><div class="rounded-2xl border border-slate-100 bg-white px-4 py-3.5 text-sm font-medium text-slate-800 shadow-[0_1px_3px_rgba(0,0,0,0.03)] break-all">${escapeHtml(waDisplay)}</div></div><div><div class="flex items-center justify-between gap-4"><span class="text-sm font-medium text-slate-900">Role</span><span class="inline-flex rounded-xl px-4 py-1.5 text-xs font-medium ${roleClass}">${escapeHtml(roleLabel(u.role))}</span></div></div></div>
+    <div class="mt-8 flex justify-end"><button type="button" data-action="close-modal" class="rounded-xl bg-primary px-8 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm button-hover-soft-neutral">Tutup</button></div></section></div>`;
   }
 
   const editing = modalMode === 'edit';
@@ -668,7 +791,7 @@ function renderModal() {
     'HMTI';
   const selectedOrg = editing ? organizationOf(u) : (u?.displayOrganization || pjOrg);
 
-  return `<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-[2px] p-4 sm:p-6" data-modal-backdrop><section role="dialog" aria-modal="true" aria-labelledby="user-form-title" class="w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white p-6 sm:p-8 shadow-2xl transition-all"><h2 id="user-form-title" class="text-xl font-semibold tracking-tight text-slate-900">${editing ? 'Edit Pengguna' : 'Tambah Pengguna'}</h2><form id="user-form" class="mt-6 space-y-4"><div><label class="mb-2 block text-sm font-medium text-slate-900">Nama Pengguna</label><input name="nama" type="text" value="${escapeHtml(u.nama || '')}" placeholder="Nama Pengguna" class="w-full rounded-2xl border border-slate-100 bg-white px-4 py-3.5 text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.03)]" /><p id="name-field-error" class="mt-1.5 text-xs text-rose-500 ${nameFieldError ? '' : 'hidden'}">${escapeHtml(nameFieldError)}</p></div><div><div class="mb-2 flex items-center justify-between"><label class="text-sm font-medium text-slate-900">NIM</label><span id="nim-digit-counter" class="text-xs ${((u.nim || '')).length === 12 ? 'font-semibold text-emerald-600' : 'font-medium text-slate-400'}">${((u.nim || '')).length}/12</span></div><input name="nim" type="text" inputmode="numeric" maxlength="12" value="${escapeHtml(u.nim || '')}" placeholder="NIM" class="w-full rounded-2xl border border-slate-100 bg-white px-4 py-3.5 text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.03)]" /><p id="nim-field-error" class="mt-1.5 text-xs text-rose-500 hidden">NIM tidak valid</p></div><div><label class="mb-2 block text-sm font-medium text-slate-900">Nomor Whatsapp</label><div class="flex items-center overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.03)] focus-within:border-slate-300 focus-within:ring-2 focus-within:ring-slate-100"><span class="inline-flex h-12 items-center border-r border-slate-100 bg-slate-50 px-4 text-sm font-medium text-slate-600">+62</span><input name="noWhatsapp" type="tel" value="${escapeHtml(formatNomorWa(u.noWhatsapp || u.no_whatsapp || ''))}" placeholder="812-3456-7890" class="h-12 flex-1 border-0 border-none bg-transparent px-4 text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none ring-0 shadow-none focus:border-0 focus:border-none focus:outline-none focus:ring-0 focus:shadow-none" style="border: none !important; outline: none !important; box-shadow: none !important;" /><span class="flex items-center justify-center pr-4" style="padding-right:16px;"><svg class="h-4 w-4 shrink-0 rounded-full border border-slate-200 overflow-hidden" viewBox="0 0 24 24"><path d="M0,0 H24 V12 H0 Z" class="fill-rose-600" style="fill:#e11d48;" /><path d="M0,12 H24 V24 H0 Z" class="fill-white" style="fill:#ffffff;" /></svg></span></div><p id="wa-field-error" class="mt-1.5 text-xs text-rose-500 ${waFieldError ? '' : 'hidden'}">${escapeHtml(waFieldError)}</p></div><div><label class="mb-2 block text-sm font-medium text-slate-900">Organisasi</label><div class="relative"><select name="displayOrganizationSelect" disabled class="${selectClass('appearance-none pr-10 cursor-not-allowed bg-slate-50 text-slate-500 opacity-90')}"><option value="${escapeHtml(selectedOrg)}" selected>${escapeHtml(selectedOrg)}</option></select><input type="hidden" name="displayOrganization" value="${escapeHtml(selectedOrg)}" /><span class="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 flex items-center">${renderIcon('Lock', 'h-4 w-4 stroke-[2]')}</span></div><p class="mt-1 text-xs text-slate-400">Organisasi otomatis disesuaikan dengan organisasi Anda (${escapeHtml(selectedOrg)}).</p></div><div><span class="mb-3 block text-sm font-medium text-slate-900">Role</span><div class="space-y-3" id="role-radio-group"><label class="flex cursor-pointer items-center gap-3" data-role-label><input type="radio" name="role" value="${ROLES.PEMINJAM}" ${isPeminjam ? 'checked' : ''} class="sr-only" /><span data-role-indicator class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${isPeminjam ? 'border-primary bg-primary text-white' : 'border-slate-300 bg-white text-transparent'}"><svg data-role-check class="h-3 w-3 stroke-[3] ${isPeminjam ? 'block' : 'hidden'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span class="text-sm font-medium text-slate-800">Peminjam</span></label><label class="flex cursor-pointer items-center gap-3" data-role-label><input type="radio" name="role" value="${ROLES.PENANGGUNG_JAWAB}" ${isPj ? 'checked' : ''} class="sr-only" /><span data-role-indicator class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${isPj ? 'border-primary bg-primary text-white' : 'border-slate-300 bg-white text-transparent'}"><svg data-role-check class="h-3 w-3 stroke-[3] ${isPj ? 'block' : 'hidden'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span class="text-sm font-medium text-slate-800">Penanggung Jawab</span></label></div></div><div id="user-form-error" class="${userFormError ? '' : 'hidden'} rounded-xl bg-red-50 px-4 py-2 text-sm text-red-700">${escapeHtml(userFormError)}</div><div class="mt-8 flex items-center justify-end gap-4"><button type="button" data-action="close-modal" class="cancel-form-button rounded-xl px-6 py-2.5 text-sm font-semibold text-slate-500 transition hover:bg-slate-50" style="height:40px; min-height:40px; max-height:40px; padding-top:0; padding-bottom:0; line-height:20px; box-sizing:border-box;">Batal</button><button type="submit" class="inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-xl bg-primary px-8 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:brightness-110" style="display:inline-flex; flex-shrink:0; align-items:center; justify-content:center; white-space:nowrap; width:auto; min-width:92px; height:40px; min-height:40px; max-height:40px; padding:0 32px; line-height:20px; box-sizing:border-box;">${editing ? 'Edit' : 'Tambah'}</button></div></form></section></div>`;
+  return `<div class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/30 backdrop-blur-[2px] p-4 sm:p-6" data-modal-backdrop><section role="dialog" aria-modal="true" aria-labelledby="user-form-title" class="pd-pop-in w-full max-w-xl max-h-[90dvh] overflow-y-auto rounded-3xl bg-white p-6 sm:p-8 shadow-2xl transition-all"><h2 id="user-form-title" class="text-xl font-semibold tracking-tight text-slate-900">${editing ? 'Edit Pengguna' : 'Tambah Pengguna'}</h2><form id="user-form" class="mt-6 space-y-4"><div><label class="mb-2 block text-sm font-medium text-slate-900">Nama Pengguna</label><input name="nama" type="text" value="${escapeHtml(u.nama || '')}" placeholder="Nama Pengguna" class="w-full rounded-2xl border border-slate-100 bg-white px-4 py-3.5 text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.03)]" /><p id="name-field-error" class="mt-1.5 text-xs text-rose-500 ${nameFieldError ? '' : 'hidden'}">${escapeHtml(nameFieldError)}</p></div><div><div class="mb-2 flex items-center justify-between"><label class="text-sm font-medium text-slate-900">NIM</label><span id="nim-digit-counter" class="text-xs ${((u.nim || '')).length === 12 ? 'font-semibold text-emerald-600' : 'font-medium text-slate-400'}">${((u.nim || '')).length}/12</span></div><input name="nim" type="text" inputmode="numeric" maxlength="12" value="${escapeHtml(u.nim || '')}" placeholder="NIM" class="w-full rounded-2xl border border-slate-100 bg-white px-4 py-3.5 text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.03)]" /><p id="nim-field-error" class="mt-1.5 text-xs text-rose-500 hidden">NIM tidak valid</p></div><div><label class="mb-2 block text-sm font-medium text-slate-900">Nomor Whatsapp</label><div class="flex items-center overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.03)] focus-within:border-slate-300 focus-within:ring-2 focus-within:ring-slate-100"><span class="inline-flex h-12 items-center border-r border-slate-100 bg-slate-50 px-4 text-sm font-medium text-slate-600">+62</span><input name="noWhatsapp" type="tel" value="${escapeHtml(formatNomorWa(u.noWhatsapp || u.no_whatsapp || ''))}" placeholder="812-3456-7890" class="h-12 flex-1 border-0 border-none bg-transparent px-4 text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none ring-0 shadow-none focus:border-0 focus:border-none focus:outline-none focus:ring-0 focus:shadow-none" style="border: none !important; outline: none !important; box-shadow: none !important;" /><span class="flex items-center justify-center pr-4" style="padding-right:16px;">${renderWhatsappFlag()}</span></div><p id="wa-field-error" class="mt-1.5 text-xs text-rose-500 ${waFieldError ? '' : 'hidden'}">${escapeHtml(waFieldError)}</p></div><div><label class="mb-2 block text-sm font-medium text-slate-900">Organisasi</label><div class="relative"><select name="displayOrganizationSelect" disabled class="${selectClass('appearance-none pr-10 cursor-not-allowed bg-slate-50 text-slate-500 opacity-90')}"><option value="${escapeHtml(selectedOrg)}" selected>${escapeHtml(selectedOrg)}</option></select><input type="hidden" name="displayOrganization" value="${escapeHtml(selectedOrg)}" /><span class="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 flex items-center">${renderIcon('Lock', 'h-4 w-4 stroke-[2]')}</span></div><p class="mt-1 text-xs text-slate-400">Organisasi otomatis disesuaikan dengan organisasi Anda (${escapeHtml(selectedOrg)}).</p></div><div><span class="mb-3 block text-sm font-medium text-slate-900">Role</span><div class="space-y-3" id="role-radio-group"><label class="flex cursor-pointer items-center gap-3" data-role-label><input type="radio" name="role" value="${ROLES.PEMINJAM}" ${isPeminjam ? 'checked' : ''} class="sr-only" /><span data-role-indicator class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${isPeminjam ? 'border-primary bg-primary text-white' : 'border-slate-300 bg-white text-transparent'}"><svg data-role-check class="h-3 w-3 stroke-[3] ${isPeminjam ? 'block' : 'hidden'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span class="text-sm font-medium text-slate-800">Peminjam</span></label><label class="flex cursor-pointer items-center gap-3" data-role-label><input type="radio" name="role" value="${ROLES.PENANGGUNG_JAWAB}" ${isPj ? 'checked' : ''} class="sr-only" /><span data-role-indicator class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${isPj ? 'border-primary bg-primary text-white' : 'border-slate-300 bg-white text-transparent'}"><svg data-role-check class="h-3 w-3 stroke-[3] ${isPj ? 'block' : 'hidden'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span class="text-sm font-medium text-slate-800">Penanggung Jawab</span></label></div></div><div id="user-form-error" class="${userFormError ? '' : 'hidden'} rounded-xl bg-red-50 px-4 py-2 text-sm text-red-700">${escapeHtml(userFormError)}</div><div class="mt-8 flex items-center justify-end gap-4"><button type="button" data-action="close-modal" class="button-hover-soft-red rounded-xl px-6 py-2.5 text-sm font-semibold text-slate-500 transition hover:bg-slate-50" style="height:40px; min-height:40px; max-height:40px; padding-top:0; padding-bottom:0; line-height:20px; box-sizing:border-box;">Batal</button><button type="submit" class="inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-xl bg-primary px-8 text-sm font-semibold text-primary-foreground shadow-sm button-hover-soft-primary transition-colors" style="display:inline-flex; flex-shrink:0; align-items:center; justify-content:center; white-space:nowrap; width:auto; min-width:92px; height:40px; min-height:40px; max-height:40px; padding:0 32px; line-height:20px; box-sizing:border-box;">${editing ? 'Edit' : 'Tambah'}</button></div></form></section></div>`;
 }
 
 function renderContent() {
@@ -676,15 +799,15 @@ function renderContent() {
   const filteredUsers = visibleUsers();
   const nAktif = countActiveFilters();
 
-  return `<section class="w-full px-5 pb-8 pt-8 sm:px-6 lg:px-7">
+  return `<section class="pd-page-in w-full px-5 pb-8 pt-8 sm:px-6 lg:px-7">
     <div class="mb-9">
       <h1 class="text-3xl font-semibold tracking-tight text-slate-900">Kelola Pengguna</h1>
       <p class="mt-1 text-sm text-slate-400">Pantau dan kelola akun pengguna, hak akses, dan perannya dalam sistem.</p>
     </div>
 
     <div class="mb-3 inline-flex items-center gap-1 rounded-xl bg-white p-1.5">
-      <button type="button" data-action="switch-tab" data-tab="pengguna" class="rounded-lg px-4 py-2 text-[11px] font-medium transition ${isPenggunaTab ? 'bg-blue-100 text-slate-900' : 'text-slate-600 hover:bg-slate-50'}">List Pengguna</button>
-      <button type="button" data-action="switch-tab" data-tab="request-password" class="rounded-lg px-4 py-2 text-[11px] font-medium transition ${!isPenggunaTab ? 'bg-blue-100 text-slate-900' : 'text-slate-600 hover:bg-slate-50'}">List Request Password</button>
+      <button type="button" data-action="switch-tab" data-tab="pengguna" class="rounded-lg px-4 py-2 text-[11px] font-medium transition-colors active:scale-95 ${isPenggunaTab ? 'bg-blue-100 text-slate-900' : 'text-slate-600 hover:bg-slate-50'}">List Pengguna</button>
+      <button type="button" data-action="switch-tab" data-tab="request-password" class="rounded-lg px-4 py-2 text-[11px] font-medium transition-colors active:scale-95 ${!isPenggunaTab ? 'bg-blue-100 text-slate-900' : 'text-slate-600 hover:bg-slate-50'}">List Request Password</button>
     </div>
 
     <div class="rounded-2xl bg-white p-4 shadow-[0_1px_4px_rgba(15,23,42,0.025)] sm:p-6">
@@ -722,10 +845,13 @@ function renderContent() {
         </div>
       </div>
 
-      ${toastMessage ? `<div role="status" class="mb-4 rounded-xl px-4 py-2.5 text-sm ${toastType === 'error' ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}">${escapeHtml(toastMessage)}</div>` : ''}
+      ${toastMessage ? `<div role="status" class="pd-rise-in mb-4 rounded-xl px-4 py-2.5 text-sm ${toastType === 'error' ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}">${escapeHtml(toastMessage)}</div>` : ''}
 
-      <!-- Table Area -->
-      <div class="w-full overflow-x-auto">
+      <!-- Table Area (desktop) + Kartu (mobile) -->
+      <div class="space-y-3 md:hidden" data-card-list>
+        ${isPenggunaTab ? renderUserCards() : renderRpCards()}
+      </div>
+      <div class="hidden w-full overflow-x-auto md:block">
         <table class="w-full min-w-[680px] border-collapse text-left">
           <thead>
             <tr class="border-b border-slate-100 text-sm font-medium leading-[140%] tracking-normal text-slate-400">
@@ -765,13 +891,13 @@ function renderContent() {
   ${renderModal()}
 
   <dialog id="dialog-filter-pengguna" aria-labelledby="filter-pengguna-title" style="width: min(512px, calc(100vw - 2rem)); max-width: none;" class="fixed left-1/2 top-1/2 z-50 m-0 -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-white p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm">
-    <div class="flex flex-col p-5 sm:p-6">
+    <div class="pd-pop-in flex max-h-[90dvh] flex-col overflow-y-auto p-5 sm:p-6">
       <div class="flex items-center justify-between border-b border-border pb-3">
         <div class="flex min-w-0 items-center gap-2">
           <h2 id="filter-pengguna-title" class="text-base font-semibold leading-tight text-foreground">${isPenggunaTab ? 'Filter Kelola Pengguna' : 'Filter Request Password'}</h2>
           ${nAktif > 0 ? `<span class="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">${nAktif}</span>` : ''}
         </div>
-        <button type="button" data-action="close-filter-dialog" aria-label="Tutup filter" class="ml-2 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground">
+        <button type="button" data-action="close-filter-dialog" aria-label="Tutup filter" class="ml-2 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           ${renderIcon('X', 'h-4 w-4')}
         </button>
       </div>
@@ -839,7 +965,7 @@ function renderContent() {
       </form>
       <div class="mt-5 flex items-center justify-end gap-3">
         <button type="button" data-action="reset-filter-dialog" class="filter-reset-link px-2 py-2.5 text-sm font-semibold text-slate-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">Reset</button>
-        <button type="button" data-action="apply-filter-dialog" class="rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">Terapkan</button>
+        <button type="button" data-action="apply-filter-dialog" class="rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-white shadow-sm button-hover-soft-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">Terapkan</button>
       </div>
     </div>
   </dialog>`;

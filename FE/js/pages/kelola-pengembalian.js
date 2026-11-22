@@ -8,24 +8,16 @@ import { escapeHtml } from '../ui/html.js';
 import { renderSearchInput } from '../ui/search-input.js';
 import { renderFilterButton } from '../ui/filter.js';
 import { renderPagination as renderSharedPagination } from '../ui/pagination.js';
-import { statusChipClass, renderStatusChip } from '../ui/status-chip.js';
+import { renderStatusChip } from '../ui/status-chip.js';
 import { selectClass } from '../ui/classes.js';
 import { renderModal as renderGlobalModal } from '../ui/modal.js';
 import { compressImageToDataUrl } from './kelola-inventaris-form.js';
 import { validateFotoFile } from '../lib/inventaris-form.js';
 import { renderOrganisasiLogo } from '../ui/organisasi-badge.js';
 import { renderEmptyState } from '../ui/empty-state.js';
-import { renderTableLoadingRow } from '../ui/loading-state.js';
+import { renderContainerLoading, renderTableLoadingRow } from '../ui/loading-state.js';
 
 let isLoading = false;
-
-function renderReturnStatusChip(status) {
-  const isRejected = String(status || '').toLowerCase().trim() === 'ditolak';
-  return renderStatusChip({
-    status,
-    className: isRejected ? 'status-chip-return-rejected' : '',
-  });
-}
 
 const OKI_LIST = ['BEM', 'HMTI', 'HME', 'HIMANIA', 'RISPOL', 'HMS', 'THEATRISIC', 'PP'];
 
@@ -141,23 +133,6 @@ function getDaysLate(row) {
   return diffDays > 0 ? diffDays : 3;
 }
 
-function statusInfo(status) {
-  const s = String(status || '').toLowerCase();
-  if (s === STATUS_PEMINJAMAN.MENUNGGU_KONFIRMASI_PENGEMBALIAN || s === 'menunggu_pengembalian' || s === 'menunggu') {
-    return { label: 'Menunggu', cls: statusChipClass(status) };
-  }
-  if (s === STATUS_PEMINJAMAN.TERLAMBAT || s === 'terlambat') {
-    return { label: 'Terlambat', cls: statusChipClass(status) };
-  }
-  if (s === STATUS_PEMINJAMAN.DIKEMBALIKAN || s === 'selesai' || s === 'dikembalikan') {
-    return { label: 'Dikembalikan', cls: statusChipClass(status) };
-  }
-  if (s === STATUS_PEMINJAMAN.DITOLAK || s === 'ditolak') {
-    return { label: 'Ditolak', cls: statusChipClass(status) };
-  }
-  return { label: status || '—', cls: statusChipClass(status) };
-}
-
 function personName(row) {
   return row.pengguna?.nama || row.peminjam?.nama || row.namaPeminjam || 'Peminjam';
 }
@@ -240,37 +215,121 @@ function visibleRows() {
   });
 }
 
-function renderTableRows() {
-  if (isLoading) {
-    return renderTableLoadingRow({ colspan: 8, message: 'Memuat data pengembalian...' });
-  }
+/**
+ * Hitung daftar baris yang tampil pada halaman saat ini (dipakai tabel & kartu).
+ */
+function getVisiblePageRows() {
   const filtered = visibleRows();
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   currentPage = Math.min(currentPage, pages);
   const start = (currentPage - 1) * PAGE_SIZE;
-  const pageRows = filtered.slice(start, start + PAGE_SIZE);
-  if (!pageRows.length) return renderEmptyState({ colspan: 8 });
-  return pageRows.map((row, index) => {
-    const id = String(row.id || row.idPeminjaman);
-    const name = personName(row);
-    const org = organizationName(row);
-    const status = statusInfo(row.status);
-    const pending =
-      row.status === STATUS_PEMINJAMAN.MENUNGGU_KONFIRMASI_PENGEMBALIAN ||
-      String(row.status).toLowerCase() === 'menunggu_pengembalian' ||
-      String(row.status).toLowerCase() === 'menunggu';
+  return { filtered, start, pageRows: filtered.slice(start, start + PAGE_SIZE) };
+}
 
-    return `<tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50/60">
+function isPendingReturn(row) {
+  const value = String(row.status).toLowerCase();
+  return (
+    row.status === STATUS_PEMINJAMAN.MENUNGGU_KONFIRMASI_PENGEMBALIAN ||
+    value === 'menunggu_pengembalian' ||
+    value === 'menunggu'
+  );
+}
+
+/**
+ * Render grup tombol aksi baris/kartu pengembalian (Detail / Setujui / Tolak).
+ * @param {object} row
+ * @param {string} [sizeClass='h-8 w-8'] Ukuran tombol ikon (h-8 w-8 di tabel, h-10 w-10 di kartu).
+ */
+function renderReturnActions(row, sizeClass = 'h-8 w-8') {
+  const id = String(row.id || row.idPeminjaman);
+  const baseClass = `inline-flex ${sizeClass} shrink-0 items-center justify-center rounded-xl transition-colors active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`;
+  return `<div class="flex items-center justify-center gap-0" role="group" aria-label="Aksi pengembalian">
+    <button type="button" data-action="detail" data-id="${escapeHtml(id)}" title="Lihat detail" aria-label="Lihat detail" class="${baseClass} text-slate-400 hover:bg-slate-100 hover:text-slate-700">${renderIcon('Info', 'h-4 w-4')}</button>
+    ${
+      isPendingReturn(row)
+        ? `<button type="button" data-action="confirm" data-id="${escapeHtml(id)}" title="Setujui pengembalian" aria-label="Setujui pengembalian" class="${baseClass} text-green-600 hover:bg-green-50">${renderIcon('CircleCheck', 'h-4 w-4')}</button>
+      <button type="button" data-action="late" data-id="${escapeHtml(id)}" title="Tolak pengembalian" aria-label="Tolak pengembalian" class="${baseClass} text-red-600 hover:bg-red-50">${renderIcon('CircleX', 'h-4 w-4')}</button>`
+        : ''
+    }
+  </div>`;
+}
+
+/**
+ * Render baris tunggal dalam tabel pengembalian (desktop >= md).
+ */
+function renderReturnTableRow(row, index, start) {
+  const name = personName(row);
+  const org = organizationName(row);
+  return `<tr class="border-b border-slate-100 transition-colors last:border-0 hover:bg-slate-50/60">
       <td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400">${start + index + 1}</td>
       <td class="min-w-[190px] px-4 py-3"><div class="flex items-center gap-2.5"><span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-xs font-semibold text-white">${escapeHtml(initials(name))}</span><span class="min-w-0"><span class="block truncate text-xs font-medium text-slate-500">${escapeHtml(name)}</span><span class="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500">${renderOrganisasiLogo(org, row.peminjam?.logoUrl || row.logoPeminjamUrl, 'h-3.5 w-3.5')}<span>${escapeHtml(org)}</span></span></span></div></td>
       <td class="min-w-[140px] px-4 py-4 text-xs text-slate-400">${escapeHtml(itemName(row))}</td>
       <td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400">${escapeHtml(dateLabel(row.startDate || row.mulai || row.tanggalMulai))}</td>
       <td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400">${escapeHtml(dateLabel(row.endDate || row.selesai || row.tanggalSelesai))}</td>
       <td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400">${escapeHtml(dateLabel(row.tanggalPengembalian))}</td>
-      <td class="px-4 py-4 text-center">${renderReturnStatusChip(row.status)}</td>
-      <td class="whitespace-nowrap px-4 py-4"><div class="flex items-center justify-center gap-0"><button type="button" data-action="detail" data-id="${escapeHtml(id)}" title="Lihat detail" aria-label="Lihat detail" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100">${renderIcon('Info', 'h-4 w-4')}</button>${pending ? `<button type="button" data-action="confirm" data-id="${escapeHtml(id)}" title="Setujui pengembalian" aria-label="Setujui pengembalian" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-green-600 hover:bg-green-50">${renderIcon('CircleCheck', 'h-4 w-4')}</button><button type="button" data-action="late" data-id="${escapeHtml(id)}" title="Tolak pengembalian" aria-label="Tolak pengembalian" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-red-600 hover:bg-red-50">${renderIcon('CircleX', 'h-4 w-4')}</button>` : ''}</div></td>
+      <td class="px-4 py-4 text-center">${renderStatusChip({ status: row.status })}</td>
+      <td class="whitespace-nowrap px-4 py-4">${renderReturnActions(row, 'h-8 w-8')}</td>
     </tr>`;
-  }).join('');
+}
+
+/**
+ * Render kartu pengembalian untuk tampilan mobile (< md).
+ */
+function renderReturnCard(row, index, start) {
+  const name = personName(row);
+  const org = organizationName(row);
+  const delay = Math.min(index, 11) * 40;
+  return `<article class="pd-rise-in rounded-xl border border-slate-100 bg-white p-4 shadow-sm" style="animation-delay:${delay}ms">
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex min-w-0 items-center gap-2.5">
+          <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-xs font-semibold text-white">${escapeHtml(initials(name))}</span>
+          <span class="min-w-0">
+            <span class="block truncate text-sm font-semibold text-slate-800">${escapeHtml(name)}</span>
+            <span class="mt-0.5 flex items-center gap-1.5 text-[11px] text-slate-500">${renderOrganisasiLogo(org, row.peminjam?.logoUrl || row.logoPeminjamUrl, 'h-3.5 w-3.5')}<span>${escapeHtml(org)}</span></span>
+          </span>
+        </div>
+        <div class="shrink-0">${renderStatusChip({ status: row.status })}</div>
+      </div>
+      <dl class="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+        <div class="col-span-2">
+          <dt class="text-slate-400">Barang Dipinjam</dt>
+          <dd class="mt-0.5 font-medium text-slate-700">${escapeHtml(itemName(row))}</dd>
+        </div>
+        <div>
+          <dt class="text-slate-400">Tanggal Mulai</dt>
+          <dd class="mt-0.5 font-medium text-slate-700">${escapeHtml(dateLabel(row.startDate || row.mulai || row.tanggalMulai))}</dd>
+        </div>
+        <div>
+          <dt class="text-slate-400">Tanggal Selesai</dt>
+          <dd class="mt-0.5 font-medium text-slate-700">${escapeHtml(dateLabel(row.endDate || row.selesai || row.tanggalSelesai))}</dd>
+        </div>
+        <div>
+          <dt class="text-slate-400">Tanggal Kembali</dt>
+          <dd class="mt-0.5 font-medium text-slate-700">${escapeHtml(dateLabel(row.tanggalPengembalian))}</dd>
+        </div>
+      </dl>
+      <div class="mt-3 flex justify-end gap-1 border-t border-slate-100 pt-3">
+        ${renderReturnActions(row, 'h-10 w-10')}
+      </div>
+    </article>`;
+}
+
+function renderTableRows() {
+  if (isLoading) {
+    return renderTableLoadingRow({ colspan: 8, message: 'Memuat data pengembalian...' });
+  }
+  const { start, pageRows } = getVisiblePageRows();
+  if (!pageRows.length) return renderEmptyState({ colspan: 8 });
+  return pageRows.map((row, index) => renderReturnTableRow(row, index, start)).join('');
+}
+
+function renderCards() {
+  if (isLoading) {
+    return renderContainerLoading({ message: 'Memuat data pengembalian...' });
+  }
+  const { start, pageRows } = getVisiblePageRows();
+  if (!pageRows.length) return renderEmptyState({});
+  return pageRows.map((row, index) => renderReturnCard(row, index, start)).join('');
 }
 
 function renderPagination() {
@@ -294,7 +353,7 @@ function renderFormPengembalianPage() {
   const fieldClass = 'w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 transition-colors placeholder:text-slate-400 hover:border-slate-300 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15';
   const readonlyClass = 'w-full rounded-xl border border-transparent bg-slate-50 px-4 py-3 text-sm text-slate-700 cursor-not-allowed';
 
-  return `<section class="w-full px-5 pb-8 pt-8 sm:px-6 lg:px-7">
+  return `<section class="pd-page-in w-full px-5 pb-8 pt-8 sm:px-6 lg:px-7">
     <div class="mb-6">
       <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Form Pengembalian</h1>
       <p class="mt-1 text-sm text-slate-400">Lengkapi informasi pengembalian dan kondisi barang.</p>
@@ -358,8 +417,8 @@ function renderFormPengembalianPage() {
       </div>
 
       <div class="mt-7 flex items-center justify-end gap-3 border-t border-slate-100 pt-5">
-        <button type="button" data-action="prompt-cancel-form" class="h-12 min-w-[112px] rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:border-rose-700 hover:bg-rose-700 hover:text-white">Batal</button>
-        <button type="button" data-action="prompt-submit-form" class="h-12 min-w-[112px] rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-primary/30">Kirim</button>
+        <button type="button" data-action="prompt-cancel-form" class="h-12 min-w-[112px] rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-sm font-semibold text-slate-600 button-hover-soft-red">Batal</button>
+        <button type="button" data-action="prompt-submit-form" class="h-12 min-w-[112px] rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-white shadow-sm button-hover-soft-primary focus:outline-none focus:ring-2 focus:ring-primary/30">Kirim</button>
       </div>
     </div>
   </section>`;
@@ -383,11 +442,11 @@ function renderModal() {
       { label: 'Tanggal Selesai', value: dateLabel(row.endDate || row.selesai || row.tanggalSelesai) },
       { label: 'Tanggal Pengembalian', value: dateLabel(row.tanggalPengembalian) },
     ];
-    return `<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4" data-modal-backdrop>
-      <section role="dialog" aria-modal="true" aria-labelledby="return-detail-title" class="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl sm:p-8">
+    return `<div class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4" data-modal-backdrop>
+      <section role="dialog" aria-modal="true" aria-labelledby="return-detail-title" class="pd-pop-in max-h-[90dvh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl sm:p-8">
         <div class="flex items-start justify-between gap-4">
           <h2 id="return-detail-title" class="text-2xl font-semibold tracking-tight text-slate-900">Detail Pengembalian</h2>
-          <button type="button" data-action="close-modal" aria-label="Tutup detail" class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700">${renderIcon('X', 'h-5 w-5')}</button>
+          <button type="button" data-action="close-modal" aria-label="Tutup detail" class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition-colors active:scale-95 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">${renderIcon('X', 'h-5 w-5')}</button>
         </div>
 
         <div class="mt-6 space-y-6 text-sm">
@@ -403,7 +462,7 @@ function renderModal() {
             ${dateColumns.map((date, index) => `<div class="text-center ${index === 0 ? 'sm:px-2' : 'sm:px-4'}"><p class="text-sm font-semibold text-slate-900 sm:text-base">${date.label}</p><p class="mt-3 text-sm font-medium text-slate-800 sm:text-base">${escapeHtml(date.value)}</p></div>`).join('')}
           </div>
 
-          <div class="flex items-center justify-between gap-6"><p class="text-base font-semibold text-slate-900">Status</p><div class="flex items-center gap-2">${isTerlambat ? `<button type="button" data-action="show-late-tooltip" aria-label="Lihat waktu keterlambatan" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-rose-700 transition-colors hover:bg-rose-50 hover:text-rose-800">${renderIcon('AlertCircle', 'h-6 w-6')}</button>` : ''}${renderReturnStatusChip(row.status)}</div></div>
+          <div class="flex items-center justify-between gap-6"><p class="text-base font-semibold text-slate-900">Status</p><div class="flex items-center gap-2">${isTerlambat ? `<button type="button" data-action="show-late-tooltip" aria-label="Lihat waktu keterlambatan" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-rose-700 transition-colors hover:bg-rose-50 hover:text-rose-800">${renderIcon('AlertCircle', 'h-6 w-6')}</button>` : ''}${renderStatusChip({ status: row.status })}</div></div>
 
           ${isDikembalikan ? `<div class="flex items-center justify-between gap-6"><p class="text-base font-semibold text-slate-900">Diproses Oleh</p><p class="text-base font-medium text-slate-800">${escapeHtml(row.diprosesOleh || row.namaPeminjam || name)}</p></div>` : ''}
           ${isDikembalikan && row.kondisiPengembalian ? `<div class="flex items-center justify-between gap-6"><p class="text-base font-semibold text-slate-900">Kondisi Barang Saat Dikembalikan</p><span class="rounded-lg px-3 py-1.5 text-sm font-medium ${String(row.kondisiPengembalian).toLowerCase() === 'rusak' ? 'bg-rose-100 text-rose-700' : 'bg-emerald-50 text-emerald-700'}">${escapeHtml(row.kondisiPengembalian)}</span></div>` : ''}
@@ -413,7 +472,7 @@ function renderModal() {
           ${isDikembalikan ? `<div><p class="mb-2 text-base font-semibold text-slate-900">Sanksi</p><div class="space-y-1.5 rounded-2xl border border-slate-100 bg-slate-50/60 px-5 py-4 text-sm leading-relaxed text-slate-700"><p class="font-semibold text-slate-900">Sanksi Keterlambatan dan Kehilangan Barang</p><p><strong>- Keterlambatan:</strong> Peminjam dapat dikenakan pembatasan peminjaman sementara.</p><p><strong>- Kehilangan:</strong> Peminjam wajib mengganti barang dengan barang serupa atau sesuai ketentuan pengelola.</p>${row.sanksi ? `<p><strong>Catatan:</strong> ${escapeHtml(row.sanksi)}</p>` : ''}</div></div>` : ''}
         </div>
 
-        <div class="mt-6 flex justify-end"><button type="button" data-action="close-modal" class="rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:brightness-110">Tutup</button></div>
+        <div class="mt-6 flex justify-end"><button type="button" data-action="close-modal" class="rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground button-hover-soft-neutral">Tutup</button></div>
       </section>
       ${isTerlambat ? `<div id="return-late-tooltip" role="tooltip" class="pointer-events-none whitespace-nowrap rounded-xl bg-white px-4 py-3 text-sm font-medium text-slate-900" style="display:none;position:fixed;z-index:100000;filter:drop-shadow(0 5px 12px rgba(15,23,42,0.22))">Waktu Terlambat: ${daysLate} Hari<span aria-hidden="true" style="position:absolute;right:-5px;top:50%;width:10px;height:10px;background:white;border-radius:2px;transform:translateY(-50%) rotate(45deg)"></span></div>` : ''}
     </div>`;
@@ -430,13 +489,13 @@ function renderModal() {
           label: 'Kembali',
           action: 'close-modal',
           variant: 'outline',
-          className: 'w-1/2 rounded-xl',
+          className: 'w-1/2 rounded-xl button-hover-soft-neutral',
         },
         {
           label: 'Setujui',
           action: 'open-form-approve',
           variant: 'default',
-          className: 'w-1/2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700',
+          className: 'w-1/2 rounded-xl bg-emerald-600 text-white button-hover-soft-green',
         },
       ],
     });
@@ -458,13 +517,13 @@ function renderModal() {
           label: 'Kembali',
           action: 'back-to-form-approve',
           variant: 'outline',
-          className: 'w-1/2 rounded-xl',
+          className: 'w-1/2 rounded-xl button-hover-soft-neutral',
         },
         {
           label: 'Kirim',
           action: 'execute-approve',
           variant: 'default',
-          className: 'w-1/2 rounded-xl bg-primary text-white transition-colors hover:brightness-110',
+          className: 'w-1/2 rounded-xl bg-primary text-white button-hover-soft-primary',
         },
       ],
     });
@@ -481,13 +540,13 @@ function renderModal() {
           label: 'Kembali',
           action: 'back-to-form-approve',
           variant: 'outline',
-          className: 'w-1/2 rounded-xl',
+          className: 'w-1/2 rounded-xl button-hover-soft-neutral',
         },
         {
           label: 'Batalkan',
           action: 'confirm-cancel-return',
           variant: 'default',
-          className: 'w-1/2 rounded-xl bg-primary text-white transition-colors hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-primary/30',
+          className: 'w-1/2 rounded-xl bg-primary text-white button-hover-soft-red focus:outline-none focus:ring-2 focus:ring-primary/30',
         },
       ],
     });
@@ -502,7 +561,7 @@ function renderModal() {
       primaryAction: {
         label: 'Kembali',
         action: 'close-modal',
-        className: 'w-full rounded-xl bg-primary text-white transition-colors hover:brightness-110',
+        className: 'w-full rounded-xl bg-primary text-white button-hover-soft-neutral',
       },
     });
   }
@@ -518,13 +577,13 @@ function renderModal() {
           label: 'Kembali',
           action: 'back-to-form-reject',
           variant: 'outline',
-          className: 'w-1/2 rounded-xl',
+          className: 'w-1/2 rounded-xl button-hover-soft-neutral',
         },
         {
           label: 'Tolak',
           action: 'execute-reject',
           variant: 'default',
-          className: 'w-1/2 rounded-xl bg-rose-600 text-white hover:bg-rose-700',
+          className: 'w-1/2 rounded-xl bg-rose-600 text-white button-hover-soft-red',
         },
       ],
     });
@@ -533,8 +592,8 @@ function renderModal() {
   // 8. Popup Alasan Penolakan — disamakan dengan popup Permohonan Ditolak pada List Pengajuan PJ.
   if (activeDialog === 'form-reject') {
     const showError = rejectionValidationCount > 0;
-    return `<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4" data-modal-backdrop>
-      <section role="dialog" aria-modal="true" aria-labelledby="return-reject-title" class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+    return `<div class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4" data-modal-backdrop>
+      <section role="dialog" aria-modal="true" aria-labelledby="return-reject-title" class="pd-pop-in max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
         <h2 id="return-reject-title" class="text-xl font-bold tracking-tight text-slate-900">Pengembalian Ditolak</h2>
         <div class="mt-5 space-y-2">
           <label for="form-alasan-penolakan" class="block text-sm font-semibold text-slate-900">Alasan Penolakan</label>
@@ -542,8 +601,8 @@ function renderModal() {
           ${showError ? `<div id="return-rejection-error" role="alert" class="rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-700 ${rejectionValidationCount > 0 ? 'validation-blink' : ''}">Alasan penolakan wajib diisi.</div>` : ''}
         </div>
         <div class="mt-6 flex items-center justify-end gap-3">
-          <button type="button" data-action="close-modal" class="h-12 rounded-xl border border-slate-200 bg-white px-5 text-sm font-medium text-slate-600 transition-colors hover:border-rose-700 hover:bg-rose-700 hover:text-white">Batal</button>
-          <button type="button" data-action="prompt-confirm-reject" class="h-12 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition hover:brightness-110">Kirim</button>
+          <button type="button" data-action="close-modal" class="h-12 rounded-xl border border-slate-200 bg-white px-5 text-sm font-medium text-slate-600 button-hover-soft-red">Batal</button>
+          <button type="button" data-action="prompt-confirm-reject" class="h-12 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground button-hover-soft-primary">Kirim</button>
         </div>
       </section>
     </div>`;
@@ -558,7 +617,7 @@ function renderModal() {
       primaryAction: {
         label: 'Kembali',
         action: 'close-modal',
-        className: 'w-full rounded-xl bg-primary text-white transition-colors hover:brightness-110',
+        className: 'w-full rounded-xl bg-primary text-white button-hover-soft-neutral',
       },
     });
   }
@@ -591,7 +650,7 @@ function renderContent() {
 
   const count = visibleRows().length;
   const nAktif = countActiveFilters();
-  return `<section class="w-full px-5 pb-8 pt-8 sm:px-6 lg:px-7">
+  return `<section class="pd-page-in w-full px-5 pb-8 pt-8 sm:px-6 lg:px-7">
     <div class="mb-9">
       <h1 class="text-3xl font-semibold tracking-tight text-slate-900">Kelola Pengembalian</h1>
       <p class="mt-1 text-sm text-slate-400">Pantau dan kelola proses pengembalian barang serta kondisi barang yang dikembalikan.</p>
@@ -611,7 +670,14 @@ function renderContent() {
         </div>
       </div>
       ${toastMessage ? `<div role="status" class="mb-3 rounded-lg px-4 py-2 text-sm ${toastType === 'error' ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}">${escapeHtml(toastMessage)}</div>` : ''}
-      <div class="w-full overflow-x-auto">
+      <div class="space-y-4">
+      <!-- Daftar Kartu (mobile < md) -->
+      <div class="space-y-3 md:hidden" data-card-list>
+        ${renderCards()}
+      </div>
+
+      <!-- Tabel (desktop >= md) -->
+      <div class="hidden w-full overflow-x-auto md:block">
       <table class="w-full min-w-[790px] border-collapse text-left">
       <thead>
         <tr class="border-b border-slate-100 text-sm leading-[140%] tracking-normal text-slate-400">
@@ -630,18 +696,19 @@ function renderContent() {
         </tbody>
         </table>
         </div>
+      </div>
       <div class="mt-5 flex items-center justify-between gap-3"><p class="text-xs text-slate-500">Menampilkan ${count ? Math.min((currentPage - 1) * PAGE_SIZE + 1, count) : 0}–${Math.min(currentPage * PAGE_SIZE, count)} dari ${count} pengajuan</p>${renderPagination()}</div>
     </div>
   </section>
   ${renderModal()}
-  <dialog id="dialog-filter-pengembalian" aria-labelledby="filter-pengembalian-title" style="width: min(512px, calc(100vw - 2rem)); max-width: none;" class="fixed left-1/2 top-1/2 m-0 -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-white p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm">
-    <div class="flex flex-col p-5 sm:p-6">
+  <dialog id="dialog-filter-pengembalian" aria-labelledby="filter-pengembalian-title" style="width: min(512px, calc(100vw - 2rem)); max-width: none;" class="fixed left-1/2 top-1/2 m-0 max-h-[90dvh] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl border border-border bg-white p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm">
+    <div class="pd-pop-in flex flex-col p-5 sm:p-6">
       <div class="flex items-center justify-between border-b border-border pb-3">
         <div class="flex min-w-0 items-center gap-2">
           <h2 id="filter-pengembalian-title" class="text-base font-semibold leading-tight text-foreground">Filter Kelola Pengembalian</h2>
           ${nAktif > 0 ? `<span class="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">${nAktif}</span>` : ""}
         </div>
-        <button type="button" data-action="close-filter-dialog" aria-label="Tutup filter" class="ml-2 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground">
+        <button type="button" data-action="close-filter-dialog" aria-label="Tutup filter" class="ml-2 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors active:scale-95 hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           ${renderIcon('X', 'h-4 w-4')}
         </button>
       </div>
@@ -690,7 +757,7 @@ function renderContent() {
 
       <div class="mt-5 flex items-center justify-end gap-3">
         <button type="button" data-action="reset-filter-dialog" class="filter-reset-link px-2 py-2.5 text-sm font-semibold text-slate-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">Reset</button>
-        <button type="button" data-action="apply-filter-dialog" class="rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">Terapkan</button>
+        <button type="button" data-action="apply-filter-dialog" class="rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-white shadow-sm button-hover-soft-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">Terapkan</button>
       </div>
     </div>
   </dialog>`;
@@ -1048,6 +1115,8 @@ export async function mount(root) {
     const filtered = visibleRows();
     const tbody = rootElement.querySelector('tbody');
     if (tbody) tbody.innerHTML = renderTableRows();
+    const cardList = rootElement.querySelector('[data-card-list]');
+    if (cardList) cardList.innerHTML = renderCards();
     const footer = rootElement.querySelector('.mt-5.flex.items-center.justify-between');
     if (footer) footer.innerHTML = `<p class="text-xs text-slate-500">Menampilkan ${filtered.length ? 1 : 0}–${Math.min(PAGE_SIZE, filtered.length)} dari ${filtered.length} pengajuan</p>${renderPagination()}`;
   };

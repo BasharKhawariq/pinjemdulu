@@ -204,10 +204,10 @@ export function renderOrganisasiBadge(org, {
   if (!displayName) return asSafeHtml ? raw('') : '';
 
   const sizeClass = size === 'sm' ? 'h-3.5 w-3.5' : size === 'lg' ? 'h-5 w-5' : 'h-4 w-4';
-  const textSizeClass = size === 'sm' ? 'text-[11px]' : size === 'lg' ? 'text-xs' : 'text-xs';
+  const textSizeClass = size === 'sm' ? 'text-[11px]' : 'text-xs';
   const logoMarkup = renderOrganisasiLogo(org, logoUrl, sizeClass);
 
-  const markup = `<span class="inline-flex items-center gap-1.5 font-medium text-slate-700 ${className}">${logoMarkup}<span class="truncate ${textSizeClass} ${textClass}">${escapeHtml(displayName)}</span></span>`;
+  const markup = `<span class="inline-flex min-w-0 max-w-full items-center gap-1.5 font-medium text-slate-700 ${className}">${logoMarkup}<span class="min-w-0 truncate ${textSizeClass} ${textClass}">${escapeHtml(displayName)}</span></span>`;
 
   return asSafeHtml ? raw(markup) : markup;
 }

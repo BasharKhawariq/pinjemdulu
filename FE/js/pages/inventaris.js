@@ -52,12 +52,14 @@ export function renderKategoriBadge(nama = '') {
 /**
  * Render kartu tunggal inventaris.
  * @param {object} inv
+ * @param {number} [index=0] Urutan kartu (untuk stagger animasi masuk).
  * @returns {import('../ui/html.js').SafeHtml}
  */
-export function renderInventarisCard(inv) {
+export function renderInventarisCard(inv, index = 0) {
   if (!inv) return raw('');
   const statusInfo = getStatusKetersediaan(inv);
   const hrefDetail = `#/inventaris/${encodeURIComponent(inv.idInventaris || '')}`;
+  const staggerDelay = Math.min(Math.max(index, 0), 11) * 40;
 
   const imageMarkup = inv.thumbnail
     ? html`
@@ -77,13 +79,14 @@ export function renderInventarisCard(inv) {
       `;
 
   return html`
-    <a
-      href="${hrefDetail}"
-      data-action="view-detail"
-      data-id="${inv.idInventaris}"
-      class="group relative flex flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-      aria-label="Lihat detail ${inv.namaBarang}"
-    >
+    <div class="pd-rise-in" style="animation-delay:${staggerDelay}ms">
+      <a
+        href="${hrefDetail}"
+        data-action="view-detail"
+        data-id="${inv.idInventaris}"
+        class="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        aria-label="Lihat detail ${inv.namaBarang}"
+      >
       <!-- Baris atas: OKI (kiri) & Kategori (kanan) -->
       <div class="mb-3 flex items-start justify-between gap-2">
         <div class="min-w-0 flex-1 truncate">
@@ -118,7 +121,8 @@ export function renderInventarisCard(inv) {
           ${renderIcon('ArrowRight', 'h-4 w-4')}
         </span>
       </div>
-    </a>
+      </a>
+    </div>
   `;
 }
 
@@ -160,7 +164,7 @@ export function renderPagination(currentPage, totalPages) {
   const total = Math.max(1, totalPages || 1);
   return html`
     <nav role="navigation" aria-label="Pagination" class="mx-auto mt-8 flex w-full flex-col items-center gap-3">
-      ${raw(renderSharedPagination({ currentPage: current, totalPages: total, action: 'change-page' }))}
+      ${raw(renderSharedPagination({ currentPage: current, totalPages: total, action: 'change-page', className: 'flex-wrap justify-center' }))}
     </nav>
   `;
 }
@@ -551,7 +555,7 @@ export async function mount(root, ctx = {}) {
           currentKategoriIds.length > 0 ||
           currentOkiIds.length > 0;
         resultsArea.innerHTML = html`
-          <div class="rounded-2xl border border-dashed border-zinc-200 bg-white px-4 py-12 text-center">
+          <div class="pd-fade-in rounded-2xl border border-dashed border-zinc-200 bg-white px-4 py-12 text-center">
             <img src="assets/animations/empty-state.gif" alt="Belum ada data" class="mx-auto h-32 w-32 sm:h-36 sm:w-36 object-contain select-none pointer-events-none" />
             <p class="mt-4 text-sm font-medium text-slate-600 sm:text-base">Belum ada data untuk ditampilkan</p>
             ${hasActiveFilters
@@ -572,7 +576,7 @@ export async function mount(root, ctx = {}) {
         return;
       }
 
-      const cardsHtml = items.map((inv) => renderInventarisCard(inv)).join('');
+      const cardsHtml = items.map((inv, i) => renderInventarisCard(inv, i)).join('');
       const paginationHtml = renderPagination(currentPage, totalPages).toString();
 
       resultsArea.innerHTML = `
@@ -584,7 +588,7 @@ export async function mount(root, ctx = {}) {
     } catch {
       if (fetchToken !== activeFetchToken) return;
       resultsArea.innerHTML = html`
-        <div class="rounded-2xl border border-dashed border-rose-300 bg-rose-50/60 p-6 text-center" role="alert">
+        <div class="pd-fade-in rounded-2xl border border-dashed border-rose-300 bg-rose-50/60 p-6 text-center" role="alert">
           <div class="mx-auto mb-2 text-rose-600 inline-flex">
             ${renderIcon('AlertTriangle', 'h-8 w-8')}
           </div>

@@ -22,7 +22,7 @@ import { renderPagination as renderSharedPagination } from '../ui/pagination.js'
 import { mockUsers } from '../data/users.js';
 import { renderOrganisasiLogo } from '../ui/organisasi-badge.js';
 import { renderEmptyState } from '../ui/empty-state.js';
-import { renderTableLoadingRow } from '../ui/loading-state.js';
+import { renderTableLoadingRow, renderContainerLoading } from '../ui/loading-state.js';
 
 const PAGE_SIZE = 5;
 
@@ -78,47 +78,91 @@ function renderTabs() {
     const selected = activeTab === tab.key;
     return `
       <button type="button" data-tab="${tab.key}" aria-pressed="${selected}"
-        class="shrink-0 cursor-pointer select-none rounded-lg px-4 py-2 text-[11px] font-medium transition ${selected ? 'bg-blue-100 text-slate-900' : 'text-slate-600 hover:bg-slate-50'}">
+        class="shrink-0 cursor-pointer select-none rounded-lg px-4 py-2.5 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95 ${selected ? 'bg-blue-100 text-slate-900' : 'text-slate-600 hover:bg-slate-50'}">
         ${tab.label}
       </button>`;
   }).join('');
+}
+
+function getVisibleRows() {
+  const filtered = getFilteredRows();
+  currentPage = Math.min(currentPage, pageCount());
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const visible = filtered.slice(start, start + PAGE_SIZE);
+  return { start, visible };
+}
+
+function renderActionCell(row, sizeClass = 'h-8 w-8') {
+  const org = namaOrganisasiPemohon(row.pemohon, row.organisasi);
+  return `
+    <button type="button" data-detail="${escapeHtml(String(row.id))}" aria-label="Lihat informasi pemohon ${escapeHtml(org)}" title="Lihat detail"
+      class="inline-flex ${sizeClass} items-center justify-center rounded-full text-slate-400 transition hover:bg-blue-50 hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95">
+      ${renderIcon('Info', 'h-[17px] w-[17px]')}
+    </button>`;
+}
+
+function renderTableRow(row, number) {
+  const org = namaOrganisasiPemohon(row.pemohon, row.organisasi);
+  return `
+    <tr class="border-b border-zinc-100 transition-colors last:border-0 hover:bg-zinc-50/60">
+      <td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-500">${number}</td>
+      <td class="px-4 py-4">
+        <div class="flex items-center gap-1.5 text-xs font-medium text-slate-700">
+          ${renderOrganisasiLogo(org, row.logoUrl, 'h-3.5 w-3.5')}
+          <span>${escapeHtml(org)}</span>
+        </div>
+      </td>
+      <td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-500">${escapeHtml(dateOnly(row.tanggalPengajuan))}</td>
+      <td class="px-4 py-4 text-center">${renderStatusChip({ status: row.status })}</td>
+      <td class="px-4 py-4 text-center"><div class="inline-flex items-center justify-center gap-1">${renderActionCell(row)}</div></td>
+    </tr>`;
 }
 
 function renderRows() {
   if (isLoading) {
     return renderTableLoadingRow({ colspan: 5, message: 'Memuat data pengajuan...' });
   }
-  const filtered = getFilteredRows();
-  currentPage = Math.min(currentPage, pageCount());
-  const start = (currentPage - 1) * PAGE_SIZE;
-  const visible = filtered.slice(start, start + PAGE_SIZE);
+  const { start, visible } = getVisibleRows();
 
   if (!visible.length) {
     return renderEmptyState({ colspan: 5 });
   }
 
-  return visible.map((row, index) => {
-    const org = namaOrganisasiPemohon(row.pemohon, row.organisasi);
-    const id = String(row.id);
-    return `
-      <tr class="border-b border-zinc-100 last:border-0 hover:bg-zinc-50/60">
-        <td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-500">${start + index + 1}</td>
-        <td class="px-4 py-4">
-          <div class="flex items-center gap-1.5 text-xs font-medium text-slate-700">
-            ${renderOrganisasiLogo(org, row.logoUrl, 'h-3.5 w-3.5')}
-            <span>${escapeHtml(org)}</span>
+  return visible.map((row, index) => renderTableRow(row, start + index + 1)).join('');
+}
+
+function renderCard(row, index) {
+  const org = namaOrganisasiPemohon(row.pemohon, row.organisasi);
+  const delay = Math.min(index, 11) * 40;
+  return `
+    <article class="pd-rise-in flex flex-col gap-3 rounded-xl border border-zinc-100 bg-white p-4 shadow-sm" style="animation-delay:${delay}ms">
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <div class="flex items-center gap-1.5 text-sm font-semibold text-slate-800">
+            ${renderOrganisasiLogo(org, row.logoUrl, 'h-4 w-4')}
+            <span class="truncate">${escapeHtml(org)}</span>
           </div>
-        </td>
-        <td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-500">${escapeHtml(dateOnly(row.tanggalPengajuan))}</td>
-        <td class="px-4 py-4 text-center">${renderStatusChip({ status: row.status })}</td>
-        <td class="px-4 py-4 text-center">
-          <button type="button" data-detail="${escapeHtml(id)}" aria-label="Lihat informasi pemohon ${escapeHtml(org)}" title="Lihat detail"
-            class="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-blue-50 hover:text-blue-700">
-            ${renderIcon('Info', 'h-[17px] w-[17px]')}
-          </button>
-        </td>
-      </tr>`;
-  }).join('');
+          <p class="mt-1 text-xs text-slate-500">Diajukan ${escapeHtml(dateOnly(row.tanggalPengajuan))}</p>
+        </div>
+        <div class="shrink-0">${renderStatusChip({ status: row.status })}</div>
+      </div>
+      <div class="flex justify-end border-t border-zinc-100 pt-3">
+        ${renderActionCell(row, 'h-10 w-10')}
+      </div>
+    </article>`;
+}
+
+function renderCards() {
+  if (isLoading) {
+    return renderContainerLoading({ message: 'Memuat data pengajuan...' });
+  }
+  const { visible } = getVisibleRows();
+
+  if (!visible.length) {
+    return renderEmptyState({ classContainer: 'py-10' });
+  }
+
+  return `<div class="space-y-3">${visible.map((row, index) => renderCard(row, index)).join('')}</div>`;
 }
 
 function renderPagination() {
@@ -141,6 +185,8 @@ function renderPagination() {
 function renderTableContent() {
   const body = rootElement?.querySelector('[data-table-body]');
   if (body) body.innerHTML = renderRows();
+  const cards = rootElement?.querySelector('[data-card-list]');
+  if (cards) cards.innerHTML = renderCards();
   const pagination = rootElement?.querySelector('[data-pagination]');
   if (pagination) pagination.innerHTML = renderPagination();
   const tabs = rootElement?.querySelector('[data-tabs]');
@@ -172,11 +218,11 @@ function renderDetail(row) {
   const pemohonNim = row.pemohon?.nim || row.nimPemohon || row.nim || '—';
   const attachment = row.lampiran?.nama || row.lampiran?.name || (row.lampiranUrl ? row.lampiranUrl.split('/').pop() : '') || 'Tidak ada lampiran surat';
   return `
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4" data-modal-overlay>
-      <section role="dialog" aria-modal="true" aria-labelledby="pj-detail-title" class="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl sm:p-8">
+    <div class="pd-fade-in fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4" data-modal-overlay>
+      <section role="dialog" aria-modal="true" aria-labelledby="pj-detail-title" class="pd-pop-in max-h-[90dvh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl sm:p-8">
         <div class="flex items-start justify-between gap-4">
           <h2 id="pj-detail-title" class="text-2xl font-semibold tracking-tight text-slate-900">Informasi Pemohon</h2>
-          <button type="button" data-action="close-modal" aria-label="Tutup detail" class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700">${renderIcon('X', 'h-5 w-5')}</button>
+          <button type="button" data-action="close-modal" aria-label="Tutup detail" class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95">${renderIcon('X', 'h-5 w-5')}</button>
         </div>
 
         <div class="mt-6 space-y-6 text-sm">
@@ -203,7 +249,7 @@ function renderDetail(row) {
           </div>
         </div>
 
-        <div class="mt-6 flex justify-end"><button type="button" data-action="close-modal" data-autofocus class="rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:brightness-110">Tutup</button></div>
+        <div class="mt-6 flex justify-end"><button type="button" data-action="close-modal" data-autofocus class="rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-colors button-hover-soft-neutral active:scale-95">Tutup</button></div>
       </section>
     </div>`;
 }
@@ -211,11 +257,11 @@ function renderDetail(row) {
 function renderForm(state) {
   const org = namaOrganisasiPemohon(user, null);
   return `
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4" data-modal-overlay>
-      <section role="dialog" aria-modal="true" aria-labelledby="pj-form-title" class="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl sm:p-8">
+    <div class="pd-fade-in fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4" data-modal-overlay>
+      <section role="dialog" aria-modal="true" aria-labelledby="pj-form-title" class="pd-pop-in max-h-[90dvh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl sm:p-8">
         <div class="flex items-start justify-between gap-4">
           <h2 id="pj-form-title" class="text-2xl font-semibold tracking-tight text-slate-900">Tambah Pengajuan</h2>
-          <button type="button" data-action="cancel-form" aria-label="Tutup form" class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700">${renderIcon('X', 'h-5 w-5')}</button>
+          <button type="button" data-action="cancel-form" aria-label="Tutup form" class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95">${renderIcon('X', 'h-5 w-5')}</button>
         </div>
 
         <div class="mt-6 space-y-6 text-sm">
@@ -240,8 +286,8 @@ function renderForm(state) {
         </div>
 
         <div class="mt-6 flex items-center justify-end gap-3">
-          <button type="button" data-action="cancel-form" class="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-medium text-slate-600 transition-colors hover:border-rose-700 hover:bg-rose-700 hover:text-white">Batal</button>
-          <button type="button" data-action="submit-form" class="rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:brightness-110">Ajukan</button>
+          <button type="button" data-action="cancel-form" class="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-medium text-slate-600 transition-colors button-hover-soft-red active:scale-95">Batal</button>
+          <button type="button" data-action="submit-form" class="rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-colors button-hover-soft-primary active:scale-95">Ajukan</button>
         </div>
       </section>
     </div>`;
@@ -257,14 +303,14 @@ function renderConfirm(state) {
         label: 'Kembali',
         action: 'back-to-form',
         variant: 'outline',
-        className: 'flex-1 rounded-xl',
+        className: 'flex-1 rounded-xl button-hover-soft-neutral',
         disabled: state.submitting,
       },
       {
         label: state.submitting ? 'Mengirim...' : 'Kirim',
         action: 'confirm-send',
         variant: 'default',
-        className: 'flex-1 rounded-xl bg-primary text-white hover:bg-primary/90',
+        className: 'flex-1 rounded-xl bg-primary text-white button-hover-soft-primary',
         disabled: state.submitting,
       },
     ],
@@ -282,7 +328,7 @@ function renderSuccess() {
         label: 'Kembali',
         action: 'close-success',
         variant: 'default',
-        className: 'w-full rounded-xl bg-primary text-white hover:bg-primary/90',
+        className: 'w-full rounded-xl bg-primary text-white button-hover-soft-neutral',
       },
     ],
   });
@@ -346,7 +392,7 @@ async function confirmSend() {
 
 export function render() {
   return `
-    <section class="w-full px-5 pb-8 pt-8 sm:px-6 lg:px-7">
+    <section class="pd-page-in w-full px-5 pb-8 pt-8 sm:px-6 lg:px-7">
       <div class="mb-9">
         <h1 class="text-3xl font-semibold tracking-tight text-slate-900">Pengajuan PJ</h1>
         <p class="mt-1 text-sm text-slate-400">Kelola dan pantau pengajuan penanggung jawab inventaris.</p>
@@ -362,13 +408,14 @@ export function render() {
           <button
             type="button"
             data-action="open-form"
-            class="${buttonClass({ variant: 'default', size: 'default', className: 'h-11 rounded-full px-5 gap-1.5 button-hover-soft-primary' })}"
+            class="${buttonClass({ variant: 'default', size: 'default', className: 'h-11 rounded-full px-5 gap-1.5 button-hover-soft-primary active:scale-95' })}"
           >
             ${renderIcon('Plus', 'h-4 w-4')}
             <span>Tambah Pengajuan</span>
           </button>
         </div>
-        <div class="w-full overflow-x-auto">
+        <div class="md:hidden" data-card-list>${renderCards()}</div>
+        <div class="hidden w-full overflow-x-auto md:block">
           <table class="w-full min-w-[560px] border-collapse text-left">
             <thead>
               <tr class="border-b border-zinc-100 text-sm leading-[140%] text-slate-400">

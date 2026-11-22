@@ -11,7 +11,7 @@ import { renderStatusChip } from '../ui/status-chip.js';
 import { renderModal as renderGlobalModal } from '../ui/modal.js';
 import { renderOrganisasiLogo } from '../ui/organisasi-badge.js';
 import { renderEmptyState } from '../ui/empty-state.js';
-import { renderTableLoadingRow } from '../ui/loading-state.js';
+import { renderTableLoadingRow, renderContainerLoading } from '../ui/loading-state.js';
 
 const TABS = [
   { key: 'menunggu', label: 'Menunggu' },
@@ -46,25 +46,30 @@ function renderTabs() {
   return TABS.map((tab) => {
     const selected = activeTab === tab.key;
     return `<button type="button" data-tab="${tab.key}" role="tab" aria-selected="${selected}"
-      class="shrink-0 cursor-pointer select-none rounded-lg px-4 py-2 text-[11px] font-medium transition ${selected ? 'bg-blue-100 text-slate-900' : 'text-slate-600 hover:bg-slate-50'}">${tab.label}</button>`;
+      class="shrink-0 cursor-pointer select-none rounded-lg px-4 py-2.5 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95 ${selected ? 'bg-blue-100 text-slate-900' : 'text-slate-600 hover:bg-slate-50'}">${tab.label}</button>`;
   }).join('');
 }
 
-function renderRows() {
-  if (isLoading) {
-    return renderTableLoadingRow({ colspan: 8, message: 'Memuat data pengembalian...' });
-  }
+function getVisibleRows() {
   const rows = getFilteredRows();
   const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   currentPage = Math.min(currentPage, pageCount);
   const start = (currentPage - 1) * PAGE_SIZE;
   const visible = rows.slice(start, start + PAGE_SIZE);
-  if (!visible.length) {
-    return renderEmptyState({ colspan: 8 });
-  }
-  return visible.map((row, index) => `
-    <tr class="border-b border-zinc-100 last:border-0 hover:bg-zinc-50/60">
-      <td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-500">${start + index + 1}</td>
+  return { start, visible };
+}
+
+function renderActions(row, sizeClass = 'h-8 w-8') {
+  const again = row.status === 'ditolak'
+    ? `<button type="button" data-return-again="${escapeHtml(row.id)}" aria-label="Ajukan kembali pengembalian" title="Ajukan kembali pengembalian" class="mr-1 inline-flex ${sizeClass} items-center justify-center rounded-full text-emerald-600 transition hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95">${renderIcon('CircleCheck', 'h-[18px] w-[18px]')}</button>`
+    : '';
+  return `${again}<button type="button" data-detail="${escapeHtml(row.id)}" aria-label="Lihat detail ${escapeHtml(row.namaBarang)}" title="Lihat detail" class="inline-flex ${sizeClass} items-center justify-center rounded-full text-slate-400 transition hover:bg-blue-50 hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95">${renderIcon('Info', 'h-[17px] w-[17px]')}</button>`;
+}
+
+function renderTableRow(row, number) {
+  return `
+    <tr class="border-b border-zinc-100 transition-colors last:border-0 hover:bg-zinc-50/60">
+      <td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-500">${number}</td>
       <td class="min-w-[180px] px-4 py-3">
         <div class="max-w-[220px] truncate text-xs font-medium text-slate-500" title="${escapeHtml(row.namaBarang)}">${escapeHtml(row.namaBarang)}</div>
         <div class="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-slate-700">
@@ -77,8 +82,56 @@ function renderRows() {
       <td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-500">${escapeHtml(dateLabel(row.tanggalDikembalikan))}</td>
       <td class="px-4 py-4 text-center text-xs text-slate-600">${row.jumlahUnit}</td>
       <td class="px-4 py-4 text-center">${renderStatusChip({ status: row.status })}</td>
-      <td class="px-4 py-4 text-center">${row.status === 'ditolak' ? `<button type="button" data-return-again="${escapeHtml(row.id)}" aria-label="Ajukan kembali pengembalian" title="Ajukan kembali pengembalian" class="mr-1 inline-flex h-8 w-8 items-center justify-center rounded-full text-emerald-600 transition hover:bg-emerald-50">${renderIcon('CircleCheck', 'h-[18px] w-[18px]')}</button>` : ''}<button type="button" data-detail="${escapeHtml(row.id)}" aria-label="Lihat detail ${escapeHtml(row.namaBarang)}" title="Lihat detail" class="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-blue-50 hover:text-blue-700">${renderIcon('Info', 'h-[17px] w-[17px]')}</button></td>
-    </tr>`).join('');
+      <td class="px-4 py-4 text-center"><div class="inline-flex items-center justify-center gap-1">${renderActions(row)}</div></td>
+    </tr>`;
+}
+
+function renderRows() {
+  if (isLoading) {
+    return renderTableLoadingRow({ colspan: 8, message: 'Memuat data pengembalian...' });
+  }
+  const { start, visible } = getVisibleRows();
+  if (!visible.length) {
+    return renderEmptyState({ colspan: 8 });
+  }
+  return visible.map((row, index) => renderTableRow(row, start + index + 1)).join('');
+}
+
+function renderCard(row, index) {
+  const delay = Math.min(index, 11) * 40;
+  return `
+    <article class="pd-rise-in flex flex-col gap-3 rounded-xl border border-zinc-100 bg-white p-4 shadow-sm" style="animation-delay:${delay}ms">
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <p class="truncate text-sm font-semibold text-slate-800" title="${escapeHtml(row.namaBarang)}">${escapeHtml(row.namaBarang)}</p>
+          <div class="mt-1 flex items-center gap-1.5 text-xs font-medium text-slate-500">
+            ${renderOrganisasiLogo(row.organisasi, row.logoUrl, 'h-3.5 w-3.5')}
+            <span class="truncate">${escapeHtml(row.organisasi)}</span>
+          </div>
+        </div>
+        <div class="shrink-0">${renderStatusChip({ status: row.status })}</div>
+      </div>
+      <dl class="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+        <div><dt class="text-slate-400">Mulai</dt><dd class="mt-0.5 font-medium text-slate-700">${escapeHtml(dateLabel(row.tanggalMulai))}</dd></div>
+        <div><dt class="text-slate-400">Selesai</dt><dd class="mt-0.5 font-medium text-slate-700">${escapeHtml(dateLabel(row.tanggalSelesai))}</dd></div>
+        <div><dt class="text-slate-400">Dikembalikan</dt><dd class="mt-0.5 font-medium text-slate-700">${escapeHtml(dateLabel(row.tanggalDikembalikan))}</dd></div>
+        <div><dt class="text-slate-400">Jumlah</dt><dd class="mt-0.5 font-medium text-slate-700">${row.jumlahUnit} unit</dd></div>
+      </dl>
+      <div class="flex justify-end gap-1 border-t border-zinc-100 pt-3">
+        ${renderActions(row, 'h-10 w-10')}
+      </div>
+    </article>`;
+}
+
+function renderCards() {
+  if (isLoading) {
+    return renderContainerLoading({ message: 'Memuat data pengembalian...' });
+  }
+  const { visible } = getVisibleRows();
+  if (!visible.length) {
+    return renderEmptyState({ classContainer: 'py-10' });
+  }
+  return `<div class="space-y-3">${visible.map((row, index) => renderCard(row, index)).join('')}</div>`;
 }
 
 import { renderPagination as renderSharedPagination } from '../ui/pagination.js';
@@ -111,11 +164,11 @@ function renderDetail(row) {
     { label: 'Tanggal Selesai', value: dateLabel(row.tanggalSelesai) },
     { label: 'Tanggal Pengembalian', value: row.tanggalDikembalikan ? dateLabel(row.tanggalDikembalikan) : '–' },
   ];
-  return `<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4" data-modal-overlay>
-    <section role="dialog" aria-modal="true" aria-labelledby="return-detail-title" class="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl sm:p-8">
+  return `<div class="pd-fade-in fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4" data-modal-overlay>
+    <section role="dialog" aria-modal="true" aria-labelledby="return-detail-title" class="pd-pop-in max-h-[90dvh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl sm:p-8">
       <div class="flex items-start justify-between gap-4">
         <h2 id="return-detail-title" class="text-2xl font-semibold tracking-tight text-slate-900">${isDitolak ? 'Detail Penolakan' : 'Detail Pengembalian'}</h2>
-        <button type="button" data-close-detail aria-label="Tutup detail" class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700">${renderIcon('X', 'h-5 w-5')}</button>
+        <button type="button" data-close-detail aria-label="Tutup detail" class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95">${renderIcon('X', 'h-5 w-5')}</button>
       </div>
 
       <div class="mt-6 space-y-6 text-sm">
@@ -156,7 +209,7 @@ function renderDetail(row) {
       </div>
 
       <div class="mt-6 flex justify-end">
-        <button type="button" data-close-detail data-autofocus class="rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:brightness-110">Tutup</button>
+        <button type="button" data-close-detail data-autofocus class="rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-colors button-hover-soft-neutral active:scale-95">Tutup</button>
       </div>
     </section>
   </div>`;
@@ -169,7 +222,7 @@ function renderActionDialog() {
       variant: 'success',
       title: 'Pengembalian Berhasil Dikirim Kembali!',
       description: 'Anda telah berhasil mengirimkan kembali pengajuan pengembalian.',
-      primaryAction: { label: 'Kembali', action: 'close-return-dialog', className: 'w-full rounded-xl bg-primary text-white transition-colors hover:brightness-110' },
+      primaryAction: { label: 'Kembali', action: 'close-return-dialog', className: 'w-full rounded-xl bg-primary text-white button-hover-soft-neutral' },
     });
   }
   return renderGlobalModal({
@@ -177,8 +230,8 @@ function renderActionDialog() {
     title: 'Ajukan Kembali Pengembalian?',
     description: 'Periksa kembali data pengajuan yang akan anda kirim',
     actions: [
-      { label: 'Kembali', action: 'close-return-dialog', variant: 'outline', className: 'w-1/2 rounded-xl' },
-      { label: 'Kirim', action: 'submit-return-again', variant: 'default', className: 'w-1/2 rounded-xl bg-primary text-white transition-colors hover:brightness-110' },
+      { label: 'Kembali', action: 'close-return-dialog', variant: 'outline', className: 'w-1/2 rounded-xl button-hover-soft-neutral' },
+      { label: 'Kirim', action: 'submit-return-again', variant: 'default', className: 'w-1/2 rounded-xl bg-primary text-white button-hover-soft-primary' },
     ],
   });
 }
@@ -186,6 +239,8 @@ function renderActionDialog() {
 function refreshTable() {
   const body = rootElement?.querySelector('[data-table-body]');
   if (body) body.innerHTML = renderRows();
+  const cards = rootElement?.querySelector('[data-card-list]');
+  if (cards) cards.innerHTML = renderCards();
   const pagination = rootElement?.querySelector('[data-pagination]');
   if (pagination) pagination.innerHTML = renderPagination();
   const tabs = rootElement?.querySelector('[data-tabs]');
@@ -199,7 +254,7 @@ function refreshPage() {
 }
 
 export function render() {
-  return `<section class="w-full px-5 pb-8 pt-8 sm:px-6 lg:px-7">
+  return `<section class="pd-page-in w-full px-5 pb-8 pt-8 sm:px-6 lg:px-7">
     <div class="mb-9">
       <h1 class="text-3xl font-semibold tracking-tight text-slate-900">Pengembalian</h1>
       <p class="mt-1 text-sm text-slate-400">Pantau status pengembalian dan riwayat pengembalian barangmu.</p>
@@ -212,7 +267,8 @@ export function render() {
         <h2 data-list-title class="text-lg font-semibold text-slate-900">List Barang ${TABS.find((tab) => tab.key === activeTab)?.label || 'Pengembalian'}</h2>
         ${renderSearchInput({ dataSearch: true, value: searchTerm, placeholder: 'Cari barang inventaris', ariaLabel: 'Cari barang inventaris', className: 'w-full sm:w-[260px]' })}
       </div>
-      <div class="w-full overflow-x-auto">
+      <div class="md:hidden" data-card-list>${renderCards()}</div>
+      <div class="hidden w-full overflow-x-auto md:block">
         <table class="w-full min-w-[900px] border-collapse text-left">
           <thead>
             <tr class="border-b border-zinc-100 text-sm leading-[140%] text-slate-400">

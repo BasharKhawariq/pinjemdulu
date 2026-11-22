@@ -1,7 +1,9 @@
 /**
- * Komponen Empty State terstandarisasi dengan animasi search Lottie/GIF
- * Menampilkan animasi kaca pembesar dan pesan "Belum ada data untuk ditampilkan".
+ * Komponen Empty State terstandarisasi dengan ilustrasi animasi (GIF) dan
+ * pesan "Belum ada data untuk ditampilkan".
  */
+import { escapeHtml } from './html.js';
+
 export function renderEmptyState({
   message = 'Belum ada data untuk ditampilkan',
   colspan = null,
@@ -9,9 +11,9 @@ export function renderEmptyState({
   imgClass = 'h-32 w-32 sm:h-36 sm:w-36',
 } = {}) {
   const content = `
-    <div class="flex flex-col items-center justify-center text-center ${classContainer}">
+    <div class="pd-rise-in flex flex-col items-center justify-center px-4 text-center ${classContainer}">
       <img src="assets/animations/empty-state.gif" alt="Belum ada data" class="mx-auto ${imgClass} object-contain select-none pointer-events-none" />
-      <p class="mt-4 text-sm font-medium text-slate-600 sm:text-base">${message}</p>
+      <p class="mt-4 text-sm font-medium text-slate-600 sm:text-base">${escapeHtml(message)}</p>
     </div>
   `;
 
@@ -21,4 +23,3 @@ export function renderEmptyState({
 
   return content;
 }
-

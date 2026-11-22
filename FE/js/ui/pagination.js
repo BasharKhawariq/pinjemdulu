@@ -76,11 +76,11 @@ export function renderPagination({
 
   const btnPrev = `<button type="button" ${prevAttr} ${
     isFirst ? 'disabled aria-disabled="true"' : ''
-  } aria-label="Halaman sebelumnya" class="flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-400 hover:bg-slate-50 transition-colors disabled:opacity-40 disabled:pointer-events-none">${renderIcon('ChevronLeft', 'h-4 w-4')}</button>`;
+  } aria-label="Halaman sebelumnya" class="flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-400 transition-colors duration-150 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-600 active:scale-95 disabled:opacity-40 disabled:pointer-events-none">${renderIcon('ChevronLeft', 'h-4 w-4')}</button>`;
 
   const btnNext = `<button type="button" ${nextAttr} ${
     isLast ? 'disabled aria-disabled="true"' : ''
-  } aria-label="Halaman berikutnya" class="flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-400 hover:bg-slate-50 transition-colors disabled:opacity-40 disabled:pointer-events-none">${renderIcon('ChevronRight', 'h-4 w-4')}</button>`;
+  } aria-label="Halaman berikutnya" class="flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-400 transition-colors duration-150 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-600 active:scale-95 disabled:opacity-40 disabled:pointer-events-none">${renderIcon('ChevronRight', 'h-4 w-4')}</button>`;
 
   let contentPages = '';
   if (showNumbers) {
@@ -96,9 +96,9 @@ export function renderPagination({
             ? `data-page="${p}"`
             : `data-action="${escapeHtml(action)}" data-page="${p}"`;
         if (isActive) {
-          return `<button type="button" ${pageAttr} aria-current="page" class="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-sm font-semibold text-white transition-colors shadow-sm">${p}</button>`;
+          return `<button type="button" ${pageAttr} aria-current="page" class="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-sm font-semibold text-white shadow-sm transition-colors duration-150 active:scale-95">${p}</button>`;
         }
-        return `<button type="button" ${pageAttr} aria-label="Halaman ${p}" class="flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">${p}</button>`;
+        return `<button type="button" ${pageAttr} aria-label="Halaman ${p}" class="flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white text-sm font-medium text-slate-600 transition-colors duration-150 hover:border-primary/40 hover:bg-slate-50 hover:text-primary active:scale-95">${p}</button>`;
       })
       .join('');
   } else {

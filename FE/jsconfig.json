@@ -1,0 +1,8 @@
+{
+  "compilerOptions": {
+    "checkJs": false,
+    "allowJs": true,
+    "forceConsistentCasingInFileNames": false
+  },
+  "exclude": ["node_modules"]
+}

@@ -6,11 +6,11 @@ import {
   renderFilterModal,
 } from '../js/ui/filter.js';
 
-test('filter: filterButtonClass memuat kelas hover primary dan border yang sesuai', () => {
+test('filter: filterButtonClass memuat kelas hover abu gelap dan border yang sesuai', () => {
   const cls = filterButtonClass();
-  assert.ok(cls.includes('hover:bg-primary'));
-  assert.ok(cls.includes('hover:text-white'));
-  assert.ok(cls.includes('hover:border-primary'));
+  assert.ok(cls.includes('hover:bg-secondary-hover'));
+  assert.ok(cls.includes('hover:text-secondary-hover-foreground'));
+  assert.ok(cls.includes('hover:border-secondary-hover'));
   assert.ok(cls.includes('rounded-full'));
 });
 

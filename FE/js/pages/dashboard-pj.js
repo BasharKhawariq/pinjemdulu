@@ -18,7 +18,7 @@ import { compressImageToDataUrl } from './kelola-inventaris-form.js';
 import { validateFotoFile } from '../lib/inventaris-form.js';
 import { renderOrganisasiLogo } from '../ui/organisasi-badge.js';
 import { renderEmptyState } from '../ui/empty-state.js';
-import { renderTableLoadingRow } from '../ui/loading-state.js';
+import { renderContainerLoading } from '../ui/loading-state.js';
 
 let activeTab = 'peminjaman';
 let managementTab = 'peminjaman';
@@ -120,16 +120,7 @@ function todayIsoDate() {
   return local.toISOString().slice(0, 10);
 }
 
-function getOrgBadgeClass(org) {
-  const key = String(org || '').toUpperCase();
-  if (key === 'HMTI') return 'bg-amber-400 text-amber-950';
-  if (key === 'HME' || key === 'HMF') return 'bg-rose-700 text-white';
-  if (key === 'HMS') return 'bg-slate-800 text-amber-400';
-  if (key === 'HIMANIA') return 'bg-blue-600 text-white';
-  return 'bg-slate-200 text-slate-700';
-}
-
-function getStatusBadge(status, isReturn = false) {
+function getStatusBadge(status) {
   const normalized = String(status || '').toLowerCase();
   if (normalized === 'menunggu' || normalized === STATUS_PEMINJAMAN.MENUNGGU_KONFIRMASI_PENGEMBALIAN) {
     return { label: 'Menunggu', cls: 'bg-amber-50 text-amber-600' };
@@ -150,10 +141,7 @@ function getStatusBadge(status, isReturn = false) {
     return { label: 'Dipinjam', cls: 'bg-purple-50 text-purple-700' };
   }
   if (normalized === 'ditolak' || normalized === STATUS_PEMINJAMAN.DITOLAK) {
-    return {
-      label: 'Ditolak',
-      cls: isReturn ? 'status-chip-return-rejected-dashboard' : 'bg-rose-100 text-rose-700',
-    };
+    return { label: 'Ditolak', cls: 'bg-rose-100 text-rose-700' };
   }
   return { label: String(status || '-'), cls: 'bg-zinc-100 text-zinc-700' };
 }
@@ -223,12 +211,14 @@ function renderSummaryCards() {
     { label: 'Tersedia', value: available, icon: 'CircleCheck', iconBoxClass: 'bg-emerald-50 text-emerald-600' },
     { label: 'Terlambat', value: late, icon: 'AlarmClock', iconBoxClass: 'bg-rose-100 text-rose-600' },
   ];
-  return cards.map((card) => `
-    <div class="flex min-h-[132px] flex-col justify-between rounded-2xl bg-white p-4 shadow-[0_1px_3px_rgba(15,23,42,0.03)] sm:p-5">
-      <span class="inline-flex h-8 w-8 items-center justify-center rounded-xl ${card.iconBoxClass}">${renderIcon(card.icon, 'h-4 w-4')}</span>
-      <div class="mt-4">
-        <p class="text-2xl font-bold leading-none text-slate-900">${card.value}</p>
-        <p class="mt-2 text-sm font-medium text-slate-400">${escapeHtml(card.label)}</p>
+  return cards.map((card, index) => `
+    <div class="pd-rise-in" style="animation-delay:${Math.min(index, 7) * 50}ms">
+      <div class="pd-card-hover flex h-full min-h-[132px] flex-col justify-between rounded-2xl bg-white p-4 shadow-[0_1px_3px_rgba(15,23,42,0.03)] sm:p-5">
+        <span class="inline-flex h-8 w-8 items-center justify-center rounded-xl ${card.iconBoxClass}">${renderIcon(card.icon, 'h-4 w-4')}</span>
+        <div class="mt-4">
+          <p class="text-2xl font-bold leading-none text-slate-900">${card.value}</p>
+          <p class="mt-2 text-sm font-medium text-slate-400">${escapeHtml(card.label)}</p>
+        </div>
       </div>
     </div>`).join('');
 }
@@ -237,20 +227,45 @@ function renderRightBannerCards() {
   const totalUnits = liveStats?.totalUnit ?? liveInventaris.reduce((sum, item) => sum + Number(item.totalBarang || 0), 0);
   const approvals = liveStats?.persetujuanPj ?? livePeminjaman.filter((row) => String(row.status || '').toLowerCase() === 'diajukan').length;
   return `
-    <div class="flex flex-col gap-3">
-      <div class="relative flex min-h-[96px] flex-col items-center justify-between overflow-hidden rounded-2xl bg-primary px-5 py-3 text-white shadow-sm">
+    <div class="pd-rise-in flex flex-col gap-3">
+      <div class="pd-card-hover relative flex min-h-[96px] flex-col items-center justify-between overflow-hidden rounded-2xl bg-primary px-5 py-3 text-white shadow-sm">
         <span class="pointer-events-none absolute -bottom-10 -left-8 h-28 w-28 rounded-full bg-white/10"></span>
         <span class="pointer-events-none absolute -bottom-14 left-4 h-28 w-28 rounded-full bg-white/5"></span>
         <span class="relative z-10 inline-flex items-center rounded-full bg-white px-3 py-1 text-[10px] font-semibold text-slate-900">Total Unit</span>
         <span class="relative z-10 mt-2 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-base font-bold text-slate-900">${totalUnits}</span>
       </div>
-      <div class="relative flex min-h-[96px] flex-col items-center justify-between overflow-hidden rounded-2xl bg-brand px-5 py-3 text-white shadow-sm">
+      <div class="pd-card-hover relative flex min-h-[96px] flex-col items-center justify-between overflow-hidden rounded-2xl bg-brand px-5 py-3 text-white shadow-sm">
         <span class="pointer-events-none absolute -bottom-10 -left-8 h-28 w-28 rounded-full bg-white/15"></span>
         <span class="pointer-events-none absolute -bottom-14 left-4 h-28 w-28 rounded-full bg-white/10"></span>
         <span class="relative z-10 inline-flex items-center rounded-full bg-white px-3 py-1 text-[10px] font-semibold text-slate-900">Persetujuan PJ</span>
         <span class="relative z-10 mt-2 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-base font-bold text-slate-900">${approvals}</span>
       </div>
     </div>`;
+}
+
+function renderManagementActionButtons(row, isReturn, mobile = false) {
+  const status = String(row.status || '').toLowerCase();
+  const pending = ['diajukan', 'menunggu_persetujuan'].includes(status);
+  const approved = status === 'disetujui';
+  const returnPending = [
+    String(STATUS_PEMINJAMAN.MENUNGGU_KONFIRMASI_PENGEMBALIAN).toLowerCase(),
+    'menunggu_pengembalian',
+    'menunggu',
+  ].includes(status);
+  const size = mobile ? 'h-11 w-11' : 'h-8 w-8';
+  const actionButton = (action, title, icon, color = 'text-slate-400') => `
+    <button
+      type="button"
+      data-action="${action}"
+      data-id="${escapeHtml(row.id)}"
+      title="${title}"
+      aria-label="${title}"
+      class="inline-flex ${size} shrink-0 items-center justify-center rounded-xl ${color} transition hover:bg-slate-100 active:scale-95"
+    >${renderIcon(icon, 'h-4 w-4')}</button>`;
+
+  return isReturn
+    ? `${actionButton('management-detail-return', 'Lihat detail pengembalian', 'Info')}${returnPending ? `${actionButton('management-approve-return', 'Proses pengembalian', 'CircleCheck', 'text-green-600 hover:bg-green-50')}${actionButton('management-reject-return', 'Tolak pengembalian', 'CircleX', 'text-red-600 hover:bg-red-50')}` : ''}`
+    : `${actionButton('management-detail-loan', 'Lihat detail peminjaman', 'Info')}${pending ? `${actionButton('management-approve-loan', 'Setujui pengajuan', 'CircleCheck', 'text-green-600 hover:bg-green-50')}${actionButton('management-reject-loan', 'Tolak pengajuan', 'CircleX', 'text-red-600 hover:bg-red-50')}` : approved ? actionButton('management-pickup', 'Konfirmasi pengambilan', 'HandCoins', 'text-slate-400 hover:bg-slate-100') : ''}`;
 }
 
 function renderManagementTable() {
@@ -291,35 +306,81 @@ function renderManagementTable() {
         : allRows)
     : allRows.filter((row) => !returnStatuses.includes(String(row.status || '').toLowerCase()) || String(row.status || '').toLowerCase() === 'ditolak')
   ).slice(0, 5);
-  const pendingValues = ['diajukan', 'menunggu_persetujuan'];
   const approvedValues = ['disetujui'];
-  const returnPendingValues = [String(STATUS_PEMINJAMAN.MENUNGGU_KONFIRMASI_PENGEMBALIAN).toLowerCase(), 'menunggu_pengembalian', 'menunggu'];
-  const body = isLoading
-    ? renderTableLoadingRow({ colspan: isReturn ? 8 : 9, message: 'Memuat data pengelolaan...' })
-    : (rows.length ? rows.map((row, index) => {
+  const body = rows.length ? rows.map((row, index) => {
     const status = String(row.status || '').toLowerCase();
-    const pending = pendingValues.includes(status);
     const approved = approvedValues.includes(status);
-    const returnPending = returnPendingValues.includes(status);
     const initials = String(row.nama).split(/\s+/).map((part) => part[0] || '').slice(0, 2).join('').toUpperCase();
-    const actionButton = (action, title, icon, color = 'text-slate-400') => `<button type="button" data-action="${action}" data-id="${escapeHtml(row.id)}" title="${title}" aria-label="${title}" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${color} transition hover:bg-slate-100">${renderIcon(icon, 'h-4 w-4')}</button>`;
-    const actionButtons = isReturn
-      ? `${actionButton('management-detail-return', 'Lihat detail pengembalian', 'Info')}${returnPending ? `${actionButton('management-approve-return', 'Proses pengembalian', 'CircleCheck', 'text-green-600 hover:bg-green-50')}${actionButton('management-reject-return', 'Tolak pengembalian', 'CircleX', 'text-red-600 hover:bg-red-50')}` : ''}`
-      : `${actionButton('management-detail-loan', 'Lihat detail peminjaman', 'Info')}${pending ? `${actionButton('management-approve-loan', 'Setujui pengajuan', 'CircleCheck', 'text-green-600 hover:bg-green-50')}${actionButton('management-reject-loan', 'Tolak pengajuan', 'CircleX', 'text-red-600 hover:bg-red-50')}` : approved ? actionButton('management-pickup', 'Konfirmasi pengambilan', 'HandCoins', 'text-slate-400 hover:bg-slate-100') : ''}`;
     return `<tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50/60">
       <td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400">${index + 1}</td>
       <td class="min-w-[190px] px-4 py-3"><div class="flex items-center gap-2.5"><span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-xs font-semibold text-white">${escapeHtml(initials)}</span><span class="min-w-0"><span class="block truncate text-xs font-medium text-slate-500">${escapeHtml(row.nama)}</span><span class="mt-1 flex items-center gap-1.5 text-[11px] text-slate-700">${renderOrganisasiLogo(row.organisasi, row.logoUrl, 'h-3.5 w-3.5')}<span>${escapeHtml(row.organisasi)}</span></span></span></div></td>
       <td class="min-w-[150px] px-4 py-4 text-xs text-slate-400">${escapeHtml(row.barang)}</td>
       <td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400">${escapeHtml(formatDateEnOrId(row.mulai))}</td>
       ${isReturn ? `<td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400">${escapeHtml(formatDateEnOrId(row.selesai))}</td><td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400">${escapeHtml(formatDateEnOrId(row.tanggalKembali))}</td>` : `<td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400">${escapeHtml(approved || status === String(STATUS_PEMINJAMAN.DIPINJAM).toLowerCase() ? formatDateEnOrId(row.pengambilan) : '—')}</td><td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400">${escapeHtml(formatDateEnOrId(row.selesai))}</td><td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400">${escapeHtml(row.jumlah)}</td>`}
-      ${isReturn ? `<td class="whitespace-nowrap px-4 py-4 text-center">${renderStatusChip({ status: row.status, className: String(row.status || '').toLowerCase() === 'ditolak' ? 'status-chip-return-rejected' : '' })}</td>` : `<td class="whitespace-nowrap px-4 py-4 text-center">${renderStatusChip({ status: row.status })}</td>`}
-      <td class="whitespace-nowrap px-1 py-4"><div class="flex items-center justify-center gap-0">${actionButtons}</div></td>
+      <td class="whitespace-nowrap px-4 py-4 text-center">${renderStatusChip({ status: row.status })}</td>
+      <td class="whitespace-nowrap px-1 py-4"><div class="flex items-center justify-center gap-0">${renderManagementActionButtons(row, isReturn)}</div></td>
     </tr>`;
-  }).join('') : renderEmptyState({ colspan: isReturn ? 8 : 9 }));
+  }).join('') : renderEmptyState({ colspan: isReturn ? 8 : 9 });
+
+  const cards = rows.length ? rows.map((row, index) => {
+      const status = String(row.status || '').toLowerCase();
+      const approved = approvedValues.includes(status);
+      const isBorrowed = status === String(STATUS_PEMINJAMAN.DIPINJAM).toLowerCase();
+      const initials = String(row.nama).split(/\s+/).map((part) => part[0] || '').slice(0, 2).join('').toUpperCase();
+      const dates = isReturn
+        ? [
+            { label: 'Tanggal Mulai', value: formatDateEnOrId(row.mulai) },
+            { label: 'Tanggal Selesai', value: formatDateEnOrId(row.selesai) },
+            { label: 'Tanggal Pengembalian', value: formatDateEnOrId(row.tanggalKembali) },
+          ]
+        : [
+            { label: 'Tanggal Mulai', value: formatDateEnOrId(row.mulai) },
+            { label: 'Tanggal Pengambilan', value: approved || isBorrowed ? formatDateEnOrId(row.pengambilan) : '—' },
+            { label: 'Tanggal Selesai', value: formatDateEnOrId(row.selesai) },
+          ];
+      return `
+        <div class="pd-rise-in" style="animation-delay:${Math.min(index, 7) * 50}ms">
+          <article class="pd-card-hover rounded-xl border border-slate-100 bg-white p-4 shadow-[0_1px_3px_rgba(15,23,42,0.03)]">
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex min-w-0 items-center gap-2.5">
+              <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-xs font-semibold text-white">${escapeHtml(initials)}</span>
+              <div class="min-w-0">
+                <h3 class="truncate text-sm font-semibold text-slate-800">${escapeHtml(row.nama)}</h3>
+                <p class="mt-1 inline-flex items-center gap-1.5 text-xs text-slate-500">
+                  ${renderOrganisasiLogo(row.organisasi, row.logoUrl, 'h-4 w-4')}
+                  <span class="truncate">${escapeHtml(row.organisasi)}</span>
+                </p>
+              </div>
+            </div>
+            <div class="shrink-0">${renderStatusChip({ status: row.status })}</div>
+          </div>
+          <p class="mt-4 break-words border-t border-slate-100 pt-3 text-sm font-medium text-slate-700">${escapeHtml(row.barang)}</p>
+          <dl class="mt-3 grid grid-cols-2 gap-x-3 gap-y-3">
+            ${dates.map((date) => `
+              <div class="min-w-0">
+                <dt class="text-[10px] text-slate-400">${date.label}</dt>
+                <dd class="mt-1 break-words text-xs font-medium text-slate-700">${escapeHtml(date.value)}</dd>
+              </div>
+            `).join('')}
+            ${!isReturn ? `<div><dt class="text-[10px] text-slate-400">Jumlah Unit</dt><dd class="mt-1 text-xs font-medium text-slate-700">${escapeHtml(row.jumlah)}</dd></div>` : ''}
+          </dl>
+          <div class="mt-3 flex flex-wrap items-center gap-1 border-t border-slate-100 pt-3" aria-label="Aksi pengelolaan">
+            ${renderManagementActionButtons(row, isReturn, true)}
+          </div>
+          </article>
+        </div>
+      `;
+    }).join('') : '<div class="rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-400">Belum ada data pengelolaan.</div>';
 
   const headers = isReturn
     ? '<th class="px-4 py-4 text-center font-semibold">No</th><th class="px-4 py-4 font-semibold">Nama Peminjam</th><th class="px-4 py-4 font-semibold">Barang Dipinjam</th><th class="px-4 py-4 text-center font-semibold">Tanggal Mulai</th><th class="px-4 py-4 text-center font-semibold">Tanggal Selesai</th><th class="px-4 py-4 text-center font-semibold">Tanggal Pengembalian</th><th class="px-4 py-4 text-center font-semibold">Status</th><th class="px-4 py-4 text-center font-semibold">Aksi</th>'
     : '<th class="px-4 py-4 text-center font-semibold">No</th><th class="px-4 py-4 font-semibold">Nama Peminjam</th><th class="px-4 py-4 font-semibold">Barang Dipinjam</th><th class="px-4 py-4 text-center font-semibold">Tanggal Mulai</th><th class="px-4 py-4 text-center font-semibold">Tanggal Pengambilan</th><th class="px-4 py-4 text-center font-semibold">Tanggal Selesai</th><th class="px-4 py-4 text-center font-semibold">Jumlah Unit</th><th class="px-4 py-4 text-center font-semibold">Status</th><th class="px-4 py-4 text-center font-semibold">Aksi</th>';
+  const tableContent = isLoading
+    ? renderContainerLoading({ message: 'Memuat data pengelolaan...', minHeight: 'min-h-[180px]' })
+    : `<div class="space-y-3 p-3 md:hidden" data-card-list>${cards}</div>
+      <div class="hidden w-full overflow-x-auto md:block"><table class="w-full min-w-[${isReturn ? '1000' : '1100'}px] border-collapse text-left">
+        <thead><tr class="border-b border-slate-100 text-sm leading-[140%] tracking-normal text-slate-400">${headers}</tr></thead><tbody>${body}</tbody>
+      </table></div>`;
   return `
     <div class="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <h2 class="text-[20px] font-semibold text-slate-900">Pengelolaan</h2>
@@ -329,9 +390,7 @@ function renderManagementTable() {
       </div>
     </div>
     <section class="overflow-hidden rounded-xl border border-zinc-100/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.02)]">
-      <div class="w-full overflow-x-auto"><table class="w-full min-w-[${isReturn ? '1000' : '1100'}px] border-collapse text-left">
-        <thead><tr class="border-b border-slate-100 text-sm leading-[140%] tracking-normal text-slate-400">${headers}</tr></thead><tbody>${body}</tbody>
-      </table></div>
+      ${tableContent}
     </section>
     <div class="mt-3 flex justify-end"><a href="${targetRoute}" class="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold text-slate-800 transition hover:text-primary hover:underline">Lihat Semua ${renderIcon('ChevronRight','h-3.5 w-3.5')}</a></div>`;
 }
@@ -351,13 +410,9 @@ function renderTable() {
     )
     .join('');
 
-  const bodyHtml = isLoading
-    ? renderTableLoadingRow({ colspan: 8, message: 'Memuat data pengajuan...' })
-    : (rows.length ? rows
+  const bodyHtml = rows.length ? rows
     .map((row, index) => {
-      const badge = getStatusBadge(row.status, isPengembalian);
-      const orgBadgeCls = getOrgBadgeClass(row.organisasi);
-      const orgInitial = String(row.organisasi || 'O').slice(0, 1).toUpperCase();
+      const badge = getStatusBadge(row.status);
 
       const middleCols = isPengembalian
         ? `
@@ -395,7 +450,7 @@ function renderTable() {
               data-id="${escapeHtml(row.id)}"
               aria-label="Lihat detail ${escapeHtml(row.namaBarang)}"
               title="Lihat detail"
-              class="inline-flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+              class="inline-flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 active:scale-95"
             >
               ${renderIcon('Info', 'h-4 w-4')}
             </button>
@@ -403,10 +458,73 @@ function renderTable() {
         </tr>
       `;
     })
-    .join('') : renderEmptyState({ colspan: 8 }));
+    .join('') : renderEmptyState({ colspan: 8 });
+
+  const cardsHtml = rows.length ? rows.map((row, index) => {
+      const badge = getStatusBadge(row.status);
+      const dates = isPengembalian
+        ? [
+            { label: 'Tanggal Mulai', value: formatDateEnOrId(row.tanggalMulai) },
+            { label: 'Tanggal Selesai', value: formatDateEnOrId(row.tanggalSelesai) },
+            { label: 'Tanggal Dikembalikan', value: row.tanggalDikembalikan ? formatDateEnOrId(row.tanggalDikembalikan) : '—' },
+          ]
+        : [
+            { label: 'Tanggal Diajukan', value: formatDateEnOrId(row.tanggalDiajukan) },
+            { label: 'Tanggal Mulai', value: formatDateEnOrId(row.tanggalMulai) },
+            { label: 'Tanggal Selesai', value: formatDateEnOrId(row.tanggalSelesai) },
+          ];
+      return `
+        <div class="pd-rise-in" style="animation-delay:${Math.min(index, 7) * 50}ms">
+          <article class="pd-card-hover rounded-xl border border-slate-100 bg-white p-4 shadow-[0_1px_3px_rgba(15,23,42,0.03)]">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Pengajuan ${index + 1}</p>
+              <h3 class="mt-1 break-words text-sm font-semibold text-slate-800">${escapeHtml(row.namaBarang)}</h3>
+              <p class="mt-1 inline-flex items-center gap-1.5 text-xs text-slate-500">
+                ${renderOrganisasiLogo(row.organisasi, row.logoUrl, 'h-4 w-4')}
+                <span>${escapeHtml(row.organisasi)}</span>
+              </p>
+            </div>
+            <span class="inline-flex shrink-0 whitespace-nowrap rounded-xl px-3 py-1.5 text-[10px] font-medium ${badge.cls}">
+              ${escapeHtml(badge.label)}
+            </span>
+          </div>
+          <dl class="mt-4 grid grid-cols-2 gap-x-3 gap-y-3 border-t border-slate-100 pt-3">
+            ${dates.map((date) => `
+              <div class="min-w-0">
+                <dt class="text-[10px] text-slate-400">${date.label}</dt>
+                <dd class="mt-1 break-words text-xs font-medium text-slate-700">${escapeHtml(date.value)}</dd>
+              </div>
+            `).join('')}
+            <div>
+              <dt class="text-[10px] text-slate-400">Jumlah Unit</dt>
+              <dd class="mt-1 text-xs font-medium text-slate-700">${escapeHtml(row.jumlahUnit)}</dd>
+            </div>
+          </dl>
+          <button
+            type="button"
+            data-action="open-detail"
+            data-id="${escapeHtml(row.id)}"
+            aria-label="Lihat detail ${escapeHtml(row.namaBarang)}"
+            class="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-slate-50 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 active:scale-[0.98]"
+          >
+            ${renderIcon('Info', 'h-4 w-4')}
+            Lihat Detail
+          </button>
+          </article>
+        </div>
+      `;
+    }).join('') : '<div class="rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-400">Belum ada pengajuan.</div>';
+
+  if (isLoading) {
+    return renderContainerLoading({ message: 'Memuat pengajuan saya...', minHeight: 'min-h-[180px]' });
+  }
 
   return `
-    <div class="overflow-x-auto">
+    <div class="space-y-3 p-3 md:hidden" data-card-list>
+      ${cardsHtml}
+    </div>
+    <div class="hidden overflow-x-auto md:block">
       <table class="w-full min-w-[860px] border-collapse text-left">
         <thead>
           <tr class="border-b border-slate-100 text-sm leading-[140%] tracking-normal text-slate-400">
@@ -424,11 +542,11 @@ function renderTable() {
 function renderDetailModal() {
   if (!detailRow) return '';
   const isPengembalian = activeTab === 'pengembalian';
-  const badge = getStatusBadge(detailRow.status, isPengembalian);
+  const badge = getStatusBadge(detailRow.status);
 
   return `
-    <div class="fixed inset-0 z-[9999] isolate flex items-center justify-center bg-slate-900/35 backdrop-blur-sm p-4" data-modal-overlay>
-      <section role="dialog" aria-modal="true" aria-labelledby="dash-detail-title" class="relative z-10 isolate w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+    <div class="pd-fade-in fixed inset-0 z-[9999] isolate flex items-center justify-center bg-slate-900/35 backdrop-blur-sm p-4" data-modal-overlay>
+      <section role="dialog" aria-modal="true" aria-labelledby="dash-detail-title" class="pd-pop-in relative z-10 isolate max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
         <div class="flex items-start justify-between gap-4">
           <div>
             <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">
@@ -436,7 +554,7 @@ function renderDetailModal() {
             </p>
             <h2 id="dash-detail-title" class="mt-1 text-lg font-semibold text-slate-900">${escapeHtml(detailRow.namaBarang)}</h2>
           </div>
-          <button type="button" data-action="close-detail" aria-label="Tutup detail" class="rounded-lg p-2 text-slate-400 hover:bg-slate-100">
+          <button type="button" data-action="close-detail" aria-label="Tutup detail" class="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 active:scale-95">
             ${renderIcon('X', 'h-4 w-4')}
           </button>
         </div>
@@ -486,7 +604,7 @@ function renderDetailModal() {
           }
         </dl>
         <div class="mt-6 flex justify-end">
-          <button type="button" data-action="close-detail" class="rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white hover:opacity-90">
+          <button type="button" data-action="close-detail" class="rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white button-hover-soft-neutral">
             Tutup
           </button>
         </div>
@@ -506,10 +624,10 @@ function renderManagementModal() {
   const end = row.endDate || row.selesai || row.tanggalSelesai;
   const id = String(row.id || row.idPeminjaman || '');
   const status = getStatusBadge(row.status);
-  const close = { label: 'Kembali', action: 'management-close', variant: 'outline', className: 'w-1/2 rounded-xl' };
+  const close = { label: 'Kembali', action: 'management-close', variant: 'outline', className: 'w-1/2 rounded-xl button-hover-soft-neutral' };
   const action = (label, name, variant, className = 'w-1/2 rounded-xl') => ({ label, action: name, dataId: id, variant, className });
-  const shell = (title, content, buttons = '', widthClass = 'max-w-lg') => `<div class="fixed inset-0 z-[9999] isolate flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4" data-management-modal-backdrop><section role="dialog" aria-modal="true" class="relative z-10 isolate max-h-[90vh] w-full ${widthClass} overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl"><div class="mb-5 flex items-center justify-between gap-4"><h2 class="text-xl font-bold tracking-tight text-slate-900">${title}</h2><button type="button" data-action="management-close" aria-label="Tutup" class="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100">${renderIcon('X','h-5 w-5')}</button></div>${content}${buttons ? `<div class="mt-6 flex justify-end gap-3">${buttons}</div>` : ''}</section></div>`;
-  const primary = (actionName, label, color = 'bg-primary text-white') => `<button type="button" data-action="${actionName}" data-id="${escapeHtml(id)}" class="rounded-xl ${color} px-5 py-2.5 text-sm font-semibold transition hover:brightness-110">${label}</button>`;
+  const shell = (title, content, buttons = '', widthClass = 'max-w-lg') => `<div class="pd-fade-in fixed inset-0 z-[9999] isolate flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4" data-management-modal-backdrop><section role="dialog" aria-modal="true" class="relative z-10 isolate max-h-[90dvh] w-full ${widthClass} overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl"><div class="mb-5 flex items-center justify-between gap-4"><h2 class="text-xl font-bold tracking-tight text-slate-900">${title}</h2><button type="button" data-action="management-close" aria-label="Tutup" class="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 active:scale-95">${renderIcon('X','h-5 w-5')}</button></div>${content}${buttons ? `<div class="mt-6 flex justify-end gap-3">${buttons}</div>` : ''}</section></div>`;
+  const primary = (actionName, label, color = 'bg-primary text-white', hoverClass = 'button-hover-soft-primary') => `<button type="button" data-action="${actionName}" data-id="${escapeHtml(id)}" class="rounded-xl ${color} ${hoverClass} px-5 py-2.5 text-sm font-semibold transition">${label}</button>`;
 
   if (managementModal === 'detail-loan' || managementModal === 'detail-return') {
     const isReturn = managementModal === 'detail-return';
@@ -523,35 +641,35 @@ function renderManagementModal() {
       ...(isReturn ? [{ label: 'Tanggal Pengembalian', value: formatDateEnOrId(row.tanggalPengembalian) }] : []),
     ];
     const dateGrid = `<div class="grid grid-cols-1 gap-4 ${dateColumns.length === 5 ? 'sm:grid-cols-5' : dateColumns.length === 4 ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} sm:gap-0 sm:divide-x sm:divide-slate-300">${dateColumns.map((date, index) => `<div class="text-center ${index === 0 ? 'sm:px-2' : 'sm:px-4'}"><p class="text-sm font-semibold text-slate-900 sm:text-base">${date.label}</p><p class="mt-3 text-sm font-medium text-slate-800 sm:text-base">${escapeHtml(date.value)}</p></div>`).join('')}</div>`;
-    return `<div class="fixed inset-0 z-[9999] isolate flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4" data-management-modal-backdrop>
-      <section role="dialog" aria-modal="true" aria-labelledby="management-detail-title" class="relative z-10 isolate max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl sm:p-8">
-        <div class="flex items-start justify-between gap-4"><h2 id="management-detail-title" class="text-2xl font-semibold tracking-tight text-slate-900">${isReturn ? 'Detail Pengembalian' : 'Detail Peminjaman'}</h2><button type="button" data-action="management-close" aria-label="Tutup detail" class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700">${renderIcon('X','h-5 w-5')}</button></div>
+    return `<div class="pd-fade-in fixed inset-0 z-[9999] isolate flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4" data-management-modal-backdrop>
+      <section role="dialog" aria-modal="true" aria-labelledby="management-detail-title" class="relative z-10 isolate max-h-[90dvh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl sm:p-8">
+        <div class="flex items-start justify-between gap-4"><h2 id="management-detail-title" class="text-2xl font-semibold tracking-tight text-slate-900">${isReturn ? 'Detail Pengembalian' : 'Detail Peminjaman'}</h2><button type="button" data-action="management-close" aria-label="Tutup detail" class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 active:scale-95">${renderIcon('X','h-5 w-5')}</button></div>
         <div class="mt-6 space-y-6 text-sm">
           <div class="flex items-center justify-between gap-6"><p class="text-base ${isReturn ? 'font-semibold' : 'font-medium'} text-slate-900">Nama Peminjam</p><div class="text-right"><p class="text-base font-medium text-slate-800">${escapeHtml(name)}</p><p class="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-slate-600"><span class="inline-block h-4 w-4 rounded-full bg-slate-400" aria-hidden="true"></span>${escapeHtml(org)}</p></div></div>
           <div class="flex items-center justify-between gap-6"><p class="text-base ${isReturn ? 'font-semibold' : 'font-medium'} text-slate-900">NIM</p><p class="text-base font-medium text-slate-800">${escapeHtml(nim)}</p></div>
           <div class="flex items-center justify-between gap-6"><p class="text-base ${isReturn ? 'font-semibold' : 'font-medium'} text-slate-900">${isReturn ? 'Barang Dipinjam' : 'Nama Barang'}</p><p class="text-right text-base font-medium text-slate-800">${escapeHtml(item)}</p></div>
           <div class="flex items-center justify-between gap-6"><p class="text-base ${isReturn ? 'font-semibold' : 'font-medium'} text-slate-900">Jumlah Unit</p><p class="text-base font-medium text-slate-800">${escapeHtml(row.jumlahPinjam ?? row.jumlahUnit ?? 1)}</p></div>
           ${dateGrid}
-          <div class="flex items-center justify-between gap-6"><p class="text-base ${isReturn ? 'font-semibold' : 'font-medium'} text-slate-900">Status</p><div class="flex items-center gap-2">${isLate ? `<button type="button" data-action="management-show-late-tooltip" aria-label="Lihat waktu keterlambatan" aria-describedby="dashboard-late-tooltip" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-rose-700 transition-colors hover:bg-rose-50 hover:text-rose-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300">${renderIcon('AlertCircle', 'h-6 w-6')}</button>` : ''}${renderStatusChip({status: row.status, className: isReturn && isRejected ? 'status-chip-return-rejected' : ''})}</div></div>
+          <div class="flex items-center justify-between gap-6"><p class="text-base ${isReturn ? 'font-semibold' : 'font-medium'} text-slate-900">Status</p><div class="flex items-center gap-2">${isLate ? `<button type="button" data-action="management-show-late-tooltip" aria-label="Lihat waktu keterlambatan" aria-describedby="dashboard-late-tooltip" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-rose-700 transition-colors hover:bg-rose-50 hover:text-rose-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300">${renderIcon('AlertCircle', 'h-6 w-6')}</button>` : ''}${renderStatusChip({ status: row.status })}</div></div>
           ${isRejected ? `<div><p class="mb-2 text-base ${isReturn ? 'font-semibold' : 'font-medium'} text-slate-900">Alasan Penolakan</p><div class="rounded-2xl border border-slate-100 bg-white px-5 py-4 text-base font-medium text-slate-700">${escapeHtml(row.alasanPenolakan || 'Pengembalian ditolak oleh pengelola.')}</div></div>` : ''}
           <div><p class="mb-2 text-base ${isReturn ? 'font-semibold' : 'font-medium'} text-slate-900">Keperluan Peminjaman Barang</p><div class="rounded-2xl border border-slate-100 bg-white px-5 py-4 text-base font-medium text-slate-800">${escapeHtml(row.keperluan || 'Seminar BEM')}</div></div>
           ${isReturn && row.kondisiPengembalian ? `<div><p class="mb-2 text-base ${isReturn ? 'font-semibold' : 'font-medium'} text-slate-900">Kondisi Barang Saat Dikembalikan</p><p class="text-base text-slate-800">${escapeHtml(row.kondisiPengembalian)}</p></div>` : ''}
           ${isReturn && row.fotoKondisi ? `<div><p class="mb-2 text-base ${isReturn ? 'font-semibold' : 'font-medium'} text-slate-900">Foto Kondisi Barang Saat Dikembalikan</p><img src="${escapeHtml(row.fotoKondisi)}" alt="Foto kondisi barang saat dikembalikan" class="max-h-48 rounded-xl object-contain"></div>` : ''}
           ${isReturn && row.sanksi ? `<div><p class="mb-2 text-base ${isReturn ? 'font-semibold' : 'font-medium'} text-slate-900">Sanksi</p><div class="rounded-2xl border border-slate-100 bg-white px-5 py-4 text-base text-slate-700">${escapeHtml(row.sanksi)}</div></div>` : ''}
-        </div><div class="mt-6 flex justify-end"><button type="button" data-action="management-close" class="rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:brightness-110">Tutup</button></div>
+        </div><div class="mt-6 flex justify-end"><button type="button" data-action="management-close" class="rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-colors button-hover-soft-neutral">Tutup</button></div>
       </section>${isLate ? `<div id="dashboard-late-tooltip" role="tooltip" class="pointer-events-none whitespace-nowrap rounded-xl bg-white px-4 py-3 text-sm font-medium text-slate-900" style="display:none;position:fixed;z-index:100000;filter:drop-shadow(0 5px 12px rgba(15,23,42,0.22))">Waktu Terlambat: ${escapeHtml(row.waktuTerlambat || 3)} Hari<span aria-hidden="true" style="position:absolute;right:-5px;top:50%;width:10px;height:10px;background:white;border-radius:2px;transform:translateY(-50%) rotate(45deg)"></span></div>` : ''}</div>`;
   }
 
-  if (managementModal === 'confirm-approve-loan') return renderModalComponent({ variant: 'approve', title: 'Setujui pengajuan peminjaman?', description: 'Saya yakin ingin menyetujui peminjaman ini', actions: [close, action('Setujui','management-execute-approve-loan','default','w-1/2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700')] });
-  if (managementModal === 'reject-loan') return `<div class="fixed inset-0 z-[9999] isolate flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4" data-management-modal-backdrop>
-    <section role="dialog" aria-modal="true" aria-labelledby="dashboard-loan-reject-title" class="relative z-10 isolate w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+  if (managementModal === 'confirm-approve-loan') return renderModalComponent({ variant: 'approve', title: 'Setujui pengajuan peminjaman?', description: 'Saya yakin ingin menyetujui peminjaman ini', actions: [close, action('Setujui','management-execute-approve-loan','default','w-1/2 rounded-xl bg-emerald-600 text-white button-hover-soft-green')] });
+  if (managementModal === 'reject-loan') return `<div class="pd-fade-in fixed inset-0 z-[9999] isolate flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4" data-management-modal-backdrop>
+    <section role="dialog" aria-modal="true" aria-labelledby="dashboard-loan-reject-title" class="relative z-10 isolate max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
       <h2 id="dashboard-loan-reject-title" class="text-xl font-bold tracking-tight text-slate-900">Permohonan Ditolak</h2>
       <div class="mt-5 space-y-2"><label for="dashboard-reject-reason" class="block text-sm font-semibold text-slate-900">Alasan Penolakan</label><textarea id="dashboard-reject-reason" rows="3" placeholder="Masukkan alasan penolakan" style="resize:none" class="w-full resize-none rounded-xl border ${managementError ? 'border-red-300' : 'border-slate-200'} bg-white px-4 py-3 text-sm text-slate-800 outline-none placeholder:text-slate-400 focus:border-slate-300 focus:ring-2 focus:ring-slate-100">${escapeHtml(managementRejectReason)}</textarea>${managementError ? `<div role="alert" class="rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-700 validation-blink">${escapeHtml(managementError)}</div>` : ''}</div>
-      <div class="mt-6 flex items-center justify-end gap-3"><button type="button" data-action="management-close" class="h-12 rounded-xl border border-slate-200 bg-white px-5 text-sm font-medium text-slate-600 transition-colors hover:border-rose-700 hover:bg-rose-700 hover:text-white">Batal</button><button type="button" data-action="management-submit-reject-loan" class="h-12 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition hover:brightness-110">Kirim</button></div>
+      <div class="mt-6 flex items-center justify-end gap-3"><button type="button" data-action="management-close" class="h-12 rounded-xl border border-slate-200 bg-white px-5 text-sm font-medium text-slate-600 button-hover-soft-red">Batal</button><button type="button" data-action="management-submit-reject-loan" class="h-12 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition button-hover-soft-primary">Kirim</button></div>
     </section></div>`;
-  if (managementModal === 'confirm-reject-loan') return renderModalComponent({ variant: 'reject', title: 'Tolak pengajuan peminjaman?', description: 'Saya yakin ingin menolak peminjaman ini', actions: [close, action('Tolak','management-execute-reject-loan','default','w-1/2 rounded-xl bg-rose-600 text-white hover:bg-rose-700')] });
-  if (managementModal === 'success-approve-loan') return renderModalComponent({ variant: 'success', title: 'Pengajuan Disetujui', description: 'Pengajuan peminjaman barang berhasil disetujui dan status telah diperbarui.', primaryAction: {label:'Tutup',action:'management-close',className:'w-full rounded-xl transition-colors hover:brightness-110'} });
-  if (managementModal === 'success-reject-loan') return renderModalComponent({ variant: 'reject', title: 'Pengajuan Berhasil Ditolak', description: 'Pengajuan peminjaman barang berhasil ditolak.', primaryAction: {label:'Tutup',action:'management-close',className:'w-full rounded-xl transition-colors hover:brightness-110'} });
+  if (managementModal === 'confirm-reject-loan') return renderModalComponent({ variant: 'reject', title: 'Tolak pengajuan peminjaman?', description: 'Saya yakin ingin menolak peminjaman ini', actions: [close, action('Tolak','management-execute-reject-loan','default','w-1/2 rounded-xl bg-rose-600 text-white button-hover-soft-red')] });
+  if (managementModal === 'success-approve-loan') return renderModalComponent({ variant: 'success', title: 'Pengajuan Disetujui', description: 'Pengajuan peminjaman barang berhasil disetujui dan status telah diperbarui.', primaryAction: {label:'Tutup',action:'management-close',className:'w-full rounded-xl button-hover-soft-neutral'} });
+  if (managementModal === 'success-reject-loan') return renderModalComponent({ variant: 'reject', title: 'Pengajuan Berhasil Ditolak', description: 'Pengajuan peminjaman barang berhasil ditolak.', primaryAction: {label:'Tutup',action:'management-close',className:'w-full rounded-xl button-hover-soft-neutral'} });
 
   if (managementModal === 'pickup') {
     const start = String(managementModalRow?.mulai || managementModalRow?.startDate || managementModalRow?.tanggalMulai || '').slice(0, 10);
@@ -561,22 +679,22 @@ function renderManagementModal() {
       ${isNotStarted ? `<div class="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800"><span class="font-semibold">Perhatian:</span> Periode peminjaman baru dimulai pada tanggal <strong>${escapeHtml(formatDateEnOrId(start))}</strong>. Pengambilan barang belum dapat diproses sebelum tanggal mulai.</div>` : ''}
       <div><label for="dashboard-pickup-date" class="mb-2 block text-sm font-semibold text-slate-900">Tanggal Pengambilan</label><div class="relative"><input id="dashboard-pickup-date" type="date" ${start ? `min="${escapeHtml(start)}"` : ''} ${end ? `max="${escapeHtml(end)}"` : ''} value="${escapeHtml(managementPickupDate)}" class="h-12 w-full rounded-2xl border border-slate-100 bg-white px-4 text-sm font-medium ${managementPickupDate ? 'text-slate-800' : 'text-transparent'} outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100">${managementPickupDate ? '' : '<span class="pointer-events-none absolute inset-y-0 left-4 flex items-center text-sm font-medium text-slate-400">Pilih tanggal</span>'}</div></div>
       <div><p class="mb-2 text-sm font-semibold text-slate-900">Foto Barang</p><button type="button" data-action="management-choose-pickup-photo" class="flex min-h-[150px] w-full flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-center transition-colors hover:bg-slate-100">${managementPickupPhoto ? `<img src="${escapeHtml(managementPickupPhoto)}" alt="Foto barang" class="max-h-32 rounded-lg object-contain">` : `<img src="assets/img/Image-Dropbox.png" alt="" class="mb-2 h-10 w-10 object-contain"><span class="text-xs font-semibold text-slate-700">Seret foto ke sini, atau Pilih File</span><span class="mt-1 text-[10px] text-slate-400">File harus berformat JPG atau PNG dengan ukuran maksimal 2 MB.</span>`}</button><input id="dashboard-pickup-photo" type="file" accept="image/jpeg,image/png,image/jpg" class="sr-only">${managementPickupPhotoError ? `<p class="mt-1 text-xs text-rose-600">${escapeHtml(managementPickupPhotoError)}</p>` : ''}</div>
-      ${managementError ? `<p role="alert" class="text-xs text-red-600">${escapeHtml(managementError)}</p>` : ''}</div>`, `${primary('management-close','Batal','border border-slate-200 bg-white text-slate-600 hover:border-rose-700 hover:bg-rose-700 hover:text-white')}${isNotStarted ? '<button type="button" disabled class="rounded-xl bg-slate-300 px-6 py-3 text-sm font-semibold text-slate-500 cursor-not-allowed shadow-none">Kirim</button>' : primary('management-submit-pickup','Kirim')}`);
+      ${managementError ? `<p role="alert" class="text-xs text-red-600">${escapeHtml(managementError)}</p>` : ''}</div>`, `${primary('management-close','Batal','border border-slate-200 bg-white text-slate-600','button-hover-soft-red')}${isNotStarted ? '<button type="button" disabled class="rounded-xl bg-slate-300 px-6 py-3 text-sm font-semibold text-slate-500 cursor-not-allowed shadow-none">Kirim</button>' : primary('management-submit-pickup','Kirim')}`);
   }
 
   if (managementModal === 'confirm-approve-return') return '';
   if (managementModal === 'form-approve-return') return '';
-    if (managementModal === 'confirm-submit-return') return renderModalComponent({ variant: 'send', title: 'Kirim Form Pengembalian?', description: 'Periksa kembali data pengajuan yang akan anda kirim', actions: [ {label:'Kembali',action:'management-back-to-return-form',variant:'outline',className:'w-1/2 rounded-xl'}, action('Kirim','management-execute-approve-return','default','w-1/2 rounded-xl bg-primary text-white transition-colors hover:brightness-110') ] });
-  if (managementModal === 'confirm-cancel-return-form') return renderModalComponent({ variant: 'cancel', title: 'Batal Kirim Form?', description: 'Apakah anda yakin ingin batal menyetujui pengembalian?', actions: [{label:'Kembali',action:'management-back-to-return-form',variant:'outline',className:'w-1/2 rounded-xl'},action('Batalkan','management-cancel-return-confirmed','default','w-1/2 rounded-xl bg-primary text-white transition-colors hover:brightness-110')] });
-  if (managementModal === 'success-approve-return') return renderModalComponent({ variant: 'success', title: 'Pengembalian Berhasil!', description: 'Persetujuan pengembalian dan data berhasil disimpan.', primaryAction: {label:'Kembali',action:'management-close',className:'w-full rounded-xl bg-primary text-white transition-colors hover:brightness-110'} });
-  if (managementModal === 'confirm-reject-return') return renderModalComponent({ variant: 'reject', title: 'Tolak pengajuan pengembalian?', description: 'Periksa kembali data pengajuan yang akan anda tolak', actions: [{label:'Kembali',action:'management-back-reject-return',variant:'outline',className:'w-1/2 rounded-xl'}, action('Tolak','management-execute-reject-return','default','w-1/2 rounded-xl bg-rose-600 text-white transition-colors hover:brightness-110')] });
-  if (managementModal === 'reject-return') return `<div class="fixed inset-0 z-[9999] isolate flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4" data-management-modal-backdrop>
-    <section role="dialog" aria-modal="true" aria-labelledby="dashboard-return-reject-title" class="relative z-10 isolate w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+    if (managementModal === 'confirm-submit-return') return renderModalComponent({ variant: 'send', title: 'Kirim Form Pengembalian?', description: 'Periksa kembali data pengajuan yang akan anda kirim', actions: [ {label:'Kembali',action:'management-back-to-return-form',variant:'outline',className:'w-1/2 rounded-xl button-hover-soft-neutral'}, action('Kirim','management-execute-approve-return','default','w-1/2 rounded-xl bg-primary text-white button-hover-soft-primary') ] });
+  if (managementModal === 'confirm-cancel-return-form') return renderModalComponent({ variant: 'cancel', title: 'Batal Kirim Form?', description: 'Apakah anda yakin ingin batal menyetujui pengembalian?', actions: [{label:'Kembali',action:'management-back-to-return-form',variant:'outline',className:'w-1/2 rounded-xl button-hover-soft-neutral'},action('Batalkan','management-cancel-return-confirmed','default','w-1/2 rounded-xl bg-primary text-white button-hover-soft-red')] });
+  if (managementModal === 'success-approve-return') return renderModalComponent({ variant: 'success', title: 'Pengembalian Berhasil!', description: 'Persetujuan pengembalian dan data berhasil disimpan.', primaryAction: {label:'Kembali',action:'management-close',className:'w-full rounded-xl bg-primary text-white button-hover-soft-neutral'} });
+  if (managementModal === 'confirm-reject-return') return renderModalComponent({ variant: 'reject', title: 'Tolak pengajuan pengembalian?', description: 'Periksa kembali data pengajuan yang akan anda tolak', actions: [{label:'Kembali',action:'management-back-reject-return',variant:'outline',className:'w-1/2 rounded-xl button-hover-soft-neutral'}, action('Tolak','management-execute-reject-return','default','w-1/2 rounded-xl bg-rose-600 text-white button-hover-soft-red')] });
+  if (managementModal === 'reject-return') return `<div class="pd-fade-in fixed inset-0 z-[9999] isolate flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4" data-management-modal-backdrop>
+    <section role="dialog" aria-modal="true" aria-labelledby="dashboard-return-reject-title" class="relative z-10 isolate max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
       <h2 id="dashboard-return-reject-title" class="text-xl font-bold tracking-tight text-slate-900">Permohonan Ditolak</h2>
       <div class="mt-5 space-y-2"><label for="dashboard-return-reason" class="block text-sm font-semibold text-slate-900">Alasan Penolakan</label><textarea id="dashboard-return-reason" rows="3" placeholder="Masukkan alasan penolakan" style="resize:none" class="w-full resize-none rounded-xl border ${managementError ? 'border-red-300' : 'border-slate-200'} bg-white px-4 py-3 text-sm text-slate-800 outline-none placeholder:text-slate-400 focus:border-slate-300 focus:ring-2 focus:ring-slate-100">${escapeHtml(managementReturnReason)}</textarea>${managementError ? `<div role="alert" class="rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-700 validation-blink">${escapeHtml(managementError)}</div>` : ''}</div>
-      <div class="mt-6 flex items-center justify-end gap-3"><button type="button" data-action="management-close" class="h-12 rounded-xl border border-slate-200 bg-white px-5 text-sm font-medium text-slate-600 transition-colors hover:border-rose-700 hover:bg-rose-700 hover:text-white">Batal</button><button type="button" data-action="management-submit-reject-return" class="h-12 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition hover:brightness-110">Kirim</button></div>
+      <div class="mt-6 flex items-center justify-end gap-3"><button type="button" data-action="management-close" class="h-12 rounded-xl border border-slate-200 bg-white px-5 text-sm font-medium text-slate-600 button-hover-soft-red">Batal</button><button type="button" data-action="management-submit-reject-return" class="h-12 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition button-hover-soft-primary">Kirim</button></div>
     </section></div>`;
-  if (managementModal === 'success-reject-return') return renderModalComponent({ variant: 'reject', title: 'Pengembalian Berhasil Ditolak!', description: 'Persetujuan pengembalian dan data berhasil ditolak.', primaryAction: {label:'Kembali',action:'management-close',className:'w-full rounded-xl bg-primary text-white transition-colors hover:brightness-110'} });
+  if (managementModal === 'success-reject-return') return renderModalComponent({ variant: 'reject', title: 'Pengembalian Berhasil Ditolak!', description: 'Persetujuan pengembalian dan data berhasil ditolak.', primaryAction: {label:'Kembali',action:'management-close',className:'w-full rounded-xl bg-primary text-white button-hover-soft-neutral'} });
   return '';
 }
 
@@ -605,7 +723,7 @@ function renderDashboardReturnFormPage() {
         <div class="space-y-1.5"><label class="block text-sm font-medium text-slate-700">Foto Kondisi Barang Saat Dikembalikan</label><button type="button" data-action="management-choose-return-photo" class="flex min-h-[140px] w-full flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 transition-colors hover:border-primary hover:bg-slate-50/70 focus:outline-none focus:ring-2 focus:ring-primary/20">${managementReturnPhoto ? `<img src="${escapeHtml(managementReturnPhoto)}" alt="Foto kondisi barang" class="max-h-40 rounded-lg object-contain">` : `<img src="assets/img/Image-Dropbox.png" alt="" class="mb-2 h-9 w-9 object-contain"><span class="text-sm font-medium text-slate-700">Pilih foto kondisi barang</span><span class="mt-1 text-xs text-slate-400">Format JPG atau PNG</span>`}</button><input id="dashboard-return-photo" type="file" accept="image/jpeg,image/png,image/jpg" class="sr-only">${managementReturnPhotoError ? `<p class="text-sm text-rose-600">${escapeHtml(managementReturnPhotoError)}</p>` : ''}</div>
       </div>
       ${managementError ? `<p role="alert" class="mt-3 text-sm text-rose-600">${escapeHtml(managementError)}</p>` : ''}
-      <div class="mt-7 flex items-center justify-end gap-3 border-t border-slate-100 pt-5"><button type="button" data-action="management-cancel-return-form" class="h-12 min-w-[112px] rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:border-rose-700 hover:bg-rose-700 hover:text-white">Batal</button><button type="button" data-action="management-submit-return-form" class="h-12 min-w-[112px] rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-primary/30">Kirim</button></div>
+      <div class="mt-7 flex items-center justify-end gap-3 border-t border-slate-100 pt-5"><button type="button" data-action="management-cancel-return-form" class="h-12 min-w-[112px] rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-sm font-semibold text-slate-600 button-hover-soft-red">Batal</button><button type="button" data-action="management-submit-return-form" class="h-12 min-w-[112px] rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors button-hover-soft-primary focus:outline-none focus:ring-2 focus:ring-primary/30">Kirim</button></div>
     </div>
   </section>`;
 }
@@ -618,7 +736,7 @@ function renderDashboardContent(ctx = {}) {
   const seeAllHref = activeTab === 'pengembalian' ? '#/pengajuan-saya/pengembalian' : '#/pengajuan-saya/peminjaman';
 
   return `
-    <section class="min-h-[calc(100vh-112px)] rounded-none bg-background -m-4 p-4 sm:-m-7 sm:p-7">
+    <section class="pd-page-in min-h-[calc(100dvh-112px)] rounded-none bg-background -m-4 p-4 sm:-m-7 sm:p-7">
       <div class="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_240px] xl:grid-cols-[1fr_256px]">
         <div class="flex flex-col justify-between">
           <div>

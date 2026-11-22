@@ -46,7 +46,7 @@ export function render({
   // 1. Keadaan Memuat (Skeleton)
   if (loading) {
     return html`
-      <div class="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+      <div class="pd-page-in mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
         <div class="mb-6 flex items-center gap-3">
           <div class="h-9 w-28 rounded-xl bg-muted/60 animate-pulse"></div>
         </div>
@@ -58,7 +58,7 @@ export function render({
   // 2. Keadaan Galat Memuat Data
   if (error) {
     return html`
-      <div class="mx-auto max-w-4xl px-4 py-12 text-center sm:px-6 lg:px-8">
+      <div class="pd-page-in mx-auto max-w-4xl px-4 py-12 text-center sm:px-6 lg:px-8">
         <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
           ${renderIcon('AlertCircle', 'h-7 w-7')}
         </div>
@@ -67,7 +67,7 @@ export function render({
         <div class="mt-6 flex justify-center gap-3">
           <a
             href="#/inventaris${catalogQuery ? '?' + catalogQuery : ''}"
-            class="${buttonClass({ variant: 'outline' })}"
+            class="${buttonClass({ variant: 'outline' })} button-hover-soft-neutral"
           >
             Kembali ke Katalog
           </a>
@@ -89,12 +89,12 @@ export function render({
     const isOkiSendiri = gate.reason?.includes('milik OKI Anda');
 
     return html`
-      <div class="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
+      <div class="pd-page-in mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
         <div class="mb-6">
           <a
             href="#/inventaris/${encodeURIComponent(item?.idInventaris || '')}${catalogQuery ? '?' + catalogQuery : ''}"
             data-action="kembali-detail"
-            class="${buttonClass({ variant: 'ghost', size: 'sm' })} text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5"
+            class="${buttonClass({ variant: 'ghost', size: 'sm' })} button-hover-soft-neutral text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5"
           >
             ${renderIcon('ArrowLeft', 'h-4 w-4')}
             <span>Kembali ke Detail Barang</span>
@@ -112,7 +112,7 @@ export function render({
           <div class="mt-8 flex justify-center gap-3">
             <a
               href="#/inventaris/${encodeURIComponent(item?.idInventaris || '')}${catalogQuery ? '?' + catalogQuery : ''}"
-              class="${buttonClass({ variant: 'default' })} bg-primary text-white"
+              class="${buttonClass({ variant: 'default' })} button-hover-soft-neutral bg-primary text-white"
             >
               Kembali ke Detail Barang
             </a>
@@ -135,11 +135,11 @@ export function render({
   // Jika barang null tapi lolos (fallback)
   if (!item) {
     return html`
-      <div class="mx-auto max-w-4xl px-4 py-12 text-center sm:px-6 lg:px-8">
+      <div class="pd-page-in mx-auto max-w-4xl px-4 py-12 text-center sm:px-6 lg:px-8">
         <h1 class="text-xl font-bold text-foreground">Barang Tidak Ditemukan</h1>
         <p class="mt-2 text-sm text-muted-foreground">Barang yang ingin Anda ajukan tidak ditemukan.</p>
         <div class="mt-6">
-          <a href="#/inventaris" class="${buttonClass({ variant: 'default' })} bg-primary text-white">
+          <a href="#/inventaris" class="${buttonClass({ variant: 'default' })} button-hover-soft-neutral bg-primary text-white">
             Kembali ke Katalog
           </a>
         </div>
@@ -171,7 +171,7 @@ export function render({
     (typeof user?.organisasi === 'string' ? user?.organisasi : 'Organisasi');
 
   return html`
-    <div class="mx-auto w-full px-4 py-6 sm:px-6 lg:px-8">
+    <div class="pd-page-in mx-auto w-full px-4 py-6 sm:px-6 lg:px-8">
       <!-- Navigasi Breadcrumb Header: Inventaris -->
       <div class="mb-6 flex items-center gap-2">
         <a
@@ -179,7 +179,7 @@ export function render({
           data-action="kembali-detail"
           class="inline-flex items-center gap-2 text-sm font-semibold text-foreground hover:text-primary transition-colors"
         >
-          <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background shadow-xs text-muted-foreground">
+          <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background shadow-xs text-muted-foreground transition-transform active:scale-95">
             ${renderIcon('Archive', 'h-4 w-4')}
           </span>
           <span>Inventaris</span>
@@ -347,7 +347,7 @@ export function render({
             <button
               type="button"
               data-action="batal"
-              class="${buttonClass({ variant: 'outline' })} rounded-xl px-6 py-2.5 font-medium border-border"
+              class="${buttonClass({ variant: 'outline' })} button-hover-soft-red rounded-xl px-6 py-2.5 font-medium border-border transition active:scale-95"
             >
               Batal
             </button>
@@ -355,7 +355,7 @@ export function render({
               type="button"
               data-action="kirim"
               ${formState.isSubmitting ? raw('disabled') : ''}
-              class="${buttonClass({ variant: 'default' })} rounded-xl px-6 py-2.5 bg-primary text-white font-medium hover:bg-primary/90"
+              class="${buttonClass({ variant: 'default' })} button-hover-soft-primary rounded-xl px-6 py-2.5 bg-primary text-white font-medium transition active:scale-95"
             >
               ${formState.isSubmitting
                 ? html`
@@ -387,11 +387,13 @@ export function render({
             label: 'Kembali',
             action: 'tutup-dialog-konfirmasi',
             variant: 'outline',
+            className: 'flex-1 rounded-xl button-hover-soft-neutral',
           },
           {
             label: 'Kirim',
             action: 'konfirmasi-kirim',
             variant: 'default',
+            className: 'flex-1 rounded-xl button-hover-soft-primary',
           },
         ],
       })}
@@ -410,11 +412,13 @@ export function render({
             label: 'Kembali',
             action: 'tutup-dialog-batal',
             variant: 'outline',
+            className: 'flex-1 rounded-xl button-hover-soft-neutral',
           },
           {
             label: 'Batalkan',
             action: 'konfirmasi-batal',
             variant: 'destructive',
+            className: 'flex-1 rounded-xl button-hover-soft-red',
           },
         ],
       })}
@@ -433,6 +437,7 @@ export function render({
             label: 'Kembali',
             action: 'ke-detail-sukses',
             variant: 'default',
+            className: 'w-full rounded-xl button-hover-soft-neutral',
           },
         ],
       })}

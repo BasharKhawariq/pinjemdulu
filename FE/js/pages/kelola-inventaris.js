@@ -15,7 +15,7 @@ import {
   alertClass,
 } from '../ui/classes.js';
 import { renderIcon } from '../ui/icons.js';
-import { renderSearchInput } from '../ui/search-input.js';
+import { renderSearchInput, renderSearchClearButton } from '../ui/search-input.js';
 import { renderModal } from '../ui/modal.js';
 import { renderFilterButton } from '../ui/filter.js';
 import {
@@ -38,6 +38,7 @@ import { normalizeKondisi } from '../lib/kondisi.js';
 import { KONDISI_BARANG, LABEL_KONDISI } from '../lib/constants.js';
 import { renderKelolaTabs } from '../ui/kelola-tabs.js';
 import { renderOrganisasiBadge as renderSharedBadge, renderOrganisasiLogo } from '../ui/organisasi-badge.js';
+import { renderContainerLoading } from '../ui/loading-state.js';
 
 export const renderTabs = renderKelolaTabs;
 
@@ -158,6 +159,52 @@ export function renderTableSkeleton() {
 }
 
 /**
+ * Render grup tombol aksi baris/kartu inventaris (Ubah / Detail / Hapus).
+ * @param {object} it
+ * @param {string} [sizeClass='h-8 w-8'] Ukuran tombol ikon (h-8 w-8 di tabel, h-10 w-10 di kartu mobile)
+ * @returns {import('../ui/html.js').SafeHtml}
+ */
+export function renderActions(it, sizeClass = 'h-8 w-8') {
+  return html`
+    <div class="flex items-center justify-center gap-0" role="group" aria-label="Aksi inventaris ${it.namaBarang}">
+      <!-- Ubah (Link Halaman Terpisah) -->
+      <a
+        href="#/kelola/inventaris/${it.idInventaris}/ubah"
+        aria-label="Ubah ${it.namaBarang}"
+        title="Ubah ${it.namaBarang}"
+        class="inline-flex ${sizeClass} items-center justify-center rounded-xl text-slate-400 transition-colors active:scale-95 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        ${renderIcon('Pencil', 'h-4 w-4')}
+      </a>
+
+      <!-- Detail -->
+      <button
+        type="button"
+        data-action="detail-inventaris"
+        data-id="${it.idInventaris}"
+        aria-label="Lihat detail ${it.namaBarang}"
+        title="Lihat detail ${it.namaBarang}"
+        class="inline-flex ${sizeClass} items-center justify-center rounded-xl text-slate-400 transition-colors active:scale-95 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        ${renderIcon('Info', 'h-4 w-4')}
+      </button>
+
+      <!-- Hapus -->
+      <button
+        type="button"
+        data-action="delete-inventaris"
+        data-id="${it.idInventaris}"
+        aria-label="Hapus ${it.namaBarang}"
+        title="Hapus ${it.namaBarang}"
+        class="inline-flex ${sizeClass} items-center justify-center rounded-xl text-red-600 transition-colors active:scale-95 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        ${renderIcon('Trash2', 'h-4 w-4')}
+      </button>
+    </div>
+  `;
+}
+
+/**
  * Render baris tunggal dalam tabel inventaris.
  * @param {object} it
  * @param {number} index
@@ -170,7 +217,7 @@ export function renderTableRow(it, index, page = 1, perPage = 10) {
   const total = Number(it.totalBarang ?? 0);
 
   return html`
-    <tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50/60" data-id="${it.idInventaris}">
+    <tr class="border-b border-slate-100 transition-colors last:border-0 hover:bg-slate-50/60" data-id="${it.idInventaris}">
       <td class="whitespace-nowrap px-4 py-4 text-center text-xs text-slate-400 align-middle">${no}</td>
       <td class="min-w-[200px] px-4 py-4 align-middle">
         <span class="text-xs font-medium text-slate-500">${it.namaBarang}</span>
@@ -186,43 +233,52 @@ export function renderTableRow(it, index, page = 1, perPage = 10) {
         ${renderStatusBadge(it)}
       </td>
       <td class="whitespace-nowrap px-1 py-4 align-middle min-w-[160px]">
-        <div class="flex items-center justify-center gap-0" role="group" aria-label="Aksi inventaris ${it.namaBarang}">
-          <!-- Ubah (Link Halaman Terpisah) -->
-          <a
-            href="#/kelola/inventaris/${it.idInventaris}/ubah"
-            aria-label="Ubah ${it.namaBarang}"
-            title="Ubah ${it.namaBarang}"
-            class="inline-flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            ${renderIcon('Pencil', 'h-4 w-4')}
-          </a>
-
-          <!-- Detail -->
-          <button
-            type="button"
-            data-action="detail-inventaris"
-            data-id="${it.idInventaris}"
-            aria-label="Lihat detail ${it.namaBarang}"
-            title="Lihat detail ${it.namaBarang}"
-            class="inline-flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            ${renderIcon('Info', 'h-4 w-4')}
-          </button>
-
-          <!-- Hapus -->
-          <button
-            type="button"
-            data-action="delete-inventaris"
-            data-id="${it.idInventaris}"
-            aria-label="Hapus ${it.namaBarang}"
-            title="Hapus ${it.namaBarang}"
-            class="inline-flex h-8 w-8 items-center justify-center rounded-xl text-red-600 transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            ${renderIcon('Trash2', 'h-4 w-4')}
-          </button>
-        </div>
+        ${renderActions(it, 'h-8 w-8')}
       </td>
     </tr>
+  `;
+}
+
+/**
+ * Render kartu item inventaris untuk tampilan mobile.
+ * @param {object} it
+ * @param {number} index
+ * @param {number} page
+ * @param {number} perPage
+ * @returns {import('../ui/html.js').SafeHtml}
+ */
+export function renderCard(it, index = 0, page = 1, perPage = 10) {
+  const no = (page - 1) * perPage + index + 1;
+  const total = Number(it.totalBarang ?? 0);
+  const delay = Math.min(index, 11) * 40;
+
+  return html`
+    <article class="pd-rise-in rounded-xl border border-slate-100 bg-white p-4 shadow-sm" style="animation-delay:${delay}ms" data-id="${it.idInventaris}">
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <p class="text-[11px] font-medium text-slate-400">#${no}</p>
+          <p class="truncate text-sm font-semibold text-slate-800" title="${it.namaBarang}">${it.namaBarang}</p>
+        </div>
+        <div class="shrink-0">${renderStatusBadge(it)}</div>
+      </div>
+      <dl class="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+        <div>
+          <dt class="text-slate-400">Kategori</dt>
+          <dd class="mt-0.5 font-medium text-slate-700">${renderKategoriBadge(it.namaKategori)}</dd>
+        </div>
+        <div>
+          <dt class="text-slate-400">Jumlah Unit</dt>
+          <dd class="mt-0.5 font-medium text-slate-700">${total}</dd>
+        </div>
+        <div>
+          <dt class="text-slate-400">Kondisi</dt>
+          <dd class="mt-0.5 font-medium text-slate-700">${renderKondisiBadge(it.kondisi)}</dd>
+        </div>
+      </dl>
+      <div class="mt-3 flex justify-end gap-1 border-t border-slate-100 pt-3">
+        ${renderActions(it, 'h-10 w-10')}
+      </div>
+    </article>
   `;
 }
 
@@ -325,14 +381,14 @@ export function renderFilterModal({ filters = {}, kategoriList = [], countActive
   `;
 
   return html`
-    <dialog id="dialog-filter-kelola" aria-labelledby="filter-kelola-title" style="width: min(512px, calc(100vw - 2rem)); max-width: none;" class="fixed left-1/2 top-1/2 m-0 -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-white p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm">
-      <div class="flex flex-col p-5 sm:p-6">
+    <dialog id="dialog-filter-kelola" aria-labelledby="filter-kelola-title" style="width: min(512px, calc(100vw - 2rem)); max-width: none;" class="fixed left-1/2 top-1/2 m-0 max-h-[90dvh] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl border border-border bg-white p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm">
+      <div class="pd-pop-in flex flex-col p-5 sm:p-6">
         <div class="flex items-center justify-between border-b border-border pb-3">
           <div class="flex min-w-0 items-center gap-2">
             <h2 id="filter-kelola-title" class="text-base font-semibold leading-tight text-foreground">Filter Barang Inventaris</h2>
             ${countActive > 0 ? html`<span id="filter-dialog-badge" class="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">${countActive}</span>` : raw('')}
           </div>
-          <button type="button" data-action="close-filter-dialog" aria-label="Tutup filter" class="ml-2 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground">
+          <button type="button" data-action="close-filter-dialog" aria-label="Tutup filter" class="ml-2 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors active:scale-95 hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
             ${renderIcon('X', 'h-4 w-4')}
           </button>
         </div>
@@ -343,7 +399,7 @@ export function renderFilterModal({ filters = {}, kategoriList = [], countActive
 
         <div class="mt-5 flex items-center justify-end gap-3">
           <button type="button" data-action="reset-filter-dialog" class="filter-reset-link px-2 py-2.5 text-sm font-semibold text-slate-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">Reset</button>
-          <button type="button" data-action="apply-filter-dialog" class="rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">Terapkan</button>
+          <button type="button" data-action="apply-filter-dialog" class="rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-white shadow-sm button-hover-soft-primary active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">Terapkan</button>
         </div>
       </div>
     </dialog>
@@ -371,8 +427,8 @@ export function renderDetailModal(item) {
   const jumlahText = sisa === total ? `${total} unit` : `${sisa} dari ${total} unit tersedia`;
 
   return html`
-    <dialog id="dialog-detail-kelola" aria-labelledby="dialog-detail-title" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 z-50 w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-2xl border border-border bg-background p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm">
-      <div class="flex flex-col max-h-[90vh]">
+    <dialog id="dialog-detail-kelola" aria-labelledby="dialog-detail-title" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 z-50 w-full max-w-2xl max-h-[90dvh] overflow-hidden rounded-2xl border border-border bg-background p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm">
+      <div class="pd-pop-in flex flex-col max-h-[90dvh]">
         <!-- Header -->
         <div class="flex items-center justify-between border-b border-border px-6 py-4">
           <h2 id="dialog-detail-title" class="text-xl font-semibold text-foreground">Detail Inventaris</h2>
@@ -380,7 +436,7 @@ export function renderDetailModal(item) {
             type="button"
             data-action="close-detail-dialog"
             aria-label="Tutup detail"
-            class="inline-flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            class="inline-flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground transition-colors active:scale-95 hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             ${renderIcon('X', 'h-5 w-5')}
           </button>
@@ -468,7 +524,7 @@ export function renderDetailModal(item) {
           <button
             type="button"
             data-action="close-detail-dialog"
-            class="${buttonClass({ variant: 'default', size: 'default', className: 'transition-colors hover:brightness-110' })}"
+            class="${buttonClass({ variant: 'default', size: 'default', className: 'button-hover-soft-neutral' })}"
           >
             Tutup
           </button>
@@ -547,8 +603,8 @@ export function renderFormModal({
       : 'Tambah Inventaris';
 
   return html`
-    <dialog id="dialog-form-kelola" aria-labelledby="dialog-form-title" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 z-50 w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-2xl border border-border bg-background p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm">
-      <form id="kelola-inventaris-form" class="flex flex-col max-h-[90vh]" onsubmit="return false;">
+    <dialog id="dialog-form-kelola" aria-labelledby="dialog-form-title" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 z-50 w-full max-w-2xl max-h-[90dvh] overflow-hidden rounded-2xl border border-border bg-background p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm">
+      <form id="kelola-inventaris-form" class="pd-pop-in flex flex-col max-h-[90dvh]" onsubmit="return false;">
         <!-- Header Dialog -->
         <div class="flex items-center justify-between border-b border-border px-6 py-4">
           <div class="flex items-center gap-2">
@@ -561,7 +617,7 @@ export function renderFormModal({
             type="button"
             data-action="close-form-dialog"
             aria-label="Tutup form"
-            class="inline-flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground"
+            class="inline-flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground transition-colors active:scale-95 hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             ${renderIcon('X', 'h-5 w-5')}
           </button>
@@ -769,7 +825,7 @@ export function renderFormModal({
           <button
             type="button"
             data-action="close-form-dialog"
-            class="${buttonClass({ variant: 'outline', size: 'default' })}"
+            class="${buttonClass({ variant: 'outline', size: 'default', className: 'button-hover-soft-red' })}"
             ${isSubmitting ? 'disabled' : ''}
           >
             Batal
@@ -777,7 +833,7 @@ export function renderFormModal({
           <button
             type="button"
             data-action="submit-form-inventaris"
-            class="${buttonClass({ variant: 'default', size: 'default' })}"
+            class="${buttonClass({ variant: 'default', size: 'default', className: 'button-hover-soft-primary' })}"
             ${isSubmitting ? 'disabled' : ''}
           >
             ${submitText}
@@ -819,6 +875,7 @@ export function renderDeleteModal(item, isSubmitting = false) {
         label: 'Kembali',
         action: 'close-delete-dialog',
         variant: 'outline',
+        className: 'flex-1 rounded-xl button-hover-soft-neutral',
         disabled: isSubmitting,
       },
       {
@@ -863,10 +920,54 @@ export function renderFeedbackModal(feedback) {
         label: 'Kembali',
         action: 'close-feedback-dialog',
         variant: 'default',
-        className: 'w-full rounded-xl transition-colors hover:bg-secondary-hover hover:text-secondary-hover-foreground hover:border-secondary-hover',
+        className: 'w-full rounded-xl button-hover-soft-neutral',
       },
     ],
   });
+}
+
+/**
+ * Render blok state kosong (tabel & kartu mobile pakai konten yang sama).
+ * @param {boolean} adaFilter
+ * @returns {import('../ui/html.js').SafeHtml}
+ */
+function renderEmptyContent(adaFilter) {
+  return html`
+    <div class="flex flex-col items-center justify-center py-6">
+      <img src="assets/animations/empty-state.gif" alt="Belum ada data" class="mx-auto h-32 w-32 sm:h-36 sm:w-36 object-contain select-none pointer-events-none" />
+      <p class="mt-4 text-sm font-medium text-slate-600 sm:text-base">${adaFilter ? 'Tidak ada hasil yang cocok' : 'Belum ada data untuk ditampilkan'}</p>
+      ${adaFilter ? html`
+        <button
+          type="button"
+          data-action="reset-filter-direct"
+          class="${buttonClass({ variant: 'outline', size: 'sm', className: 'mt-3' })}"
+        >
+          Setel Ulang Filter
+        </button>
+      ` : raw('')}
+    </div>
+  `;
+}
+
+/**
+ * Render blok state galat (tabel & kartu mobile pakai konten yang sama).
+ * @param {string} error
+ * @returns {import('../ui/html.js').SafeHtml}
+ */
+function renderErrorContent(error) {
+  return html`
+    <div class="flex flex-col items-center justify-center gap-2 py-8">
+      <span class="text-destructive font-semibold">Gagal memuat inventaris</span>
+      <p class="text-xs text-muted-foreground">${error}</p>
+      <button
+        type="button"
+        data-action="retry-load"
+        class="${buttonClass({ variant: 'outline', size: 'sm', className: 'mt-2' })}"
+      >
+        Coba Lagi
+      </button>
+    </div>
+  `;
 }
 
 /**
@@ -887,10 +988,26 @@ export function renderTableSection(state = {}) {
 
   const adaFilter = nAktif > 0 || (typeof cari === 'string' && cari.trim().length > 0);
 
+  let cardsContent;
+  if (loading) {
+    cardsContent = raw(renderContainerLoading({ message: 'Memuat inventaris...' }));
+  } else if (error) {
+    cardsContent = renderErrorContent(error);
+  } else if (items.length === 0) {
+    cardsContent = renderEmptyContent(adaFilter);
+  } else {
+    cardsContent = raw(items.map((it, idx) => renderCard(it, idx, meta.page, meta.perPage).toString()).join(''));
+  }
+
   return html`
     <div id="kelola-table-container" class="space-y-4">
-      <!-- Tabel Pembungkus Overflow 360px safe -->
-      <div class="w-full overflow-x-auto">
+      <!-- Daftar Kartu (mobile < md) -->
+      <div class="space-y-3 md:hidden" data-card-list>
+        ${cardsContent}
+      </div>
+
+      <!-- Tabel Pembungkus Overflow 360px safe (desktop >= md) -->
+      <div class="hidden w-full overflow-x-auto md:block">
         <table class="w-full min-w-full border-collapse text-left">
           <thead>
             <tr class="border-b border-slate-100 text-sm leading-[140%] tracking-normal text-slate-400">
@@ -907,35 +1024,13 @@ export function renderTableSection(state = {}) {
             ${loading ? renderTableSkeleton() : error ? html`
               <tr class="border-b border-slate-100 last:border-0">
                 <td colspan="7" class="px-4 py-12 text-center">
-                  <div class="flex flex-col items-center justify-center gap-2">
-                    <span class="text-destructive font-semibold">Gagal memuat inventaris</span>
-                    <p class="text-xs text-muted-foreground">${error}</p>
-                    <button
-                      type="button"
-                      data-action="retry-load"
-                      class="${buttonClass({ variant: 'outline', size: 'sm', className: 'mt-2' })}"
-                    >
-                      Coba Lagi
-                    </button>
-                  </div>
+                  ${renderErrorContent(error)}
                 </td>
               </tr>
             ` : items.length === 0 ? html`
               <tr class="border-b border-slate-100 last:border-0">
                 <td colspan="7" class="px-4 py-10 text-center">
-                  <div class="flex flex-col items-center justify-center">
-                    <img src="assets/animations/empty-state.gif" alt="Belum ada data" class="mx-auto h-32 w-32 sm:h-36 sm:w-36 object-contain select-none pointer-events-none" />
-                    <p class="mt-4 text-sm font-medium text-slate-600 sm:text-base">${adaFilter ? 'Tidak ada hasil yang cocok' : 'Belum ada data untuk ditampilkan'}</p>
-                    ${adaFilter ? html`
-                      <button
-                        type="button"
-                        data-action="reset-filter-direct"
-                        class="${buttonClass({ variant: 'outline', size: 'sm', className: 'mt-3' })}"
-                      >
-                        Setel Ulang Filter
-                      </button>
-                    ` : raw('')}
-                  </div>
+                  ${renderEmptyContent(adaFilter)}
                 </td>
               </tr>
             ` : raw(
@@ -979,7 +1074,7 @@ export function renderKelolaContent(state = {}) {
   const adaFilter = nAktif > 0 || cari.trim().length > 0;
 
   return html`
-    <div class="w-full space-y-6 px-5 pb-8 pt-8 sm:px-6 lg:px-7" id="kelola-inventaris-root">
+    <div class="pd-page-in w-full space-y-6 px-5 pb-8 pt-8 sm:px-6 lg:px-7" id="kelola-inventaris-root">
       <!-- Header Halaman -->
       <div class="space-y-1">
         <h1 class="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Kelola Inventaris</h1>
@@ -1165,17 +1260,12 @@ function handleSearchInput(e) {
   pageState.cari = val;
   pageState.meta.page = 1;
 
-  // Toggle tombol clear-search secara dinamis di DOM tanpa render ulang input
+  // Toggle tombol clear-search secara dinamis di DOM tanpa render ulang input.
+  // Pakai markup bersama dari komponen search-input agar gaya konsisten.
   const wrapper = document.getElementById('kelola-search-wrapper');
   const existingClear = wrapper ? wrapper.querySelector('[data-action="clear-search"]') : null;
   if (val.trim().length > 0 && !existingClear && wrapper) {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.setAttribute('data-action', 'clear-search');
-    btn.setAttribute('aria-label', 'Hapus kata kunci pencarian');
-    btn.className = 'absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground inline-flex h-5 w-5 items-center justify-center rounded';
-    btn.innerHTML = `<svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`;
-    wrapper.appendChild(btn);
+    wrapper.insertAdjacentHTML('beforeend', renderSearchClearButton({ clearAction: 'clear-search' }).toString());
   } else if (val.trim().length === 0 && existingClear) {
     existingClear.remove();
   }

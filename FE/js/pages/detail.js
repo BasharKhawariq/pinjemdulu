@@ -257,14 +257,14 @@ export function renderDetailContent(vm, hrefKatalog = '#/inventaris') {
       `;
 
   return html`
-    <div class="w-full">
+    <div class="pd-page-in w-full">
       <!-- Baris Header Navigasi -->
       <div class="mb-6 flex items-start justify-between gap-3">
         <div class="flex min-w-0 items-start gap-3">
           <a
             href="${hrefKatalog}"
             aria-label="Kembali ke katalog inventaris"
-            class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-600 transition hover:bg-zinc-50"
+            class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-600 transition active:scale-95 button-hover-soft-neutral"
           >
             ${renderIcon('ArrowLeft', 'h-4 w-4')}
           </a>
@@ -281,7 +281,7 @@ export function renderDetailContent(vm, hrefKatalog = '#/inventaris') {
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-5">
         <!-- Kolom Kiri: Foto Besar + Jadwal Peminjaman -->
         <div class="space-y-6 lg:col-span-3">
-          <div class="overflow-hidden rounded-2xl border border-zinc-200 bg-white p-3 sm:p-4">
+          <div class="pd-fade-in overflow-hidden rounded-2xl border border-zinc-200 bg-white p-3 sm:p-4">
             <div class="relative aspect-[16/10] w-full overflow-hidden rounded-xl bg-zinc-100">
               ${imageMarkup}
             </div>
@@ -426,7 +426,7 @@ export async function mount(root, ctx = {}) {
             ID barang inventaris tidak valid atau tidak disertakan.
           </p>
           <div class="mt-5">
-            <a href="${hrefKatalog}" class="${buttonClass({ variant: 'default' })} rounded-xl">
+            <a href="${hrefKatalog}" class="${buttonClass({ variant: 'default' })} rounded-xl button-hover-soft-neutral">
               Kembali ke Katalog
             </a>
           </div>
@@ -520,6 +520,12 @@ export async function mount(root, ctx = {}) {
       if (detailsEl) {
         const isHidden = detailsEl.classList.contains('hidden');
         detailsEl.classList.toggle('hidden');
+        // Panel dibuka -> animasi masuk halus; ditutup -> bersihkan kelas animasi.
+        if (isHidden) {
+          detailsEl.classList.add('pd-fade-in');
+        } else {
+          detailsEl.classList.remove('pd-fade-in');
+        }
         toggleBtn.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
         if (chevronEl) chevronEl.classList.toggle('rotate-180', isHidden);
         if (chevronMobileEl) chevronMobileEl.classList.toggle('rotate-180', isHidden);

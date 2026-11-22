@@ -9,11 +9,11 @@ import { cn } from '../lib/utils.js';
 
 /**
  * Helper kelas tombol filter bulat standar.
- * Pada hover: background biru primary, ikon dan border berwarna putih.
+ * Pada hover: latar abu lebih gelap (bukan warna primary), teks dan border ikut menggelap.
  */
 export function filterButtonClass(extra = '') {
   const base =
-    'relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors duration-150 hover:bg-primary hover:text-white hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50';
+    'relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors duration-150 hover:bg-secondary-hover hover:text-secondary-hover-foreground hover:border-secondary-hover active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50';
   return cn(base, extra);
 }
 
@@ -88,14 +88,14 @@ export function renderFilterModal({
   bodyContent = '',
   maxWidth = 'max-w-sm',
   footerJustify = 'between',
-  resetClass = 'text-sm font-medium text-muted-foreground transition hover:text-foreground',
+  resetClass = 'filter-reset-link rounded-md px-2 py-2 text-sm font-semibold text-slate-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30',
 } = {}) {
   const titleId = `${id}-title`;
   const fId = formId || `${id}-form`;
 
   return html`
-    <dialog id="${id}" aria-labelledby="${titleId}" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 z-50 w-full ${maxWidth} rounded-2xl border border-border bg-background p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm">
-      <div class="flex flex-col">
+    <dialog id="${id}" aria-labelledby="${titleId}" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 z-50 w-full ${maxWidth} max-h-[90dvh] overflow-y-auto rounded-2xl border border-border bg-background p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm">
+      <div class="pd-pop-in flex flex-col">
         <!-- Header -->
         <div class="flex items-center justify-between border-b border-border px-5 py-4">
           <div class="flex items-center gap-2.5">
@@ -113,7 +113,7 @@ export function renderFilterModal({
             type="button"
             data-action="${closeAction}"
             aria-label="Tutup filter"
-            class="inline-flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground"
+            class="inline-flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95"
           >
             ${renderIcon('X', 'h-4 w-4')}
           </button>
@@ -137,7 +137,7 @@ export function renderFilterModal({
             <button
               type="button"
               data-action="${applyAction}"
-              class="${buttonClass({ variant: 'default', size: 'sm' })}"
+              class="${buttonClass({ variant: 'default', size: 'sm', className: 'button-hover-soft-primary' })}"
             >
               Terapkan
             </button>

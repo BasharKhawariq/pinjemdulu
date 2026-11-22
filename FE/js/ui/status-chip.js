@@ -11,6 +11,8 @@ import { escapeHtml } from './html.js';
  */
 export function statusChipClass(status) {
   const s = String(status || '').toLowerCase().trim();
+
+  // Kuning — menunggu konfirmasi pengembalian.
   if (
     s === STATUS_PEMINJAMAN.MENUNGGU_KONFIRMASI_PENGEMBALIAN ||
     s === 'menunggu_pengembalian' ||
@@ -19,31 +21,26 @@ export function statusChipClass(status) {
   ) {
     return 'bg-amber-100 text-amber-800';
   }
+  // Hijau — dikembalikan / selesai / disetujui.
   if (
     s === STATUS_PEMINJAMAN.DIKEMBALIKAN ||
-    s === 'selesai' ||
-    s === 'dikembalikan'
-  ) {
-    return 'bg-emerald-100 text-emerald-700';
-  }
-  if (
     s === STATUS_PEMINJAMAN.DISETUJUI ||
+    s === 'selesai' ||
+    s === 'dikembalikan' ||
     s === 'disetujui'
   ) {
     return 'bg-emerald-100 text-emerald-700';
   }
+  // Merah — terlambat / ditolak.
   if (
     s === STATUS_PEMINJAMAN.TERLAMBAT ||
-    s === 'terlambat'
-  ) {
-    return 'bg-rose-100 text-rose-800';
-  }
-  if (
     s === STATUS_PEMINJAMAN.DITOLAK ||
+    s === 'terlambat' ||
     s === 'ditolak'
   ) {
     return 'bg-rose-100 text-rose-800';
   }
+  // Biru — diajukan / menunggu persetujuan.
   if (
     s === STATUS_PEMINJAMAN.DIAJUKAN ||
     s === 'diajukan' ||
@@ -51,6 +48,7 @@ export function statusChipClass(status) {
   ) {
     return 'bg-blue-100 text-blue-700';
   }
+  // Ungu — sedang dipinjam.
   if (
     s === STATUS_PEMINJAMAN.DIPINJAM ||
     s === 'dipinjam' ||
@@ -82,6 +80,7 @@ export function formatStatusLabel(status) {
 
 /**
  * Render elemen chip status HTML.
+ * Chip bersifat statis (non-interaktif), sehingga tidak butuh state hover/active.
  * @param {object} props
  * @param {string} props.status
  * @param {string} [props.label]
@@ -95,5 +94,5 @@ export function renderStatusChip(arg) {
   const className = (isObj ? arg.className : '') || '';
   const text = label || formatStatusLabel(status);
   const cls = statusChipClass(status);
-  return `<span class="inline-flex items-center rounded-full px-3.5 py-1 text-xs font-medium ${cls} ${className}">${escapeHtml(text)}</span>`;
+  return `<span class="inline-flex items-center whitespace-nowrap rounded-full px-3.5 py-1 text-xs font-medium ${cls} ${className}">${escapeHtml(text)}</span>`;
 }

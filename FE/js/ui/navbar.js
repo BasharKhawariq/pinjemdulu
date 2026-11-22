@@ -23,7 +23,7 @@ export function renderNavbar({ title = '', icon = null } = {}) {
           type="button"
           data-action="open-drawer"
           aria-label="Buka menu"
-          class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-zinc-200 bg-white text-zinc-700 transition hover:bg-zinc-50 md:hidden"
+          class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-zinc-200 bg-white text-zinc-700 transition-colors hover:bg-zinc-50 hover:text-zinc-900 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
         >
           ${renderIcon('Menu', 'h-6 w-6')}
         </button>

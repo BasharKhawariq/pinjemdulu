@@ -15,8 +15,8 @@ export function render(ctx = {}) {
   const message = ctx.message || 'Halaman atau inventaris yang Anda cari tidak dapat ditemukan.';
 
   return html`
-    <section class="flex min-h-[60vh] w-full items-center justify-center p-4">
-      <div class="${cardClass('flex max-w-lg flex-col items-center p-8 text-center rounded-2xl shadow-sm')}">
+    <section class="pd-page-in flex min-h-[60dvh] w-full items-center justify-center p-4">
+      <div class="${cardClass('pd-rise-in flex max-w-lg flex-col items-center p-8 text-center rounded-2xl shadow-sm')}">
         <div class="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-50 text-rose-600">
           ${renderIcon('AlertCircle', 'h-7 w-7 text-rose-600')}
         </div>
@@ -26,7 +26,7 @@ export function render(ctx = {}) {
         <p class="mb-6 text-sm text-zinc-500">
           ${message}
         </p>
-        <a href="#/inventaris" class="${buttonClass({ variant: 'default', size: 'default' })}">
+        <a href="#/inventaris" class="${buttonClass({ variant: 'default', size: 'default' })} button-hover-soft-neutral">
           Kembali ke Inventaris
         </a>
       </div>

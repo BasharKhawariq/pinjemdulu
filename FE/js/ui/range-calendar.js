@@ -42,15 +42,15 @@ export function renderRangeCalendarTrigger({
         ${ariaDescribedBy ? raw(`aria-describedby="${escapeHtml(ariaDescribedBy)}"`) : ''}
         ${hasError ? raw('aria-invalid="true"') : ''}
         class="${cn(
-          inputClass('w-full flex items-center justify-between text-left cursor-pointer pl-10 pr-10 bg-white font-normal'),
+          inputClass('w-full flex items-center justify-between text-left cursor-pointer pl-10 pr-20 bg-white font-normal hover:border-zinc-300 hover:bg-zinc-50 active:bg-zinc-100'),
           !isFilled ? 'text-zinc-400' : 'text-zinc-900',
-          hasError ? 'border-destructive focus:ring-destructive' : ''
+          hasError ? 'border-destructive focus-visible:ring-destructive' : ''
         )}"
       >
         <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">
           ${renderIcon('CalendarDays', 'h-5 w-5')}
         </span>
-        <span class="truncate">${isFilled ? value : placeholder}</span>
+        <span class="min-w-0 truncate">${isFilled ? value : placeholder}</span>
         <span class="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400">
           ${renderIcon('ChevronDown', 'h-4 w-4')}
         </span>
@@ -62,7 +62,7 @@ export function renderRangeCalendarTrigger({
               type="button"
               data-action="hapus-tanggal"
               aria-label="Hapus tanggal"
-              class="absolute right-9 top-1/2 -translate-y-1/2 p-1 text-zinc-400 hover:text-zinc-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
+              class="absolute right-9 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:bg-zinc-200"
             >
               ${renderIcon('X', 'h-4 w-4')}
             </button>
@@ -157,7 +157,7 @@ export class RangeCalendar {
   renderInitialStructure() {
     this.root.innerHTML = html`
       <dialog
-        class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 z-50 w-full max-w-[380px] overflow-hidden rounded-2xl border border-zinc-200 bg-white p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
+        class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 z-50 w-[92vw] max-w-[380px] max-h-[90dvh] overflow-y-auto rounded-2xl border border-zinc-200 bg-white p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
         aria-labelledby="calendar-title"
       >
         <div id="calendar-content" class="flex flex-col">
@@ -248,9 +248,9 @@ export class RangeCalendar {
       </div>
 
       <!-- Grid Kalender -->
-      <div class="p-4">
+      <div class="px-3 py-4 sm:p-4">
         <!-- Nama Hari -->
-        <div class="mb-2 grid grid-cols-7 text-center">
+        <div class="mx-auto mb-2 grid w-full max-w-[308px] grid-cols-7 text-center">
           ${NAMA_HARI.map(
             (h) => html`
               <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
@@ -261,7 +261,7 @@ export class RangeCalendar {
         </div>
 
         <!-- Grid Tanggal -->
-        <div class="grid grid-cols-7 gap-y-1 text-center" role="grid" aria-labelledby="calendar-title">
+        <div class="mx-auto grid w-full max-w-[308px] grid-cols-7 gap-y-1 text-center" role="grid" aria-labelledby="calendar-title">
           ${model.weeks.map((week) =>
             week.map((day) => this.renderDay(day, this.state.fokusTanggal, today))
           )}
@@ -319,7 +319,7 @@ export class RangeCalendar {
           <button
             type="button"
             data-action="tutup"
-            class="${buttonClass({ variant: 'outline', size: 'sm' })}"
+            class="${buttonClass({ variant: 'outline', size: 'sm' })} button-hover-soft-red"
           >
             Batal
           </button>
@@ -327,7 +327,7 @@ export class RangeCalendar {
             type="button"
             data-action="terapkan"
             ${!selesaiTerpilih ? raw('disabled') : ''}
-            class="${buttonClass({ variant: 'default', size: 'sm' })} px-5 bg-primary text-white disabled:opacity-40"
+            class="${buttonClass({ variant: 'default', size: 'sm' })} button-hover-soft-primary px-5 bg-primary text-primary-foreground disabled:opacity-40"
           >
             Terapkan
           </button>
@@ -338,7 +338,7 @@ export class RangeCalendar {
 
   renderDay(day, fokusTanggal, today) {
     if (!day.inMonth) {
-      return html`<div class="h-9 w-9"></div>`;
+      return html`<div class="aspect-square w-full"></div>`;
     }
 
     const isFokus = day.iso === fokusTanggal;
@@ -357,7 +357,7 @@ export class RangeCalendar {
         bgClass = 'bg-day-blocked text-day-blocked-foreground cursor-not-allowed opacity-40';
       }
     } else if (day.isStart || day.isEnd) {
-      bgClass = 'bg-primary text-white font-bold rounded-full z-10';
+      bgClass = 'bg-primary text-primary-foreground font-bold rounded-full z-10';
     } else if (day.inRange) {
       bgClass = 'bg-primary/10 text-primary font-medium';
       rangeClass = 'absolute inset-y-0 -inset-x-0.5 bg-primary/10';
@@ -391,7 +391,7 @@ export class RangeCalendar {
     const ariaLabel = `${tglFormatted}: ${labelKeadaan}`;
 
     return html`
-      <div class="relative h-9 w-9 p-0.5" role="gridcell">
+      <div class="relative aspect-square w-full" role="gridcell">
         ${day.inRange && !day.isStart && !day.isEnd ? html`<div class="${rangeClass}"></div>` : ''}
         ${day.inRange && day.isStart ? html`<div class="absolute inset-y-0 right-0 w-1/2 bg-primary/10"></div>` : ''}
         ${day.inRange && day.isEnd ? html`<div class="absolute inset-y-0 left-0 w-1/2 bg-primary/10"></div>` : ''}
@@ -405,9 +405,10 @@ export class RangeCalendar {
           aria-label="${ariaLabel}"
           title="${ariaLabel}"
           class="${cn(
-            'relative flex h-full w-full items-center justify-center text-[13px] transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 rounded-full',
+            'relative flex h-full w-full items-center justify-center rounded-full text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
             bgClass,
-            isToday && !day.isStart && !day.isEnd ? 'ring-1 ring-zinc-300 ring-offset-1' : ''
+            isToday && !day.isStart && !day.isEnd ? 'ring-1 ring-zinc-300 ring-offset-1' : '',
+            day.disabled ? '' : 'active:scale-95'
           )}"
         >
           ${day.day}

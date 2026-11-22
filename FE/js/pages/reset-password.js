@@ -23,7 +23,7 @@ const PESAN_TAUTAN_TIDAK_VALID = 'Tautan tidak valid, sudah dipakai atau kedaluw
 
 function renderTokenAlert() {
   return html`
-    <div role="alert" id="reset-password-token-alert" class="${alertClass({ variant: 'destructive', className: 'fixed left-1/2 top-4 z-50 flex w-full max-w-md -translate-x-1/2 items-center gap-2 shadow-lg' })}">
+    <div role="alert" id="reset-password-token-alert" class="${alertClass({ variant: 'destructive', className: 'pd-fade-in fixed left-1/2 top-4 z-50 flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 items-center gap-2 shadow-lg' })}">
       ${raw(renderIcon('AlertTriangle', 'h-5 w-5 shrink-0'))}
       <span>${PESAN_TAUTAN_TIDAK_VALID}</span>
     </div>
@@ -38,7 +38,7 @@ function passwordField(id, label) {
       </label>
       <div class="relative">
         <input id="${id}" name="${id}" type="password" autocomplete="new-password" class="${inputClass('h-12 rounded-2xl px-4 py-3 pr-12')}" required />
-        <button type="button" data-action="toggle-password" data-target="${id}" aria-label="Tampilkan password" class="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-zinc-400 hover:text-zinc-600">
+        <button type="button" data-action="toggle-password" data-target="${id}" aria-label="Tampilkan password" class="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600">
           ${renderIcon('Eye', 'h-5 w-5')}
         </button>
       </div>
@@ -58,7 +58,7 @@ function renderModal() {
           label: 'Kembali',
           action: 'back-reset-form',
           variant: 'outline',
-          className: 'flex-1',
+          className: 'flex-1 button-hover-soft-neutral',
         },
         {
           label: 'Kirim',
@@ -74,7 +74,7 @@ function renderModal() {
       title: 'Ubah Password berhasil!',
       description: 'Anda telah berhasil mengubah password',
       variant: 'success',
-      actions: [{ label: 'Kembali', action: 'back-to-login', className: 'w-full rounded-xl transition-all duration-200 hover:brightness-110' }],
+      actions: [{ label: 'Kembali', action: 'back-to-login', className: 'w-full rounded-xl button-hover-soft-neutral' }],
     }).toString();
   }
   return '';
@@ -87,8 +87,8 @@ export function render(ctx = {}) {
   const checking = !invalidToken && tokenStatus === 'checking';
 
   return html`
-    <main class="min-h-screen w-full bg-primary text-zinc-900">
-      <div class="flex min-h-screen w-full items-center justify-center px-5 py-10 sm:px-8">
+    <main class="min-h-[100dvh] w-full bg-primary text-zinc-900">
+      <div class="flex min-h-[100dvh] w-full items-center justify-center px-5 py-10 sm:px-8">
         <section class="w-full max-w-[410px] rounded-2xl bg-white p-7 shadow-2xl sm:p-8">
           <a href="#/login" aria-label="PinjemDulu beranda" class="mb-10 inline-flex items-center gap-2.5">
             <img src="assets/img/Logo-PinjemDulu.png" alt="Logo PinjemDulu" class="h-10 w-10 rounded-xl object-contain shadow-sm" />
@@ -104,7 +104,7 @@ export function render(ctx = {}) {
 
           ${invalidToken ? html`
             <p class="text-sm leading-6 text-zinc-500">Tautan ubah password ini tidak dapat digunakan. Silakan ajukan permintaan ubah password yang baru.</p>
-            <a href="#/login" class="${buttonClass({ variant: 'default', size: 'lg' })} mt-6 h-12 w-full rounded-xl">Kembali ke Login</a>
+            <a href="#/login" class="${buttonClass({ variant: 'default', size: 'lg' })} button-hover-soft-neutral mt-6 h-12 w-full rounded-xl">Kembali ke Login</a>
           ` : checking ? html`
             <p id="reset-password-checking" class="text-sm text-zinc-500" aria-live="polite">Memeriksa tautan...</p>
           ` : html`
@@ -116,7 +116,7 @@ export function render(ctx = {}) {
                 <button
                   type="button"
                   data-action="cancel-reset-password"
-                  class="${buttonClass({ variant: 'outline', size: 'default', className: 'h-11 w-full min-w-0 flex-1 transition-colors duration-200' })}"
+                  class="${buttonClass({ variant: 'outline', size: 'default', className: 'h-11 w-full min-w-0 flex-1 button-hover-soft-red' })}"
                 >Batal</button>
                 <button
                   type="submit"

@@ -15,7 +15,7 @@ import { escapeHtml } from '../ui/html.js';
 import { renderOrganisasiLogo } from '../ui/organisasi-badge.js';
 import { renderStatusChip } from '../ui/status-chip.js';
 import { renderEmptyState } from '../ui/empty-state.js';
-import { renderTableLoadingRow } from '../ui/loading-state.js';
+import { renderContainerLoading } from '../ui/loading-state.js';
 import * as PlaceholderPage from './placeholder.js';
 
 let activeTab = 'peminjaman';
@@ -37,15 +37,6 @@ function formatDateEnOrId(isoStr) {
   if (!isoStr) return '-';
   const formatted = formatTanggal(String(isoStr).slice(0, 10));
   return formatted || '-';
-}
-
-function getOrgBadgeClass(org) {
-  const key = String(org || '').toUpperCase();
-  if (key === 'HMTI') return 'bg-amber-400 text-amber-950';
-  if (key === 'HME' || key === 'HMF') return 'bg-rose-700 text-white';
-  if (key === 'HMS') return 'bg-slate-800 text-amber-400';
-  if (key === 'HIMANIA') return 'bg-blue-600 text-white';
-  return 'bg-slate-200 text-slate-700';
 }
 
 function getStatusBadge(status) {
@@ -177,16 +168,18 @@ function renderSummaryCards() {
 
   return cards
     .map(
-      (card) => `
-      <div class="flex min-h-[132px] flex-col justify-between rounded-2xl bg-white p-4 shadow-[0_1px_3px_rgba(15,23,42,0.03)] sm:p-5">
-        <div>
-          <span class="inline-flex h-8 w-8 items-center justify-center rounded-xl ${card.iconBoxClass}">
-            ${renderIcon(card.icon, 'h-4 w-4')}
-          </span>
-        </div>
-        <div class="mt-4">
-          <p class="text-2xl font-bold leading-none text-slate-900">${card.value}</p>
-          <p class="mt-2 text-sm font-medium text-slate-400">${escapeHtml(card.label)}</p>
+      (card, index) => `
+      <div class="pd-rise-in" style="animation-delay:${Math.min(index, 7) * 50}ms">
+        <div class="pd-card-hover flex h-full min-h-[132px] flex-col justify-between rounded-2xl bg-white p-4 shadow-[0_1px_3px_rgba(15,23,42,0.03)] sm:p-5">
+          <div>
+            <span class="inline-flex h-8 w-8 items-center justify-center rounded-xl ${card.iconBoxClass}">
+              ${renderIcon(card.icon, 'h-4 w-4')}
+            </span>
+          </div>
+          <div class="mt-4">
+            <p class="text-2xl font-bold leading-none text-slate-900">${card.value}</p>
+            <p class="mt-2 text-sm font-medium text-slate-400">${escapeHtml(card.label)}</p>
+          </div>
         </div>
       </div>`
     )
@@ -196,8 +189,8 @@ function renderSummaryCards() {
 function renderRightBannerCards() {
   const stats = computeStats();
   return `
-    <div class="flex flex-col gap-3">
-      <div class="relative flex min-h-[96px] flex-col items-center justify-between overflow-hidden rounded-2xl bg-primary px-5 py-3 text-white shadow-sm">
+    <div class="pd-rise-in flex flex-col gap-3">
+      <div class="pd-card-hover relative flex min-h-[96px] flex-col items-center justify-between overflow-hidden rounded-2xl bg-primary px-5 py-3 text-white shadow-sm">
         <span class="pointer-events-none absolute -bottom-10 -left-8 h-28 w-28 rounded-full bg-white/10"></span>
         <span class="pointer-events-none absolute -bottom-14 left-4 h-28 w-28 rounded-full bg-white/5"></span>
         <span class="relative z-10 inline-flex items-center rounded-full bg-white px-3 py-1 text-[10px] font-semibold text-slate-900">
@@ -208,7 +201,7 @@ function renderRightBannerCards() {
         </span>
       </div>
 
-      <div class="relative flex min-h-[96px] flex-col items-center justify-between overflow-hidden rounded-2xl bg-brand px-5 py-3 text-white shadow-sm">
+      <div class="pd-card-hover relative flex min-h-[96px] flex-col items-center justify-between overflow-hidden rounded-2xl bg-brand px-5 py-3 text-white shadow-sm">
         <span class="pointer-events-none absolute -bottom-10 -left-8 h-28 w-28 rounded-full bg-white/15"></span>
         <span class="pointer-events-none absolute -bottom-14 left-4 h-28 w-28 rounded-full bg-white/10"></span>
         <span class="relative z-10 inline-flex items-center rounded-full bg-white px-3 py-1 text-[10px] font-semibold text-slate-900">
@@ -237,13 +230,9 @@ function renderTable() {
     )
     .join('');
 
-  const bodyHtml = isLoading
-    ? renderTableLoadingRow({ colspan: 8, message: 'Memuat pengajuan saya...' })
-    : (rows.length ? rows
+  const bodyHtml = rows.length ? rows
     .map((row, index) => {
       const badge = getStatusBadge(row.status);
-      const orgBadgeCls = getOrgBadgeClass(row.organisasi);
-      const orgInitial = String(row.organisasi || 'O').slice(0, 1).toUpperCase();
 
       const middleCols = isPengembalian
         ? `
@@ -281,7 +270,7 @@ function renderTable() {
               data-id="${escapeHtml(row.id)}"
               aria-label="Lihat detail ${escapeHtml(row.namaBarang)}"
               title="Lihat detail"
-              class="inline-flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+              class="inline-flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 transition active:scale-95 hover:bg-slate-100 hover:text-slate-700"
             >
               ${renderIcon('Info', 'h-4 w-4')}
             </button>
@@ -289,19 +278,80 @@ function renderTable() {
         </tr>
       `;
     })
-    .join('') : renderEmptyState({ colspan: 8 }));
+    .join('') : renderEmptyState({ colspan: 8 });
+
+  const cardsHtml = rows.length ? rows.map((row, index) => {
+      const badge = getStatusBadge(row.status);
+      const dates = isPengembalian
+        ? [
+            { label: 'Tanggal Mulai', value: formatDateEnOrId(row.tanggalMulai) },
+            { label: 'Tanggal Selesai', value: formatDateEnOrId(row.tanggalSelesai) },
+            { label: 'Tanggal Dikembalikan', value: row.tanggalDikembalikan ? formatDateEnOrId(row.tanggalDikembalikan) : '—' },
+          ]
+        : [
+            { label: 'Tanggal Diajukan', value: formatDateEnOrId(row.tanggalDiajukan) },
+            { label: 'Tanggal Mulai', value: formatDateEnOrId(row.tanggalMulai) },
+            { label: 'Tanggal Selesai', value: formatDateEnOrId(row.tanggalSelesai) },
+          ];
+      return `
+        <div class="pd-rise-in" style="animation-delay:${Math.min(index, 7) * 50}ms">
+          <article class="pd-card-hover rounded-xl border border-slate-100 bg-white p-4 shadow-[0_1px_3px_rgba(15,23,42,0.03)]">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Pengajuan ${index + 1}</p>
+              <h3 class="mt-1 break-words text-sm font-semibold text-slate-800">${escapeHtml(row.namaBarang)}</h3>
+              <p class="mt-1 inline-flex items-center gap-1.5 text-xs text-slate-500">
+                ${renderOrganisasiLogo(row.organisasi, row.logoUrl, 'h-4 w-4')}
+                <span>${escapeHtml(row.organisasi)}</span>
+              </p>
+            </div>
+            <span class="inline-flex shrink-0 whitespace-nowrap rounded-xl px-3 py-1.5 text-[10px] font-medium ${badge.cls}">
+              ${escapeHtml(badge.label)}
+            </span>
+          </div>
+          <dl class="mt-4 grid grid-cols-2 gap-x-3 gap-y-3 border-t border-slate-100 pt-3">
+            ${dates.map((date) => `
+              <div class="min-w-0">
+                <dt class="text-[10px] text-slate-400">${date.label}</dt>
+                <dd class="mt-1 break-words text-xs font-medium text-slate-700">${escapeHtml(date.value)}</dd>
+              </div>
+            `).join('')}
+            <div>
+              <dt class="text-[10px] text-slate-400">Jumlah Unit</dt>
+              <dd class="mt-1 text-xs font-medium text-slate-700">${escapeHtml(row.jumlahUnit)}</dd>
+            </div>
+          </dl>
+          <button
+            type="button"
+            data-action="open-detail"
+            data-id="${escapeHtml(row.id)}"
+            aria-label="Lihat detail ${escapeHtml(row.namaBarang)}"
+            class="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-slate-50 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 active:scale-[0.98]"
+          >
+            ${renderIcon('Info', 'h-4 w-4')}
+            Lihat Detail
+          </button>
+          </article>
+        </div>
+      `;
+    }).join('') : '<div class="rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-400">Belum ada pengajuan.</div>';
+
+  if (isLoading) {
+    return renderContainerLoading({ message: 'Memuat pengajuan saya...', minHeight: 'min-h-[180px]' });
+  }
 
   return `
-    <div class="overflow-x-auto">
+    <div class="space-y-3 p-3 md:hidden" data-card-list>
+      ${cardsHtml}
+    </div>
+    <div class="hidden overflow-x-auto md:block">
       <table class="w-full min-w-[860px] border-collapse text-left">
         <thead>
           <tr class="border-b border-slate-100 text-sm leading-[140%] tracking-normal text-slate-400">
             ${headerHtml}
           </tr>
         </thead>
-        <tbody>
-          ${bodyHtml}
-        </tbody>
+        <tbody>${bodyHtml}</tbody>
       </table>
     </div>
   `;
@@ -332,11 +382,11 @@ function renderDetailModal() {
   const title = isPengembalian ? (isDitolak ? 'Detail Penolakan' : 'Detail Pengembalian') : 'Detail Peminjaman';
 
   return `
-    <div class="fixed inset-0 z-[9999] isolate flex items-center justify-center bg-slate-900/35 backdrop-blur-sm p-4" data-modal-overlay>
-      <section role="dialog" aria-modal="true" aria-labelledby="dash-detail-title" class="relative z-10 isolate max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl sm:p-8">
+    <div class="pd-fade-in fixed inset-0 z-[9999] isolate flex items-center justify-center bg-slate-900/35 backdrop-blur-sm p-4" data-modal-overlay>
+      <section role="dialog" aria-modal="true" aria-labelledby="dash-detail-title" class="pd-pop-in relative z-10 isolate max-h-[90dvh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl sm:p-8">
         <div class="flex items-start justify-between gap-4">
           <h2 id="dash-detail-title" class="text-2xl font-semibold tracking-tight text-slate-900">${title}</h2>
-          <button type="button" data-action="close-detail" aria-label="Tutup detail" class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700">${renderIcon('X', 'h-5 w-5')}</button>
+          <button type="button" data-action="close-detail" aria-label="Tutup detail" class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition active:scale-95 hover:bg-slate-100 hover:text-slate-700">${renderIcon('X', 'h-5 w-5')}</button>
         </div>
 
         <div class="mt-6 space-y-6 text-sm">
@@ -377,7 +427,7 @@ function renderDetailModal() {
         </div>
 
         <div class="mt-6 flex justify-end">
-          <button type="button" data-action="close-detail" data-autofocus class="rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:brightness-110">Tutup</button>
+          <button type="button" data-action="close-detail" data-autofocus class="button-hover-soft-neutral rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-colors">Tutup</button>
         </div>
       </section>
     </div>
@@ -390,7 +440,7 @@ function renderDashboardContent(ctx = {}) {
   const seeAllHref = activeTab === 'pengembalian' ? '#/pengajuan-saya/pengembalian' : '#/pengajuan-saya/peminjaman';
 
   return `
-    <section class="min-h-[calc(100vh-112px)] rounded-none bg-background -m-4 p-4 sm:-m-7 sm:p-7">
+    <section class="min-h-[calc(100dvh-112px)] rounded-none bg-background -m-4 p-4 sm:-m-7 sm:p-7">
       <div class="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_240px] xl:grid-cols-[1fr_256px]">
         <div class="flex flex-col justify-between">
           <div>

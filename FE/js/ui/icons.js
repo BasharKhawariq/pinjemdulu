@@ -74,3 +74,17 @@ export function renderIcon(name, className = '') {
   if (!className) return raw(svg);
   return raw(svg.replace('<svg ', `<svg class="${className}" `));
 }
+
+/**
+ * Bendera Indonesia (merah–putih) sebagai penanda nomor WhatsApp.
+ * Warna memakai utility fill-* agar tidak ada warna hardcoded di JS.
+ * @param {string} [className]
+ * @returns {import('./html.js').SafeHtml}
+ */
+export function renderWhatsappFlag(
+  className = 'h-4 w-4 shrink-0 rounded-full border border-slate-200 overflow-hidden'
+) {
+  return raw(
+    `<svg class="${className}" viewBox="0 0 24 24" aria-hidden="true"><path d="M0,0 H24 V12 H0 Z" class="fill-rose-600" /><path d="M0,12 H24 V24 H0 Z" class="fill-white" /></svg>`
+  );
+}

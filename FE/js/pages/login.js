@@ -71,14 +71,14 @@ function renderForgotPasswordPage() {
   }
 
   return html`
-    <main class="min-h-screen w-full overflow-x-hidden bg-white text-zinc-900">
-      <div class="flex min-h-screen w-full">
+    <main class="min-h-[100dvh] w-full overflow-x-hidden bg-white text-zinc-900">
+      <div class="flex min-h-[100dvh] w-full">
         <aside aria-hidden="true" class="hidden w-1/2 shrink-0 md:flex md:items-stretch lg:w-[48%]">
           <div class="flex h-full w-full flex-col bg-primary"></div>
         </aside>
-        <section class="flex min-h-screen w-full flex-1 flex-col items-center justify-start px-5 py-10 sm:px-8 md:w-1/2 md:px-12 md:py-14 lg:w-[52%] lg:px-20 lg:py-20 xl:px-28">
+        <section class="flex min-h-[100dvh] w-full flex-1 flex-col items-center justify-start px-5 py-10 sm:px-8 md:w-1/2 md:px-12 md:py-14 lg:w-[52%] lg:px-20 lg:py-20 xl:px-28">
           <div class="flex w-full max-w-xl flex-1 flex-col">
-            <div aria-label="Logo PinjemDulu" class="mb-10 inline-flex items-center gap-3">
+            <div aria-label="Logo PinjemDulu" class="mb-10 inline-flex items-center gap-3 self-start">
               <img src="assets/img/Logo-PinjemDulu.png" alt="Logo PinjemDulu" class="h-[42px] w-[42px] shrink-0 rounded-[14px] object-contain shadow-sm sm:h-[44px] sm:w-[44px]" />
               <span class="flex items-baseline text-2xl font-extrabold tracking-tight"><span class="text-zinc-900">Pinjem</span><span class="text-primary">Dulu</span></span>
             </div>
@@ -134,15 +134,15 @@ export function render(ctx = {}) {
   }
 
   return html`
-    <main class="min-h-screen w-full overflow-x-hidden bg-white text-zinc-900">
-      <div class="flex min-h-screen w-full">
+    <main class="min-h-[100dvh] w-full overflow-x-hidden bg-white text-zinc-900">
+      <div class="flex min-h-[100dvh] w-full">
         <!-- Panel kiri: BIRU TUA POLOS. Hidden di layar < md -->
         <aside aria-hidden="true" class="hidden w-1/2 shrink-0 md:flex md:items-stretch lg:w-[48%]">
           <div class="flex h-full w-full flex-col bg-primary"></div>
         </aside>
 
         <!-- Panel kanan: form login + logo + quick login + copyright -->
-        <section class="flex min-h-screen w-full flex-1 flex-col items-center justify-start px-5 py-10 sm:px-8 md:w-1/2 md:px-12 md:py-14 lg:w-[52%] lg:px-20 lg:py-20 xl:px-28">
+        <section class="flex min-h-[100dvh] w-full flex-1 flex-col items-center justify-start px-5 py-10 sm:px-8 md:w-1/2 md:px-12 md:py-14 lg:w-[52%] lg:px-20 lg:py-20 xl:px-28">
           <div class="flex w-full max-w-xl flex-1 flex-col">
             <!-- Logo Brand -->
             <div aria-label="Logo PinjemDulu" class="mb-10 inline-flex items-center gap-3 self-start">
@@ -217,7 +217,7 @@ export function render(ctx = {}) {
                     data-action="toggle-password"
                     aria-label="Tampilkan kata sandi"
                     aria-pressed="false"
-                    class="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-zinc-400 hover:text-zinc-600 transition"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600"
                   >
                     <span id="pwd-icon-show">${renderIcon('Eye', 'h-5 w-5')}</span>
                     <span id="pwd-icon-hide" class="hidden">${renderIcon('EyeOff', 'h-5 w-5')}</span>
@@ -234,18 +234,19 @@ export function render(ctx = {}) {
                 <div class="mb-2 flex items-center gap-3">
                   <div
                     id="captcha-text-display"
-                    class="flex h-12 flex-1 items-center justify-center rounded-2xl border border-input bg-zinc-100 font-mono text-xl font-bold tracking-[0.3em] text-zinc-800 select-none"
+                    class="flex h-12 flex-1 items-center justify-center rounded-2xl border border-input bg-zinc-100 font-mono text-lg font-bold tracking-[0.25em] text-zinc-800 select-none sm:text-xl sm:tracking-[0.3em]"
                   >
                     ${currentCaptchaText}
                   </div>
                   <button
                     type="button"
+                    id="btn-refresh-captcha"
                     data-action="refresh-captcha"
                     aria-label="Dapatkan captcha baru"
                     title="Dapatkan captcha baru"
                     class="${buttonClass({ variant: 'outline', size: 'icon' })} h-12 w-12 rounded-2xl shrink-0"
                   >
-                    ${renderIcon('RefreshCw', 'h-5 w-5')}
+                    <span id="captcha-refresh-icon" class="inline-flex">${renderIcon('RefreshCw', 'h-5 w-5')}</span>
                   </button>
                 </div>
                 <div>
@@ -261,7 +262,7 @@ export function render(ctx = {}) {
                 </div>
               </div>
 
-              <button type="button" data-action="forgot-password" class="mt-2 text-left text-xs font-medium text-primary hover:underline">
+              <button type="button" data-action="forgot-password" class="mt-2 text-left text-xs font-medium text-primary transition-colors hover:text-primary/80 hover:underline">
                 Lupa Password?
               </button>
 
@@ -430,6 +431,7 @@ export function mount(root) {
   const passwordError = root.querySelector('#password-error');
   const captchaError = root.querySelector('#captcha-error');
   const submitBtn = root.querySelector('#btn-login-submit');
+  const refreshCaptchaIcon = root.querySelector('#captcha-refresh-icon');
   const togglePwdBtn = root.querySelector('[data-action="toggle-password"]');
   const pwdIconShow = root.querySelector('#pwd-icon-show');
   const pwdIconHide = root.querySelector('#pwd-icon-hide');
@@ -468,6 +470,11 @@ export function mount(root) {
     if (captchaIdInput) captchaIdInput.value = c.captchaId;
     if (captchaDisplay) captchaDisplay.textContent = c.text;
     if (captchaAnswerInput) captchaAnswerInput.value = '';
+    if (refreshCaptchaIcon) {
+      refreshCaptchaIcon.classList.remove('pd-spin-once');
+      void refreshCaptchaIcon.offsetWidth;
+      refreshCaptchaIcon.classList.add('pd-spin-once');
+    }
   }
 
   async function performLogin({ nim, email, password, captchaId, captchaAnswer }) {

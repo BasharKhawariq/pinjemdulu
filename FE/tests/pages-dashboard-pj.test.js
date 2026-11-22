@@ -42,6 +42,8 @@ test('pages-dashboard-pj: render merender sapaan PJ, kartu ringkasan, tabel Peng
   assert.ok(html.includes('Pengajuan Saya'));
   assert.ok(html.includes('data-action="switch-management-tab"'));
   assert.ok(html.includes('data-action="switch-tab"'));
+  assert.ok(html.includes('data-card-list'), 'Dashboard PJ menampilkan daftar card untuk mobile');
+  assert.ok(html.includes('hidden w-full overflow-x-auto md:block'), 'Tabel desktop tetap tersedia');
 });
 
 test('pages-dashboard-pj: tab beralih dengan baik antara Kelola Peminjaman dan Kelola Pengembalian', async () => {

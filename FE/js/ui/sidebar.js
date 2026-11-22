@@ -1,6 +1,13 @@
 /**
  * sidebar.js — Komponen Sidebar Desktop & Mobile Drawer PinjemDulu.
  * Acuan: _sumber/src/components/Mixins/Sidebar.jsx
+ *
+ * Animasi collapse/expand:
+ * Keadaan collapsed dan expanded memakai SATU markup yang sama. Perbedaan lebar,
+ * label, badge, submenu, dan tombol toggle diatur lewat CSS berdasarkan atribut
+ * `data-collapsed` pada `<aside class="pd-sidebar">` (lihat css/tailwind.input.css).
+ * Karena DOM tidak dibangun ulang saat toggle, hanya lebar container yang
+ * beranimasi — logo, ikon menu, dan tombol toggle tetap pada posisinya.
  */
 
 import { renderIcon } from './icons.js';
@@ -24,61 +31,40 @@ function getStoredGroupOpen(groupKey) {
 
 /**
  * Render Brand Header di Sidebar.
+ * Markup identik untuk kedua keadaan; tombol toggle diletakkan di tepi kanan
+ * header sehingga otomatis tepat berada di atas logo saat sidebar collapsed.
  * @param {boolean} collapsed
  * @returns {string}
  */
 function renderSidebarBrand(collapsed) {
-  if (collapsed) {
-  return `
-    <div class="mx-auto flex w-fit flex-col items-center gap-3 pt-5 pb-5">
-      <div aria-label="Logo PinjemDulu" title="PinjemDulu" class="inline-flex items-center justify-center">
-        <img
-          src="assets/img/Logo-PinjemDulu.png"
-          alt="Logo PinjemDulu"
-          class="h-11 w-11 shrink-0 rounded-[12px] object-contain shadow-sm"
-        />
-      </div>
-      <button
-        type="button"
-        data-action="toggle-sidebar"
-        aria-label="Lebarkan sidebar"
-        title="Lebarkan sidebar"
-        aria-expanded="false"
-        class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-800"
-      >
-        ${renderIcon('PanelLeft', 'h-5 w-5')}
-      </button>
-    </div>
-  `;
-}
+  const toggleLabel = collapsed ? 'Lebarkan sidebar' : 'Persempit sidebar';
 
   return `
-    <div class="flex w-full items-center justify-between px-4 pt-5 pb-5">
-      <div aria-label="Logo PinjemDulu" class="inline-flex min-w-0 items-center gap-3">
+    <div class="pd-sb-brand relative flex w-full items-center gap-3 px-5 pt-5 pb-5">
+      <div class="inline-flex h-11 w-11 shrink-0 items-center justify-center" aria-label="Logo PinjemDulu">
         <img
           src="assets/img/Logo-PinjemDulu.png"
           alt="Logo PinjemDulu"
-          class="h-11 w-11 shrink-0 rounded-[12px] object-contain shadow-sm"
+          class="pd-sb-brand-logo h-11 w-11 shrink-0 rounded-[12px] object-contain shadow-sm"
         />
-        <div class="flex min-w-0 flex-col leading-none">
-          <span class="truncate text-[20px] font-bold tracking-tight sm:text-[24px]">
-            <span class="text-zinc-900">Pinjem</span><span class="text-primary">Dulu</span>
-          </span>
-          <span
-            style="letter-spacing: 0.24em;"
-            class="mt-0.5 truncate text-[8px] font-semibold uppercase text-zinc-500"
-          >
-            INVENTARIS OKI KAMPUS
-          </span>
-        </div>
+      </div>
+      <div class="pd-sb-label flex min-w-0 flex-col leading-none">
+        <span class="truncate text-[20px] font-bold tracking-tight sm:text-[24px]">
+          <span class="text-zinc-900">Pinjem</span><span class="text-primary">Dulu</span>
+        </span>
+        <span
+          class="mt-0.5 truncate text-[8px] font-semibold uppercase tracking-[0.24em] text-zinc-500"
+        >
+          INVENTARIS OKI KAMPUS
+        </span>
       </div>
       <button
         type="button"
         data-action="toggle-sidebar"
-        aria-label="Persempit sidebar"
-        title="Persempit sidebar"
-        aria-expanded="true"
-        class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-800"
+        aria-label="${toggleLabel}"
+        title="${toggleLabel}"
+        aria-expanded="${collapsed ? 'false' : 'true'}"
+        class="pd-sb-toggle ml-auto inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-500 transition-colors hover:bg-zinc-50 hover:text-zinc-800 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         ${renderIcon('PanelLeft', 'h-5 w-5')}
       </button>
@@ -88,13 +74,15 @@ function renderSidebarBrand(collapsed) {
 
 /**
  * Render Navigasi Menu Sidebar.
+ * Satu markup untuk collapsed & expanded; posisi ikon tidak bergeser karena
+ * padding kiri item selalu sama (lihat `.pd-sidebar[data-collapsed]`).
  * @param {Array<object>} items
- * @param {boolean} collapsed
  * @param {string} currentHash
  * @param {string} [role]
+ * @param {string} [idPrefix]
  * @returns {string}
  */
-function renderSidebarNav(items, collapsed, currentHash, role = '', idPrefix = 'sidebar') {
+function renderSidebarNav(items, currentHash, role = '', idPrefix = 'sidebar') {
   const listItems = items
     .map((item) => {
       const isGroup = item.type === 'group' || (Array.isArray(item.children) && item.children.length > 0);
@@ -111,29 +99,9 @@ function renderSidebarNav(items, collapsed, currentHash, role = '', idPrefix = '
         const isOpen = storedOpen ?? (hasActiveChild || isDashboardOpen);
         const icon = item.icon ? renderIcon(item.icon, 'h-6 w-6 transition-colors sidebar-nav-group-icon-svg') : '';
         const chevron = isOpen ? renderIcon('ChevronUp', 'h-4 w-4 transition-colors sidebar-nav-group-chevron-svg') : renderIcon('ChevronDown', 'h-4 w-4 transition-colors sidebar-nav-group-chevron-svg');
-        const tooltip = collapsed ? `title="${escapeHtml(item.label)}"` : '';
         const groupBadge = item.badge
           ? `<span class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-semibold text-white">${escapeHtml(String(item.badge))}</span>`
           : '';
-
-        if (collapsed) {
-          return `
-            <li>
-              <button
-                type="button"
-                data-action="toggle-group"
-                data-group="${escapeHtml(item.key)}"
-                ${tooltip}
-                aria-expanded="${isOpen}"
-                class="group flex w-full items-center justify-center rounded-2xl px-3 py-3 text-[15px] transition text-zinc-500 hover:bg-zinc-50/60 hover:text-zinc-900"
-              >
-                <span class="inline-flex h-6 w-6 shrink-0 items-center justify-center">
-                  ${icon}
-                </span>
-              </button>
-            </li>
-          `;
-        }
 
         const childItems = (item.children || [])
           .map((child) => {
@@ -151,7 +119,7 @@ function renderSidebarNav(items, collapsed, currentHash, role = '', idPrefix = '
                 <a
                   href="${escapeHtml(child.href)}"
                   aria-current="${childActive ? 'page' : 'false'}"
-                  class="group flex w-full items-center gap-3 rounded-2xl px-3.5 py-2.5 text-[14.5px] transition ${
+                  class="group flex w-full items-center gap-3 rounded-2xl px-3.5 py-2.5 text-[14.5px] transition-colors active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                     childActive
                       ? 'bg-zinc-100/90 font-semibold text-zinc-900'
                       : 'text-zinc-600 hover:bg-zinc-50/80 hover:text-zinc-900'
@@ -178,24 +146,22 @@ function renderSidebarNav(items, collapsed, currentHash, role = '', idPrefix = '
               data-group="${escapeHtml(item.key)}"
               aria-expanded="${isOpen}"
               aria-controls="${escapeHtml(subId)}"
-              class="group sidebar-nav-group flex w-full items-center justify-between rounded-2xl px-3 py-3 text-[15px] text-zinc-400 transition hover:bg-zinc-50/60 hover:text-zinc-900 font-medium"
+              class="pd-sb-item group flex w-full items-center gap-3 rounded-2xl py-3 pl-[18px] pr-3 text-[15px] font-medium text-zinc-500 transition-colors hover:bg-zinc-50/60 hover:text-zinc-900 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <div class="flex items-center gap-3">
-                <span class="inline-flex h-6 w-6 shrink-0 items-center justify-center">
-                  ${icon}
-                </span>
-                <span class="leading-tight text-[15.5px]">${escapeHtml(item.label)}</span>
-              </div>
-              <div class="flex items-center gap-2">
+              <span class="inline-flex h-6 w-6 shrink-0 items-center justify-center">
+                ${icon}
+              </span>
+              <span class="pd-sb-label min-w-0 truncate text-left text-[15.5px] leading-tight">${escapeHtml(item.label)}</span>
+              <span class="pd-sb-trailing ml-auto flex shrink-0 items-center gap-2">
                 ${groupBadge}
                 <span class="transition-transform duration-200" data-chevron="${escapeHtml(item.key)}">
                   ${chevron}
                 </span>
-              </div>
+              </span>
             </button>
             <ul
               id="${escapeHtml(subId)}"
-              class="flex flex-col gap-1 pl-4 ${isOpen ? '' : 'hidden'}"
+              class="pd-sb-sub flex flex-col gap-1 pl-4 ${isOpen ? '' : 'hidden'}"
             >
               ${childItems}
             </ul>
@@ -206,44 +172,22 @@ function renderSidebarNav(items, collapsed, currentHash, role = '', idPrefix = '
       // Item tunggal
       const active = isActivePath(item.href, currentHash);
       const icon = item.icon ? renderIcon(item.icon, active ? 'h-6 w-6 text-primary' : 'h-6 w-6') : '';
-      const tooltip = collapsed ? `title="${escapeHtml(item.label)}"` : '';
-
-      if (collapsed) {
-        return `
-          <li>
-            <a
-              href="${escapeHtml(item.href)}"
-              ${tooltip}
-              aria-current="${active ? 'page' : 'false'}"
-              class="group flex w-full items-center justify-center rounded-2xl px-3 py-3 text-[15px] transition ${
-                active
-                  ? 'bg-zinc-50 font-semibold text-primary'
-                  : 'text-zinc-500 hover:bg-zinc-50/60 hover:text-zinc-900'
-              }"
-            >
-              <span class="inline-flex h-6 w-6 shrink-0 items-center justify-center">
-                ${icon}
-              </span>
-            </a>
-          </li>
-        `;
-      }
 
       return `
         <li>
           <a
             href="${escapeHtml(item.href)}"
             aria-current="${active ? 'page' : 'false'}"
-            class="group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-[15px] transition ${
+            class="pd-sb-item group flex w-full items-center gap-3 rounded-2xl py-3 pl-[18px] pr-3 text-[15px] transition-colors active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
               active
                 ? 'bg-zinc-50 font-semibold text-primary'
                 : 'text-zinc-500 hover:bg-zinc-50/60 hover:text-zinc-900'
             }"
           >
-            <span class="inline-flex h-6 w-6 shrink-0 items-center justify-center ${active ? 'text-primary' : ''}">
+            <span class="inline-flex h-6 w-6 shrink-0 items-center justify-center">
               ${icon}
             </span>
-            <span class="leading-tight text-[15.5px] font-medium">${escapeHtml(item.label)}</span>
+            <span class="pd-sb-label min-w-0 truncate text-[15.5px] font-medium leading-tight">${escapeHtml(item.label)}</span>
           </a>
         </li>
       `;
@@ -261,30 +205,16 @@ function renderSidebarNav(items, collapsed, currentHash, role = '', idPrefix = '
 
 /**
  * Render Kartu Pengguna di bagian bawah Sidebar.
+ * Satu markup untuk kedua keadaan; nama/role dan tombol keluar disembunyikan
+ * lewat CSS saat collapsed sehingga avatar tetap pada posisi yang sama.
  * @param {object|null} user
- * @param {boolean} collapsed
  * @returns {string}
  */
-function renderSidebarUserCard(user, collapsed) {
+function renderSidebarUserCard(user) {
   const nama = user?.nama || 'Pengguna';
   const role = user?.role || '';
   const roleText = ROLE_LABEL[role] || (role === 'peminjam' ? 'Peminjam' : 'PJ Inventaris');
   const initials = getInitials(nama) || 'PD';
-
-  if (collapsed) {
-    return `
-      <div class="mt-auto flex flex-col items-center gap-3 border-t border-zinc-100 px-2 pb-5 pt-4">
-        <a
-          href="#/profil"
-          title="${escapeHtml(nama)} · ${escapeHtml(roleText)}"
-          aria-label="Buka profil ${escapeHtml(nama)}"
-          class="inline-flex h-11 w-11 items-center justify-center rounded-[18px] bg-avatar text-base font-bold text-white shadow-sm"
-        >
-          ${escapeHtml(initials)}
-        </a>
-      </div>
-    `;
-  }
 
   return `
     <div class="mt-auto border-t border-zinc-100 px-3 pb-5 pt-4">
@@ -292,11 +222,15 @@ function renderSidebarUserCard(user, collapsed) {
         <a
           href="#/profil"
           aria-label="Buka profil ${escapeHtml(nama)}"
-          class="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] bg-avatar text-base font-bold text-white shadow-sm"
+          class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[18px] bg-avatar text-base font-bold text-white shadow-sm transition-opacity hover:opacity-90 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           ${escapeHtml(initials)}
         </a>
-        <a href="#/profil" class="min-w-0 flex-1" aria-label="Buka profil ${escapeHtml(nama)}">
+        <a
+          href="#/profil"
+          aria-label="Buka profil ${escapeHtml(nama)}"
+          class="pd-sb-label min-w-0 flex-1 rounded-xl transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
           <p class="truncate text-[15px] font-semibold text-zinc-900">
             ${escapeHtml(nama)}
           </p>
@@ -309,7 +243,7 @@ function renderSidebarUserCard(user, collapsed) {
           data-action="logout"
           aria-label="Keluar"
           title="Keluar"
-          class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-rose-500 transition hover:bg-rose-50"
+          class="pd-sb-trailing inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-rose-500 transition-colors hover:bg-rose-50 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           ${renderIcon('LogOut', 'h-5 w-5')}
         </button>
@@ -325,17 +259,17 @@ function renderSidebarUserCard(user, collapsed) {
  */
 export function renderSidebar({ user = null, currentHash = '#/dashboard-peminjam', collapsed = false } = {}) {
   const items = getNavForRole(user?.role);
-  const widthClass = collapsed ? 'w-[84px]' : 'w-[280px]';
 
   return `
     <aside
       id="app-sidebar"
+      data-collapsed="${collapsed ? 'true' : 'false'}"
       aria-label="Sidebar Navigasi"
-      class="sticky top-0 hidden h-screen shrink-0 flex-col border-r border-zinc-100 bg-white transition-[width] duration-200 ease-out md:flex ${widthClass}"
+      class="pd-sidebar sticky top-0 hidden h-[100dvh] shrink-0 flex-col border-r border-zinc-100 bg-white md:flex ${collapsed ? 'w-[84px]' : 'w-[280px]'}"
     >
       ${renderSidebarBrand(collapsed)}
-      ${renderSidebarNav(items, collapsed, currentHash, user?.role, 'sidebar')}
-      ${renderSidebarUserCard(user, collapsed)}
+      ${renderSidebarNav(items, currentHash, user?.role, 'sidebar')}
+      ${renderSidebarUserCard(user)}
     </aside>
   `;
 }
@@ -375,12 +309,11 @@ export function renderMobileDrawer({ user = null, currentHash = '#/dashboard-pem
             class="h-11 w-11 shrink-0 rounded-[12px] object-contain shadow-sm"
           />
           <div class="flex min-w-0 flex-col leading-none">
-            <span class="whitespace-nowrap font-bold tracking-tight" style="font-size: 24px; line-height: 1;">
+            <span class="whitespace-nowrap text-[24px] font-bold leading-none tracking-tight">
               <span class="text-zinc-900">Pinjem</span><span class="text-primary">Dulu</span>
             </span>
             <span
-              style="letter-spacing: 0.24em;"
-              class="mt-0.5 truncate text-[8px] font-semibold uppercase text-zinc-500"
+              class="mt-0.5 truncate text-[8px] font-semibold uppercase tracking-[0.24em] text-zinc-500"
             >
               INVENTARIS OKI KAMPUS
             </span>
@@ -390,14 +323,14 @@ export function renderMobileDrawer({ user = null, currentHash = '#/dashboard-pem
           type="button"
           data-action="close-drawer"
           aria-label="Tutup menu"
-          class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-zinc-500 hover:bg-zinc-100"
+          class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-zinc-500 transition-colors hover:bg-zinc-100 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           ${renderIcon('X', 'h-5 w-5')}
         </button>
       </div>
 
-      ${renderSidebarNav(items, false, currentHash, user?.role, 'drawer')}
-      ${renderSidebarUserCard(user, false)}
+      ${renderSidebarNav(items, currentHash, user?.role, 'drawer')}
+      ${renderSidebarUserCard(user)}
     </aside>
   `;
 }
