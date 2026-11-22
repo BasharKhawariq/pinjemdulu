@@ -163,8 +163,8 @@ export function renderPagination(currentPage, totalPages) {
   const current = Math.max(1, currentPage || 1);
   const total = Math.max(1, totalPages || 1);
   return html`
-    <nav role="navigation" aria-label="Pagination" class="mx-auto mt-8 flex w-full flex-col items-center gap-3">
-      ${raw(renderSharedPagination({ currentPage: current, totalPages: total, action: 'change-page', className: 'flex-wrap justify-center' }))}
+    <nav role="navigation" aria-label="Pagination" class="mt-8 flex w-full justify-end">
+      ${raw(renderSharedPagination({ currentPage: current, totalPages: total, action: 'change-page', className: 'flex-wrap justify-end' }))}
     </nav>
   `;
 }

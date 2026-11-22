@@ -328,24 +328,20 @@ function initApp() {
       drawerOpen = false;
       renderShell();
     } else if (action === 'toggle-group') {
-      const groupKey = actionEl.getAttribute('data-group');
       if (collapsed && !drawerOpen) {
         setSidebarCollapsed(false, { persist: true });
         return;
       }
-      const targetId = actionEl.getAttribute('aria-controls');
-      const container = actionEl.closest('li');
-      const sub = (targetId ? document.getElementById(targetId) : null) || container?.querySelector('ul') || document.getElementById(`sub-${groupKey}`);
+      // Animasi buka/tutup submenu diatur CSS lewat atribut data-open; DOM tidak
+      // dibangun ulang agar transisinya tetap berjalan.
+      const sub = actionEl.closest('li')?.querySelector('.pd-sb-sub');
       if (sub) {
-        const isHidden = sub.classList.contains('hidden');
-        sub.classList.toggle('hidden', !isHidden);
-        actionEl.setAttribute('aria-expanded', String(isHidden));
-        const chevron = actionEl.querySelector('[data-chevron]');
+        const willOpen = sub.getAttribute('data-open') !== 'true';
+        sub.setAttribute('data-open', String(willOpen));
+        actionEl.setAttribute('aria-expanded', String(willOpen));
         persistSidebarGroupState();
-        if (chevron) {
-          const chevronIcon = chevron.querySelector('.sidebar-nav-group-chevron-svg');
-          chevronIcon?.classList.toggle('rotate-180', isHidden);
-        }
+        const chevronIcon = actionEl.querySelector('[data-chevron] .sidebar-nav-group-chevron-svg');
+        chevronIcon?.classList.toggle('rotate-180', willOpen);
       }
     } else if (action === 'logout') {
       logout();

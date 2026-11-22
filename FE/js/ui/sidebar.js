@@ -159,12 +159,11 @@ function renderSidebarNav(items, currentHash, role = '', idPrefix = 'sidebar') {
                 </span>
               </span>
             </button>
-            <ul
-              id="${escapeHtml(subId)}"
-              class="pd-sb-sub flex flex-col gap-1 pl-4 ${isOpen ? '' : 'hidden'}"
-            >
-              ${childItems}
-            </ul>
+            <div class="pd-sb-sub" data-open="${isOpen ? 'true' : 'false'}">
+              <ul id="${escapeHtml(subId)}" class="pd-sb-sub-list flex flex-col gap-1 pl-4">
+                ${childItems}
+              </ul>
+            </div>
           </li>
         `;
       }
