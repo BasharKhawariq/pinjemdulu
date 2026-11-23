@@ -17,6 +17,15 @@ const mockRequestPasswords = [
   { idRequestPassword: 10, namaPengguna: 'Intan Permata', nim: '254107020010', okiPemohon: 'HIMANIA', logoUrl: null, tanggalRequest: '2026-11-14T16:20:00', status: 'Dikonfirmasi' },
 ];
 
+function requireWhatsapp(value) {
+  const whatsapp = String(value ?? '').trim();
+  const digits = whatsapp.replace(/\D/g, '');
+  if (!digits) throw new Error('No WhatsApp wajib diisi.');
+  if (digits.length < 10) throw new Error('Nomor WhatsApp minimal 10 angka.');
+  if (whatsapp.length > 20) throw new Error('Nomor WhatsApp maksimal 20 karakter.');
+  return whatsapp;
+}
+
 export async function getUsers(params = {}) {
   if (!isMockEnabled()) {
     const queryParams = new URLSearchParams();
@@ -55,6 +64,10 @@ export async function getUsers(params = {}) {
 }
 
 export async function updateMockUser(id, updates = {}) {
+  const noWhatsapp = updates.noWhatsapp !== undefined
+    ? requireWhatsapp(updates.noWhatsapp)
+    : undefined;
+
   if (!isMockEnabled()) {
     const nim = String(id).trim();
     if (updates.statusAkun !== undefined) {
@@ -74,7 +87,7 @@ export async function updateMockUser(id, updates = {}) {
           namaPengguna: updates.nama ? String(updates.nama).trim() : undefined,
           role: updates.role ? roleFormatted : undefined,
           nim: updates.nim ? String(updates.nim).trim() : undefined,
-          noWhatsapp: updates.noWhatsapp !== undefined ? String(updates.noWhatsapp).trim() : undefined,
+          noWhatsapp,
         },
       });
     }
@@ -88,7 +101,7 @@ export async function updateMockUser(id, updates = {}) {
   if (updates.nama !== undefined) user.nama = String(updates.nama).trim();
   if (updates.nim !== undefined) user.nim = String(updates.nim).trim();
   if (updates.email !== undefined) user.email = String(updates.email).trim();
-  if (updates.noWhatsapp !== undefined) user.noWhatsapp = String(updates.noWhatsapp).trim();
+  if (noWhatsapp !== undefined) user.noWhatsapp = noWhatsapp;
   if (updates.businessUnit !== undefined) user.businessUnit = String(updates.businessUnit).trim();
   if (updates.displayOrganization !== undefined) user.displayOrganization = String(updates.displayOrganization).trim();
   if (updates.role !== undefined) {
@@ -104,6 +117,8 @@ export async function updateMockUser(id, updates = {}) {
 }
 
 export async function addMockUser(data = {}) {
+  const noWhatsapp = requireWhatsapp(data.noWhatsapp);
+
   if (!isMockEnabled()) {
     const roleFormatted = (data.role === ROLES.PENANGGUNG_JAWAB || data.role === 'Penanggung Jawab')
       ? 'Penanggung Jawab'
@@ -114,7 +129,7 @@ export async function addMockUser(data = {}) {
         nim: String(data.nim).trim(),
         namaPengguna: String(data.nama || data.namaPengguna).trim(),
         role: roleFormatted,
-        noWhatsapp: data.noWhatsapp ? String(data.noWhatsapp).trim() : undefined,
+        noWhatsapp,
       },
     });
     return res?.data || res;
@@ -138,6 +153,7 @@ export async function addMockUser(data = {}) {
     role: data.role === ROLES.PENANGGUNG_JAWAB ? ROLES.PENANGGUNG_JAWAB : ROLES.PEMINJAM,
     statusAkun: data.statusAkun === STATUS_AKUN.NONAKTIF ? STATUS_AKUN.NONAKTIF : STATUS_AKUN.AKTIF,
     status_akun: data.statusAkun === STATUS_AKUN.NONAKTIF ? STATUS_AKUN.NONAKTIF : STATUS_AKUN.AKTIF,
+    noWhatsapp,
     managementList: true,
   };
   mockUsers.push(user);
@@ -242,4 +258,3 @@ export async function konfirmasiRequestPassword(id, pesan) {
   if (item) item.status = 'Dikonfirmasi';
   return { message: 'Request password dikonfirmasi' };
 }
-

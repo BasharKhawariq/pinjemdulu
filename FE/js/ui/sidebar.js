@@ -49,11 +49,11 @@ function renderSidebarBrand(collapsed) {
         />
       </div>
       <div class="pd-sb-label flex min-w-0 flex-col leading-none">
-        <span class="truncate text-[20px] font-bold tracking-tight sm:text-[24px]">
+        <span class="whitespace-nowrap text-[22px] font-semibold tracking-tight">
           <span class="text-zinc-900">Pinjem</span><span class="text-primary">Dulu</span>
         </span>
         <span
-          class="mt-0.5 truncate text-[8px] font-semibold uppercase tracking-[0.24em] text-zinc-500"
+          class="mt-1 whitespace-nowrap text-[8px] font-semibold uppercase tracking-[0.14em] text-zinc-500"
         >
           INVENTARIS OKI KAMPUS
         </span>
@@ -80,9 +80,10 @@ function renderSidebarBrand(collapsed) {
  * @param {string} currentHash
  * @param {string} [role]
  * @param {string} [idPrefix]
+ * @param {boolean} [collapsed]
  * @returns {string}
  */
-function renderSidebarNav(items, currentHash, role = '', idPrefix = 'sidebar') {
+function renderSidebarNav(items, currentHash, role = '', idPrefix = 'sidebar', collapsed = false) {
   const listItems = items
     .map((item) => {
       const isGroup = item.type === 'group' || (Array.isArray(item.children) && item.children.length > 0);
@@ -96,7 +97,7 @@ function renderSidebarNav(items, currentHash, role = '', idPrefix = 'sidebar') {
         // Preferensi buka/tutup manual tetap dipertahankan saat berpindah halaman.
         // Jika belum ada preferensi, buka otomatis ketika salah satu submenu aktif.
         const storedOpen = getStoredGroupOpen(item.key);
-        const isOpen = storedOpen ?? (hasActiveChild || isDashboardOpen);
+        const isOpen = !collapsed && (storedOpen ?? (hasActiveChild || isDashboardOpen));
         const icon = item.icon ? renderIcon(item.icon, 'h-6 w-6 transition-colors sidebar-nav-group-icon-svg') : '';
         const chevron = isOpen ? renderIcon('ChevronUp', 'h-4 w-4 transition-colors sidebar-nav-group-chevron-svg') : renderIcon('ChevronDown', 'h-4 w-4 transition-colors sidebar-nav-group-chevron-svg');
         const groupBadge = item.badge
@@ -267,7 +268,7 @@ export function renderSidebar({ user = null, currentHash = '#/dashboard-peminjam
       class="pd-sidebar sticky top-0 hidden h-[100dvh] shrink-0 flex-col border-r border-zinc-100 bg-white md:flex ${collapsed ? 'w-[84px]' : 'w-[280px]'}"
     >
       ${renderSidebarBrand(collapsed)}
-      ${renderSidebarNav(items, currentHash, user?.role, 'sidebar')}
+      ${renderSidebarNav(items, currentHash, user?.role, 'sidebar', collapsed)}
       ${renderSidebarUserCard(user)}
     </aside>
   `;
@@ -308,11 +309,11 @@ export function renderMobileDrawer({ user = null, currentHash = '#/dashboard-pem
             class="h-11 w-11 shrink-0 rounded-[12px] object-contain shadow-sm"
           />
           <div class="flex min-w-0 flex-col leading-none">
-            <span class="whitespace-nowrap text-[24px] font-bold leading-none tracking-tight">
+            <span class="whitespace-nowrap text-[22px] font-semibold leading-none tracking-tight">
               <span class="text-zinc-900">Pinjem</span><span class="text-primary">Dulu</span>
             </span>
             <span
-              class="mt-0.5 truncate text-[8px] font-semibold uppercase tracking-[0.24em] text-zinc-500"
+              class="mt-0.5 whitespace-nowrap text-[8px] font-semibold uppercase tracking-[0.14em] text-zinc-500"
             >
               INVENTARIS OKI KAMPUS
             </span>

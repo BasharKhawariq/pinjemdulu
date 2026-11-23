@@ -791,7 +791,65 @@ function renderModal() {
     'HMTI';
   const selectedOrg = editing ? organizationOf(u) : (u?.displayOrganization || pjOrg);
 
-  return `<div class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/30 backdrop-blur-[2px] p-4 sm:p-6" data-modal-backdrop><section role="dialog" aria-modal="true" aria-labelledby="user-form-title" class="pd-pop-in w-full max-w-xl max-h-[90dvh] overflow-y-auto rounded-3xl bg-white p-6 sm:p-8 shadow-2xl transition-all"><h2 id="user-form-title" class="text-xl font-semibold tracking-tight text-slate-900">${editing ? 'Edit Pengguna' : 'Tambah Pengguna'}</h2><form id="user-form" class="mt-6 space-y-4"><div><label class="mb-2 block text-sm font-medium text-slate-900">Nama Pengguna</label><input name="nama" type="text" value="${escapeHtml(u.nama || '')}" placeholder="Nama Pengguna" class="w-full rounded-2xl border border-slate-100 bg-white px-4 py-3.5 text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.03)]" /><p id="name-field-error" class="mt-1.5 text-xs text-rose-500 ${nameFieldError ? '' : 'hidden'}">${escapeHtml(nameFieldError)}</p></div><div><div class="mb-2 flex items-center justify-between"><label class="text-sm font-medium text-slate-900">NIM</label><span id="nim-digit-counter" class="text-xs ${((u.nim || '')).length === 12 ? 'font-semibold text-emerald-600' : 'font-medium text-slate-400'}">${((u.nim || '')).length}/12</span></div><input name="nim" type="text" inputmode="numeric" maxlength="12" value="${escapeHtml(u.nim || '')}" placeholder="NIM" class="w-full rounded-2xl border border-slate-100 bg-white px-4 py-3.5 text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.03)]" /><p id="nim-field-error" class="mt-1.5 text-xs text-rose-500 hidden">NIM tidak valid</p></div><div><label class="mb-2 block text-sm font-medium text-slate-900">Nomor Whatsapp</label><div class="flex items-center overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.03)] focus-within:border-slate-300 focus-within:ring-2 focus-within:ring-slate-100"><span class="inline-flex h-12 items-center border-r border-slate-100 bg-slate-50 px-4 text-sm font-medium text-slate-600">+62</span><input name="noWhatsapp" type="tel" value="${escapeHtml(formatNomorWa(u.noWhatsapp || u.no_whatsapp || ''))}" placeholder="812-3456-7890" class="h-12 flex-1 border-0 border-none bg-transparent px-4 text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none ring-0 shadow-none focus:border-0 focus:border-none focus:outline-none focus:ring-0 focus:shadow-none" style="border: none !important; outline: none !important; box-shadow: none !important;" /><span class="flex items-center justify-center pr-4" style="padding-right:16px;">${renderWhatsappFlag()}</span></div><p id="wa-field-error" class="mt-1.5 text-xs text-rose-500 ${waFieldError ? '' : 'hidden'}">${escapeHtml(waFieldError)}</p></div><div><label class="mb-2 block text-sm font-medium text-slate-900">Organisasi</label><div class="relative"><select name="displayOrganizationSelect" disabled class="${selectClass('appearance-none pr-10 cursor-not-allowed bg-slate-50 text-slate-500 opacity-90')}"><option value="${escapeHtml(selectedOrg)}" selected>${escapeHtml(selectedOrg)}</option></select><input type="hidden" name="displayOrganization" value="${escapeHtml(selectedOrg)}" /><span class="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 flex items-center">${renderIcon('Lock', 'h-4 w-4 stroke-[2]')}</span></div><p class="mt-1 text-xs text-slate-400">Organisasi otomatis disesuaikan dengan organisasi Anda (${escapeHtml(selectedOrg)}).</p></div><div><span class="mb-3 block text-sm font-medium text-slate-900">Role</span><div class="space-y-3" id="role-radio-group"><label class="flex cursor-pointer items-center gap-3" data-role-label><input type="radio" name="role" value="${ROLES.PEMINJAM}" ${isPeminjam ? 'checked' : ''} class="sr-only" /><span data-role-indicator class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${isPeminjam ? 'border-primary bg-primary text-white' : 'border-slate-300 bg-white text-transparent'}"><svg data-role-check class="h-3 w-3 stroke-[3] ${isPeminjam ? 'block' : 'hidden'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span class="text-sm font-medium text-slate-800">Peminjam</span></label><label class="flex cursor-pointer items-center gap-3" data-role-label><input type="radio" name="role" value="${ROLES.PENANGGUNG_JAWAB}" ${isPj ? 'checked' : ''} class="sr-only" /><span data-role-indicator class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${isPj ? 'border-primary bg-primary text-white' : 'border-slate-300 bg-white text-transparent'}"><svg data-role-check class="h-3 w-3 stroke-[3] ${isPj ? 'block' : 'hidden'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span class="text-sm font-medium text-slate-800">Penanggung Jawab</span></label></div></div><div id="user-form-error" class="${userFormError ? '' : 'hidden'} rounded-xl bg-red-50 px-4 py-2 text-sm text-red-700">${escapeHtml(userFormError)}</div><div class="mt-8 flex items-center justify-end gap-4"><button type="button" data-action="close-modal" class="button-hover-soft-red rounded-xl px-6 py-2.5 text-sm font-semibold text-slate-500 transition hover:bg-slate-50" style="height:40px; min-height:40px; max-height:40px; padding-top:0; padding-bottom:0; line-height:20px; box-sizing:border-box;">Batal</button><button type="submit" class="inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-xl bg-primary px-8 text-sm font-semibold text-primary-foreground shadow-sm button-hover-soft-primary transition-colors" style="display:inline-flex; flex-shrink:0; align-items:center; justify-content:center; white-space:nowrap; width:auto; min-width:92px; height:40px; min-height:40px; max-height:40px; padding:0 32px; line-height:20px; box-sizing:border-box;">${editing ? 'Edit' : 'Tambah'}</button></div></form></section></div>`;
+  return `
+    <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/30 backdrop-blur-[2px] p-4 sm:p-6" data-modal-backdrop>
+      <section role="dialog" aria-modal="true" aria-labelledby="user-form-title" class="pd-pop-in w-full max-w-xl max-h-[90dvh] overflow-y-auto rounded-3xl bg-white p-6 sm:p-8 shadow-2xl transition-all">
+        <h2 id="user-form-title" class="text-xl font-semibold tracking-tight text-slate-900">${editing ? 'Edit Pengguna' : 'Tambah Pengguna'}</h2>
+        <form id="user-form" novalidate class="mt-6 space-y-4">
+          <div>
+            <label class="mb-2 block text-sm font-medium text-slate-900">Nama Pengguna</label>
+            <input name="nama" type="text" value="${escapeHtml(u.nama || '')}" placeholder="Nama Pengguna" class="w-full rounded-2xl border border-slate-100 bg-white px-4 py-3.5 text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.03)]" />
+            <p id="name-field-error" class="mt-1.5 text-xs text-rose-500 ${nameFieldError ? '' : 'hidden'}">${escapeHtml(nameFieldError)}</p>
+          </div>
+          <div>
+            <div class="mb-2 flex items-center justify-between">
+              <label class="text-sm font-medium text-slate-900">NIM</label>
+              <span id="nim-digit-counter" class="text-xs ${((u.nim || '')).length === 12 ? 'font-semibold text-emerald-600' : 'font-medium text-slate-400'}">${((u.nim || '')).length}/12</span>
+            </div>
+            <input name="nim" type="text" inputmode="numeric" maxlength="12" value="${escapeHtml(u.nim || '')}" placeholder="NIM" class="w-full rounded-2xl border border-slate-100 bg-white px-4 py-3.5 text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.03)]" />
+            <p id="nim-field-error" class="mt-1.5 text-xs text-rose-500 hidden">NIM tidak valid</p>
+          </div>
+          <div>
+            <label class="mb-2 block text-sm font-medium text-slate-900">Nomor Whatsapp<span class="ml-0.5 text-rose-500">*</span></label>
+            <div class="flex items-center overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.03)] focus-within:border-slate-300 focus-within:ring-2 focus-within:ring-slate-100">
+              <span class="inline-flex h-12 items-center border-r border-slate-100 bg-slate-50 px-4 text-sm font-medium text-slate-600">+62</span>
+              <input name="noWhatsapp" type="tel" required aria-required="true" value="${escapeHtml(formatNomorWa(u.noWhatsapp || u.no_whatsapp || ''))}" placeholder="812-3456-7890" class="h-12 flex-1 border-0 border-none bg-transparent px-4 text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none ring-0 shadow-none focus:border-0 focus:border-none focus:outline-none focus:ring-0 focus:shadow-none" style="border: none !important; outline: none !important; box-shadow: none !important;" />
+              <span class="flex items-center justify-center pr-4" style="padding-right:16px;">${renderWhatsappFlag()}</span>
+            </div>
+            <p id="wa-field-error" class="mt-1.5 text-xs text-rose-500 ${waFieldError ? '' : 'hidden'}">${escapeHtml(waFieldError)}</p>
+          </div>
+          <div>
+            <label class="mb-2 block text-sm font-medium text-slate-900">Organisasi</label>
+            <div class="relative">
+              <select name="displayOrganizationSelect" disabled class="${selectClass('appearance-none pr-10 cursor-not-allowed bg-slate-50 text-slate-500 opacity-90')}"><option value="${escapeHtml(selectedOrg)}" selected>${escapeHtml(selectedOrg)}</option></select>
+              <input type="hidden" name="displayOrganization" value="${escapeHtml(selectedOrg)}" />
+              <span class="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 flex items-center">${renderIcon('Lock', 'h-4 w-4 stroke-[2]')}</span>
+            </div>
+            <p class="mt-1 text-xs text-slate-400">Organisasi otomatis disesuaikan dengan organisasi Anda (${escapeHtml(selectedOrg)}).</p>
+          </div>
+          <div>
+            <span class="mb-3 block text-sm font-medium text-slate-900">Role</span>
+            <div class="space-y-3" id="role-radio-group">
+              <label class="flex cursor-pointer items-center gap-3" data-role-label>
+                <input type="radio" name="role" value="${ROLES.PEMINJAM}" ${isPeminjam ? 'checked' : ''} class="sr-only" />
+                <span data-role-indicator class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${isPeminjam ? 'border-primary bg-primary text-white' : 'border-slate-300 bg-white text-transparent'}"><svg data-role-check class="h-3 w-3 stroke-[3] ${isPeminjam ? 'block' : 'hidden'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                <span class="text-sm font-medium text-slate-800">Peminjam</span>
+              </label>
+              <label class="flex cursor-pointer items-center gap-3" data-role-label>
+                <input type="radio" name="role" value="${ROLES.PENANGGUNG_JAWAB}" ${isPj ? 'checked' : ''} class="sr-only" />
+                <span data-role-indicator class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${isPj ? 'border-primary bg-primary text-white' : 'border-slate-300 bg-white text-transparent'}"><svg data-role-check class="h-3 w-3 stroke-[3] ${isPj ? 'block' : 'hidden'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                <span class="text-sm font-medium text-slate-800">Penanggung Jawab</span>
+              </label>
+            </div>
+          </div>
+          <div id="user-form-error" class="${userFormError ? '' : 'hidden'} rounded-xl bg-red-50 px-4 py-2 text-sm text-red-700">${escapeHtml(userFormError)}</div>
+          <div class="mt-8 flex items-center justify-end gap-4">
+            <button type="button" data-action="close-modal" class="button-hover-soft-red rounded-xl px-6 py-2.5 text-sm font-semibold text-slate-500 transition hover:bg-slate-50" style="height:40px; min-height:40px; max-height:40px; padding-top:0; padding-bottom:0; line-height:20px; box-sizing:border-box;">Batal</button>
+            <button type="submit" class="inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-xl bg-primary px-8 text-sm font-semibold text-primary-foreground shadow-sm button-hover-soft-primary transition-colors" style="display:inline-flex; flex-shrink:0; align-items:center; justify-content:center; white-space:nowrap; width:auto; min-width:92px; height:40px; min-height:40px; max-height:40px; padding:0 32px; line-height:20px; box-sizing:border-box;">${editing ? 'Edit' : 'Tambah'}</button>
+          </div>
+        </form>
+      </section>
+    </div>`;
 }
 
 function renderContent() {
@@ -1509,16 +1567,14 @@ export async function mount(root, ctx = {}) {
       input.value = formatNomorWa(input.value);
       const digits = input.value.replace(/\D/g, '').replace(/^0+/, '').replace(/^62/, '');
       const errorEl = rootElement.querySelector('#wa-field-error');
-      const isAddForm = modalMode === 'add';
-
       if (errorEl && !errorEl.classList.contains('hidden')) {
-        if (!digits && isAddForm) {
+        if (!digits) {
           waFieldError = 'No WhatsApp wajib diisi.';
           errorEl.textContent = waFieldError;
-        } else if (digits.length > 0 && digits.length < 10 && isAddForm) {
+        } else if (digits.length < 10) {
           waFieldError = 'Nomor WhatsApp minimal 10 angka.';
           errorEl.textContent = waFieldError;
-        } else if (digits.length >= 10 || (!digits && !isAddForm)) {
+        } else {
           waFieldError = '';
           errorEl.textContent = '';
           errorEl.classList.add('hidden');
@@ -1612,9 +1668,9 @@ export async function mount(root, ctx = {}) {
     const nameMessage = !nameVal ? 'Nama Pengguna wajib diisi.' : '';
     const nimIsValid = /^\d{12}$/.test(nimVal);
     const nimMessage = !nimVal ? 'NIM wajib diisi.' : (!nimIsValid ? 'NIM tidak valid' : '');
-    const waMessage = !wasEditing
-      ? (!cleanWhatsappDigits ? 'No WhatsApp wajib diisi.' : (cleanWhatsappDigits.length < 10 ? 'Nomor WhatsApp minimal 10 angka.' : ''))
-      : (cleanWhatsappDigits && cleanWhatsappDigits.length < 10 ? 'Nomor WhatsApp minimal 10 angka.' : '');
+    const waMessage = !cleanWhatsappDigits
+      ? 'No WhatsApp wajib diisi.'
+      : (cleanWhatsappDigits.length < 10 ? 'Nomor WhatsApp minimal 10 angka.' : '');
 
     // Tampilkan pesan ketiga field sekaligus, tepat di bawah masing-masing input.
     nameFieldError = nameMessage;

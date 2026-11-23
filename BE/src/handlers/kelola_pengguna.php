@@ -57,7 +57,7 @@ function h_kuser_tambah(array $p): void
     }
     $nama = f_str('namaPengguna', $err, true, 100, 'Nama pengguna');
     $role = f_enum('role', $err, ROLE_PENGGUNA, false, 'Peminjam', 'Role');
-    $wa = f_str('noWhatsapp', $err, false, 30, 'Nomor WhatsApp');
+    $wa = f_str('noWhatsapp', $err, true, 20, 'Nomor WhatsApp');
     validasi_selesai($err);
 
     db_one(
@@ -85,7 +85,9 @@ function h_kuser_ubah(array $p): void
     }
     $nama = array_key_exists('namaPengguna', $b) ? f_str('namaPengguna', $err, true, 100, 'Nama pengguna') : $lama['nama_pengguna'];
     $role = array_key_exists('role', $b) ? f_enum('role', $err, ROLE_PENGGUNA, true, null, 'Role') : $lama['role'];
-    $wa = array_key_exists('noWhatsapp', $b) ? f_str('noWhatsapp', $err, false, 30, 'Nomor WhatsApp') : ($lama['no_whatsapp'] ?? null);
+    $wa = array_key_exists('noWhatsapp', $b)
+        ? f_str('noWhatsapp', $err, true, 20, 'Nomor WhatsApp')
+        : $lama['no_whatsapp'];
     validasi_selesai($err);
 
     db_one(

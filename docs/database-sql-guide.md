@@ -70,11 +70,16 @@ Menyimpan akun berdasarkan NIM. Relasi `id_organisasi` memastikan setiap penggun
 Constraint penting:
 
 - Nama tidak boleh kosong.
+- `no_whatsapp` wajib diisi dan tidak boleh berupa string kosong.
 - Role harus berasal dari enum.
 - `password_hash` harus berbentuk hash bcrypt.
 - `status_akun` menentukan apakah akun boleh login.
 
 Password polos tidak boleh disimpan. Jika password kosong saat insert, trigger akan membuat password default dari NIM lalu melakukan hash.
+
+Untuk database yang sudah berjalan, isi dahulu nomor WhatsApp asli pada akun yang masih kosong,
+kemudian jalankan `BE/database/03_wajibkan_no_whatsapp.sql`. Migrasi membatalkan perubahan
+jika masih menemukan nomor NULL/kosong, agar tidak mengisi data kontak dengan nomor tebakan.
 
 ### `kategori`
 

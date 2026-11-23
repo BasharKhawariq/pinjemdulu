@@ -9,6 +9,29 @@
   html {
     scroll-behavior: smooth;
   }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--input) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  *::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 9999px;
+    background-color: var(--input);
+    background-clip: padding-box;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: var(--primary);
+  }
+  *::-webkit-scrollbar-corner {
+    background: transparent;
+  }
   body {
     @apply bg-background text-foreground;
     font-family: 'Poppins', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
@@ -27,8 +50,13 @@
   h3.font-bold {
     font-weight: 600 !important;
   }
-  :focus-visible {
-    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+:focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2;
+  }
+
+  button,
+  [role='button'] {
+    font-weight: 500 !important;
   }
 
   /* Sembunyikan tombol "x" bawaan browser pada input[type="search"] agar tidak
@@ -68,12 +96,6 @@
     margin: 0 !important;
     max-height: 90dvh;
     overscroll-behavior: contain;
-  }
-
-  /* Saat dialog terbuka, kunci scroll latar belakang halaman di semua browser. */
-  html:has(dialog[open]) {
-    overflow: hidden;
-    scrollbar-gutter: stable;
   }
 
   /* Dropdown item hover global: background biru primary (biru tua), teks putih */
@@ -162,8 +184,8 @@ nav[aria-label="Pilihan Kelola"] > a {
 }
 
 /* ==========================================================================
-   Animasi & transisi halus PinjemDulu (fondasi global).
-   - Hanya memakai properti ramah performa: opacity & transform.
+/* Animasi & transisi halus PinjemDulu (fondasi global).
+   - Hanya memakai properti ramah performa: opacity & translate.
    - Menghormati preferensi pengguna: prefers-reduced-motion.
    ========================================================================== */
 
@@ -173,8 +195,23 @@ nav[aria-label="Pilihan Kelola"] > a {
 }
 
 @keyframes pd-pop-in {
-  from { opacity: 0; transform: scale(0.97); }
-  to { opacity: 1; transform: scale(1); }
+  from { opacity: 0; translate: 0 18px; }
+  to { opacity: 1; translate: 0 0; }
+}
+
+@keyframes pd-modal-rise-in {
+  from { opacity: 0; translate: 0 100vh; }
+  to { opacity: 1; translate: 0 0; }
+}
+
+@keyframes pd-modal-exit {
+  from { opacity: 1; translate: 0 0; }
+  to { opacity: 0; translate: 0 100vh; }
+}
+
+@keyframes pd-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
 }
 
 @keyframes pd-rise-in {
@@ -203,9 +240,33 @@ nav[aria-label="Pilihan Kelola"] > a {
   .pd-page-in { animation: pd-page-in 220ms ease-out backwards; }
   .pd-spin-once { animation: pd-spin 500ms ease-out; }
 
-  /* Dialog native: isi muncul halus, latar memudar. */
-  dialog[open] { animation: pd-fade-in 180ms ease-out both; }
-  dialog[open]::backdrop { animation: pd-fade-in 180ms ease-out both; }
+  [data-modal-backdrop],
+  [data-modal-overlay],
+  [data-management-modal-backdrop] {
+    animation: pd-fade-in 300ms ease-out both;
+  }
+
+  [data-modal-backdrop] > [role='dialog'],
+  [data-modal-overlay] > [role='dialog'],
+  [data-management-modal-backdrop] > [role='dialog'] {
+    animation: pd-modal-rise-in 650ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  [data-modal-exit-clone] {
+    animation: pd-fade-out 520ms ease-in both !important;
+  }
+
+  [data-modal-exit-clone] > [role='dialog'],
+  [data-modal-exit-clone] > dialog[open],
+  [data-modal-exit-content][open],
+  [data-modal-exit-clone] > dialog,
+  [data-modal-exit-content] {
+    animation: pd-modal-exit 520ms cubic-bezier(0.4, 0, 1, 1) both !important;
+  }
+
+  /* Dialog native ikut naik saat dibuka, dengan backdrop yang memudar masuk. */
+  dialog[open] { animation: pd-modal-rise-in 650ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+  dialog[open]::backdrop { animation: pd-fade-in 300ms ease-out both; }
 }
 
 /* Kartu dashboard: efek angkat + bayangan saat hover.
@@ -244,10 +305,19 @@ nav[aria-label="Pilihan Kelola"] > a {
   width: 280px;
 }
 
-/* Padding kiri item nav dikunci sama di kedua keadaan sehingga ikon menu tidak
-   pernah bergeser horizontal saat sidebar collapse/expand. */
+/* Ikon nav diposisikan pada rel tetap; perubahan lebar hanya memengaruhi label. */
 .pd-sidebar .pd-sb-item {
-  padding-left: 18px;
+  position: relative;
+  padding-left: 54px;
+}
+
+.pd-sidebar .pd-sb-item > span:first-child {
+  position: absolute;
+  top: 50%;
+  left: 18px;
+  width: 24px;
+  height: 24px;
+  transform: translateY(-50%);
 }
 
 /* Area nav tetap bisa scroll vertikal, tetapi tidak menampilkan scrollbar
@@ -256,18 +326,13 @@ nav[aria-label="Pilihan Kelola"] > a {
   overflow-x: hidden;
 }
 
-/* Saat collapsed, tombol tetap tepat di atas logo. Saat expanded, geser sedikit
-   ke kanan agar jaraknya dari identitas aplikasi terasa lebih lega. */
+/* Posisi tombol toggle tetap sama saat sidebar collapsed maupun expanded. */
 .pd-sb-toggle {
   position: absolute;
   top: 1.25rem;
   right: 1.25rem;
   transition: opacity 180ms ease, color 150ms ease, background-color 150ms ease,
     border-color 150ms ease;
-}
-
-.pd-sidebar[data-collapsed='false'] .pd-sb-toggle {
-  right: 0.75rem;
 }
 
 .pd-sb-brand-logo {
@@ -314,9 +379,12 @@ nav[aria-label="Pilihan Kelola"] > a {
   transition: visibility 0s linear 220ms;
 }
 
-/* Submenu tidak ditampilkan selama sidebar collapsed. */
-.pd-sidebar[data-collapsed='true'] .pd-sb-sub {
-  display: none;
+/* Sembunyikan wrapper dan list langsung; list memiliki visibility sendiri.
+   Visibility tidak menghapus ruang sehingga item sidebar lain tetap stabil. */
+.pd-sidebar[data-collapsed='true'] .pd-sb-sub,
+.pd-sidebar[data-collapsed='true'] .pd-sb-sub-list {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 /* Saat collapsed, tombol toggle hanya tampil ketika header sidebar di-hover
@@ -357,5 +425,27 @@ nav[aria-label="Pilihan Kelola"] > a {
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+@media (max-height: 1000px) {
+  section.pd-login-section {
+    padding-block: clamp(1rem, 4vh, 2rem);
+  }
+
+  .pd-login-section .pd-login-brand {
+    margin-bottom: 1.5rem;
+  }
+
+  .pd-login-section .pd-login-intro {
+    margin-bottom: 1.25rem;
+  }
+
+  .pd-login-section #login-form > :not(:first-child) {
+    margin-top: 0.75rem;
+  }
+
+  .pd-login-section .pd-login-footer {
+    margin-top: 2rem;
   }
 }

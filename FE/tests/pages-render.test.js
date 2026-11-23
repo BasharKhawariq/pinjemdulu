@@ -122,6 +122,8 @@ test('pages-render: renderSidebar merender untuk Peminjam dengan benar tanpa esc
   const collapsedHtml = renderSidebar({ user, currentHash: '#/dashboard-peminjam', collapsed: true });
   assert.ok(collapsedHtml.includes('w-[84px]'));
   assert.ok(collapsedHtml.includes('assets/img/Logo-PinjemDulu.png'));
+  assert.match(collapsedHtml, /aria-expanded="false"/);
+  assert.match(collapsedHtml, /class="pd-sb-sub" data-open="false"/);
   assert.ok(collapsedHtml.includes('MS'));
   assert.ok(!collapsedHtml.includes('undefined'));
   assertNoEscapedMarkup(collapsedHtml, 'Sidebar Peminjam (Collapsed)');

@@ -76,13 +76,13 @@ function renderForgotPasswordPage() {
         <aside aria-hidden="true" class="hidden w-1/2 shrink-0 md:flex md:items-stretch lg:w-[48%]">
           <div class="flex h-full w-full flex-col bg-primary"></div>
         </aside>
-        <section class="flex min-h-[100dvh] w-full flex-1 flex-col items-center justify-start px-5 py-10 sm:px-8 md:w-1/2 md:px-12 md:py-14 lg:w-[52%] lg:px-20 lg:py-20 xl:px-28">
+        <section class="pd-login-section flex min-h-[100dvh] w-full flex-1 flex-col items-center justify-start px-5 py-10 sm:px-8 md:w-1/2 md:px-12 md:py-14 lg:w-[52%] lg:px-20 lg:py-20 xl:px-28">
           <div class="flex w-full max-w-xl flex-1 flex-col">
-            <div aria-label="Logo PinjemDulu" class="mb-10 inline-flex items-center gap-3 self-start">
+            <div aria-label="Logo PinjemDulu" class="pd-login-brand mb-10 inline-flex items-center gap-3 self-start">
               <img src="assets/img/Logo-PinjemDulu.png" alt="Logo PinjemDulu" class="h-[42px] w-[42px] shrink-0 rounded-[14px] object-contain shadow-sm sm:h-[44px] sm:w-[44px]" />
               <span class="flex items-baseline text-2xl font-extrabold tracking-tight"><span class="text-zinc-900">Pinjem</span><span class="text-primary">Dulu</span></span>
             </div>
-            <div class="mb-8">
+            <div class="pd-login-intro mb-8">
               <p class="mb-2 text-sm font-medium text-zinc-500">Selamat Datang Kembali!</p>
               <h1 class="mb-2 text-3xl font-semibold leading-[1.4] tracking-[0] text-zinc-900 sm:text-[32px]">Atur Ulang Password</h1>
               <p class="text-sm leading-6 text-zinc-500">Masukkan NIM dan nomor WhatsApp yang terdaftar untuk memverifikasi akun Anda.</p>
@@ -142,22 +142,22 @@ export function render(ctx = {}) {
         </aside>
 
         <!-- Panel kanan: form login + logo + quick login + copyright -->
-        <section class="flex min-h-[100dvh] w-full flex-1 flex-col items-center justify-start px-5 py-10 sm:px-8 md:w-1/2 md:px-12 md:py-14 lg:w-[52%] lg:px-20 lg:py-20 xl:px-28">
+        <section class="pd-login-section flex min-h-[100dvh] w-full flex-1 flex-col items-center justify-start px-5 py-10 sm:px-8 md:w-1/2 md:px-12 md:py-14 lg:w-[52%] lg:px-20 lg:py-20 xl:px-28">
           <div class="flex w-full max-w-xl flex-1 flex-col">
             <!-- Logo Brand -->
-            <div aria-label="Logo PinjemDulu" class="mb-10 inline-flex items-center gap-3 self-start">
+            <div aria-label="Logo PinjemDulu" class="pd-login-brand mb-10 inline-flex items-center gap-3 self-start">
               <img
                 src="assets/img/Logo-PinjemDulu.png"
                 alt="Logo PinjemDulu"
                 class="h-[42px] w-[42px] shrink-0 rounded-[14px] object-contain shadow-sm sm:h-[44px] sm:w-[44px]"
               />
-              <span class="flex items-baseline text-2xl font-extrabold tracking-tight">
+              <span class="flex items-baseline text-2xl font-semibold tracking-tight">
                 <span class="text-zinc-900">Pinjem</span><span class="text-primary">Dulu</span>
               </span>
             </div>
 
             <!-- Header Sapaan -->
-            <div class="mb-8">
+            <div class="pd-login-intro mb-8">
               <p class="mb-2 text-sm font-medium text-zinc-500">
                 Selamat Datang Kembali!
               </p>
@@ -189,7 +189,7 @@ export function render(ctx = {}) {
                     type="text"
                     inputmode="numeric"
                     autocomplete="username"
-                    placeholder="Masukkan NIM Anda (contoh: 254107020001)"
+                    placeholder="Masukkan NIM Anda"
                     class="${inputClass('h-12 rounded-2xl px-4 py-3')}"
                     required
                   />
@@ -277,7 +277,7 @@ export function render(ctx = {}) {
             </form>
 
             <!-- Footer Hak Cipta -->
-            <footer class="mt-12 py-4 text-center text-xs text-zinc-400">
+            <footer class="pd-login-footer mt-12 py-4 text-center text-xs text-zinc-400">
               &copy; 2026. PinjemDulu - All Rights Reserved.
             </footer>
           </div>

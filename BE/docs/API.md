@@ -31,7 +31,7 @@ Akses: **publik**, **user** (semua role), **peminjam** (hanya Peminjam), **pj** 
 | `GET /api/reset-password/cek` | query `token` | `{valid: true}`; 400 `TAUTAN_TIDAK_VALID` bila tautan salah/sudah dipakai/kedaluwarsa. Hanya memeriksa, token **tidak** dikonsumsi |
 | `POST /api/reset-password` | `token`, `passwordBaru`, `konfirmasiPassword` | `{message}` |
 
-`user` = `{nim, namaPengguna, role, isPj, idOrganisasi, organisasi:{nama, singkatan, logoUrl}}`.
+`user` = `{nim, namaPengguna, noWhatsapp, role, isPj, idOrganisasi, organisasi:{nama, singkatan, logoUrl}}`.
 
 ## Akun dan referensi (user)
 
@@ -39,6 +39,7 @@ Akses: **publik**, **user** (semua role), **peminjam** (hanya Peminjam), **pj** 
 |---|---|
 | `GET /api/me` | profil saat ini |
 | `POST /api/ubah-password` | `passwordLama`, `passwordBaru`, `konfirmasiPassword`; respons memuat token baru (token lama gugur) |
+| `POST /api/ubah-whatsapp` | `noWhatsapp` wajib diisi dan tidak boleh kosong |
 | `GET /api/organisasi`, `GET /api/kategori` | referensi untuk filter dan form |
 | `GET /api/badge` | angka sidebar: `pengajuanSaya` dan, untuk PJ, `pj` |
 
@@ -94,8 +95,8 @@ Akses: **publik**, **user** (semua role), **peminjam** (hanya Peminjam), **pj** 
 | `GET /api/kelola-pengajuan-pj`, `.../{id}` | pemohon dari OKI sendiri; detail memuat `lampiranUrl` |
 | `POST /api/kelola-pengajuan-pj/{id}/setujui` / `/tolak` | tolak butuh `alasan` |
 | `GET /api/kelola-pengguna` | filter `role`, `status=aktif\|nonaktif`, `q` |
-| `POST /api/kelola-pengguna` | `nim`, `namaPengguna`, `role?`; password awal = NIM |
-| `GET /api/kelola-pengguna/{nim}`, `PUT /api/kelola-pengguna/{nim}` | ubah `nim?`, `namaPengguna?`, `role?` |
+| `POST /api/kelola-pengguna` | `nim`, `namaPengguna`, `noWhatsapp` (wajib), `role?`; password awal = NIM |
+| `GET /api/kelola-pengguna/{nim}`, `PUT /api/kelola-pengguna/{nim}` | ubah `nim?`, `namaPengguna?`, `role?`, `noWhatsapp?` (jika dikirim wajib tidak kosong) |
 | `PUT /api/kelola-pengguna/{nim}/status` | `statusAkun: true\|false` |
 | `GET /api/kelola-pengguna/request-password`, `.../{id}` | filter `status=Menunggu,Dikonfirmasi` |
 | `POST /api/kelola-pengguna/request-password/{id}/proses` | buat token 24 jam; respons `{tautanReset, pesan, waUrl, berlakuSampai}` (token hanya muncul sekali) |

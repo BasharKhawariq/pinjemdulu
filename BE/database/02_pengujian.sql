@@ -51,10 +51,22 @@ LANGUAGE sql AS $$ SELECT public.fn_hari_ini() + p_n $$;
 -- A. PENGUJIAN INTEGRITAS
 -- ---------------------------------------------------------------------
 -- A1. Password: wajib hash; pengguna baru berpassword = NIM
-SELECT pg_temp.harus_gagal('Password polos ditolak CHECK',
-  $q$INSERT INTO pengguna (nim, id_organisasi, nama_pengguna, password_hash) VALUES ('9990000001', 1, 'X', 'passwordpolos')$q$,
+SELECT pg_temp.harus_gagal('Password polos ditolak',
+  $q$INSERT INTO pengguna (nim, id_organisasi, nama_pengguna, no_whatsapp, password_hash) VALUES ('9990000001', 1, 'X', '+6281200000099', 'passwordpolos')$q$,
   'ck_pengguna_hash');
-SELECT pg_temp.harus_berhasil('PJ menambah pengguna baru', $q$SELECT sp_tambah_pengguna('2441720001', '9990000002', 'Uji Baru', 1)$q$);
+SELECT pg_temp.harus_gagal('Nomor WhatsApp NULL ditolak',
+  $q$INSERT INTO pengguna (nim, id_organisasi, nama_pengguna, no_whatsapp, password_hash) VALUES ('9990000005', 1, 'Tanpa WA', NULL, crypt('uji', gen_salt('bf', 10)))$q$,
+  'no_whatsapp');
+SELECT pg_temp.harus_gagal('Nomor WhatsApp kosong ditolak',
+  $q$INSERT INTO pengguna (nim, id_organisasi, nama_pengguna, no_whatsapp, password_hash) VALUES ('9990000006', 1, 'WA kosong', '   ', crypt('uji', gen_salt('bf', 10)))$q$,
+  'ck_pengguna_no_whatsapp_not_blank');
+SELECT pg_temp.harus_gagal('Prosedur menambah pengguna mewajibkan WhatsApp',
+  $q$SELECT sp_tambah_pengguna('2441720001', '9990000007', 'Tanpa WA', 1)$q$,
+  'Nomor WhatsApp wajib diisi');
+SELECT pg_temp.harus_berhasil('PJ menambah pengguna baru', $q$SELECT sp_tambah_pengguna('2441720001', '9990000002', 'Uji Baru', 1, 'Peminjam', '+6281200000098')$q$);
+SELECT pg_temp.harus_gagal('Prosedur mengubah pengguna tidak boleh mengosongkan WhatsApp',
+  $q$SELECT sp_ubah_pengguna('2441720001', '9990000002', '9990000002', 'Uji Baru', 1, 'Peminjam', '   ')$q$,
+  'Nomor WhatsApp wajib diisi');
 SELECT pg_temp.cek('Login pengguna baru dengan password = NIM', (SELECT count(*) = 1 FROM fn_login('9990000002', '9990000002')));
 SELECT pg_temp.cek('Yang tersimpan hash bcrypt, bukan NIM',
   (SELECT password_hash <> nim AND password_hash LIKE '$2a$10$%' FROM pengguna WHERE nim = '9990000002'));
@@ -68,7 +80,7 @@ SELECT pg_temp.harus_gagal('PJ tidak boleh memindahkan pengguna ke OKI lain', $q
 SELECT pg_temp.harus_gagal('PJ tidak boleh menonaktifkan akun OKI lain', $q$SELECT sp_set_status_akun('2441720001', '2441720013', false)$q$, 'OKI Anda sendiri');
 SELECT pg_temp.harus_berhasil('PJ menonaktifkan akun OKI sendiri', $q$SELECT sp_set_status_akun('2441720001', '2441720012', false)$q$);
 SELECT pg_temp.harus_gagal('PJ tidak boleh menonaktifkan akun sendiri', $q$SELECT sp_set_status_akun('2441720001', '2441720001', false)$q$, 'akun sendiri');
-SELECT pg_temp.harus_gagal('NIM ganda', $q$SELECT sp_tambah_pengguna('2441720001', '9990000002', 'Dobel', 1)$q$, 'NIM sudah terdaftar');
+SELECT pg_temp.harus_gagal('NIM ganda', $q$SELECT sp_tambah_pengguna('2441720001', '9990000002', 'Dobel', 1, 'Peminjam', '+6281200000097')$q$, 'NIM sudah terdaftar');
 SELECT pg_temp.harus_berhasil('Ubah password', $q$SELECT sp_ubah_password('9990000002', '9990000002', 'PasswordBaru1')$q$);
 SELECT pg_temp.harus_gagal('Ubah password: password lama salah', $q$SELECT sp_ubah_password('9990000002', 'salah', 'PasswordBaru2')$q$, 'Password saat ini salah');
 

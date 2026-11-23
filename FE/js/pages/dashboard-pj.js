@@ -729,8 +729,14 @@ function renderDashboardReturnFormPage() {
 }
 
 
+// Modal ditempatkan pada host terpisah agar buka/tutup modal tidak perlu
+// membangun ulang seluruh dashboard (yang memicu ulang animasi kartu & tabel).
+function renderModalHosts() {
+  return `<div data-detail-modal-host>${renderDetailModal()}</div><div data-management-modal-host>${renderManagementModal()}</div>`;
+}
+
 function renderDashboardContent(ctx = {}) {
-  if (managementModal === 'form-approve-return') return renderDashboardReturnFormPage() + renderManagementModal();
+  if (managementModal === 'form-approve-return') return renderDashboardReturnFormPage() + renderModalHosts();
   const user = ctx.user || currentUser;
   const userName = user?.nama || 'Maitri Sakti';
   const seeAllHref = activeTab === 'pengembalian' ? '#/pengajuan-saya/pengembalian' : '#/pengajuan-saya/peminjaman';
@@ -806,8 +812,7 @@ function renderDashboardContent(ctx = {}) {
         </div>
       </div>
 
-      ${renderDetailModal()}
-      ${renderManagementModal()}
+      ${renderModalHosts()}
     </section>
   `;
 }
@@ -833,6 +838,44 @@ export async function mount(root, ctx = {}) {
   managementReturnPhoto = '';
   managementReturnSanksi = '';
   managementReturnPhotoError = '';
+
+  // Render penuh hanya dilakukan saat struktur halaman berubah (form pengembalian)
+  // atau saat data tabel perlu dimuat ulang. Perubahan state modal saja cukup
+  // memperbarui host modal agar konten dashboard tidak dibangun ulang.
+  let renderedAsFormPage = false;
+
+  const syncModalHosts = () => {
+    const detailHost = rootElement?.querySelector('[data-detail-modal-host]');
+    if (detailHost) detailHost.innerHTML = renderDetailModal();
+    const managementHost = rootElement?.querySelector('[data-management-modal-host]');
+    if (managementHost) managementHost.innerHTML = renderManagementModal();
+  };
+
+  const renderFull = () => {
+    if (!rootElement) return;
+    rootElement.innerHTML = renderDashboardContent(ctx);
+    renderedAsFormPage = managementModal === 'form-approve-return';
+  };
+
+  const refreshDashboard = (forceFull = false) => {
+    if (!rootElement) return;
+    if (forceFull || renderedAsFormPage || managementModal === 'form-approve-return') {
+      renderFull();
+      return;
+    }
+    syncModalHosts();
+  };
+
+  const openDetailModal = (id) => {
+    const rows = activeTab === 'pengembalian' ? getPengembalianTableRows() : getPeminjamanTableRows();
+    detailRow = rows.find((item) => String(item.id) === String(id)) || null;
+    syncModalHosts();
+  };
+
+  const closeDetailModal = () => {
+    detailRow = null;
+    syncModalHosts();
+  };
 
   const reloadData = async () => {
     try {
@@ -866,21 +909,16 @@ export async function mount(root, ctx = {}) {
   };
 
   isLoading = true;
-  if (rootElement) {
-    rootElement.innerHTML = renderDashboardContent(ctx);
-  }
+  renderFull();
 
   await reloadData();
 
-  if (rootElement) {
-    rootElement.innerHTML = renderDashboardContent(ctx);
-  }
+  renderFull();
 
   clickHandler = async (event) => {
-    const refreshDashboard = () => { if (rootElement) rootElement.innerHTML = renderDashboardContent(ctx); };
     const actionEl = event.target.closest('[data-action]');
     if (!actionEl) {
-      if (event.target.matches('[data-modal-overlay]')) { detailRow = null; refreshDashboard(); }
+      if (event.target.matches('[data-modal-overlay]')) { closeDetailModal(); }
       if (event.target.matches('[data-management-modal-backdrop]')) { hideManagementLateTooltip(); managementModal = null; managementModalRow = null; managementError = ''; refreshDashboard(); }
       return;
     }
@@ -924,7 +962,7 @@ export async function mount(root, ctx = {}) {
         await updateMockPeminjamanStatus(id, action === 'management-execute-approve-loan' ? STATUS_PEMINJAMAN.DISETUJUI : STATUS_PEMINJAMAN.DITOLAK, action === 'management-execute-reject-loan' ? { alasanPenolakan: managementRejectReason } : {});
         await reloadData();
         managementNotice = action === 'management-execute-approve-loan' ? 'Pengajuan berhasil disetujui.' : 'Pengajuan berhasil ditolak.';
-        managementModal = action === 'management-execute-approve-loan' ? 'success-approve-loan' : 'success-reject-loan'; managementError = ''; refreshDashboard();
+        managementModal = action === 'management-execute-approve-loan' ? 'success-approve-loan' : 'success-reject-loan'; managementError = ''; refreshDashboard(true);
       } catch (error) { managementError = error?.message || 'Status pengajuan gagal diperbarui.'; refreshDashboard(); }
       return;
     }
@@ -975,7 +1013,7 @@ export async function mount(root, ctx = {}) {
         managementModal = null;
         managementModalRow = null;
         managementError = '';
-        refreshDashboard();
+        refreshDashboard(true);
       } catch (error) {
         managementError = error?.message || 'Pengambilan gagal dikonfirmasi.';
         refreshDashboard();
@@ -1003,7 +1041,7 @@ export async function mount(root, ctx = {}) {
         await updateMockPengembalianStatus(managementModalRow?.idPengembalian || managementModalRow?.id || managementModalRow?.idPeminjaman, STATUS_PEMINJAMAN.DIKEMBALIKAN, { tanggalPengembalian: managementReturnDate, sanksi: managementReturnSanksi, kondisiPengembalian: managementReturnCondition, fotoKondisi: managementReturnPhoto });
         await reloadData();
         managementModal = 'success-approve-return'; managementError = '';
-        refreshDashboard();
+        refreshDashboard(true);
       } catch (error) { managementError = error?.message || 'Pengembalian gagal dikonfirmasi.'; managementModal = 'form-approve-return'; refreshDashboard(); }
       return;
     }
@@ -1019,7 +1057,7 @@ export async function mount(root, ctx = {}) {
     }
     if (action === 'management-back-reject-return') { managementModal = 'reject-return'; managementError = ''; refreshDashboard(); return; }
     if (action === 'management-execute-reject-return') {
-      try { await updateMockPengembalianStatus(managementModalRow?.idPengembalian || managementModalRow?.id || managementModalRow?.idPeminjaman, STATUS_PEMINJAMAN.DITOLAK, { alasanPenolakan: managementReturnReason }); await reloadData(); managementModal = 'success-reject-return'; managementError = ''; refreshDashboard(); }
+      try { await updateMockPengembalianStatus(managementModalRow?.idPengembalian || managementModalRow?.id || managementModalRow?.idPeminjaman, STATUS_PEMINJAMAN.DITOLAK, { alasanPenolakan: managementReturnReason }); await reloadData(); managementModal = 'success-reject-return'; managementError = ''; refreshDashboard(true); }
       catch (error) { managementError = error?.message || 'Pengembalian gagal ditolak.'; managementModal = 'confirm-reject-return'; refreshDashboard(); }
       return;
     }
@@ -1027,7 +1065,7 @@ export async function mount(root, ctx = {}) {
       const nextTab = actionEl.dataset.tab;
       if (nextTab === 'peminjaman' || nextTab === 'pengembalian') {
         managementTab = nextTab;
-        if (rootElement) rootElement.innerHTML = renderDashboardContent(ctx);
+        renderFull();
       }
       return;
     }
@@ -1037,22 +1075,18 @@ export async function mount(root, ctx = {}) {
       if (nextTab === 'peminjaman' || nextTab === 'pengembalian') {
         activeTab = nextTab;
         detailRow = null;
-        if (rootElement) rootElement.innerHTML = renderDashboardContent(ctx);
+        renderFull();
       }
       return;
     }
 
     if (action === 'open-detail') {
-      const id = actionEl.dataset.id;
-      const rows = activeTab === 'pengembalian' ? getPengembalianTableRows() : getPeminjamanTableRows();
-      detailRow = rows.find((item) => String(item.id) === String(id)) || null;
-      if (rootElement) rootElement.innerHTML = renderDashboardContent(ctx);
+      openDetailModal(actionEl.dataset.id);
       return;
     }
 
     if (action === 'close-detail') {
-      detailRow = null;
-      if (rootElement) rootElement.innerHTML = renderDashboardContent(ctx);
+      closeDetailModal();
     }
   };
 
@@ -1141,7 +1175,7 @@ export async function mount(root, ctx = {}) {
       refreshDashboardForPhoto();
     }
   };
-  const refreshDashboardForPhoto = () => { if (rootElement) rootElement.innerHTML = renderDashboardContent(ctx); };
+  const refreshDashboardForPhoto = () => { refreshDashboard(); };
   managementLateTooltipPointerOverHandler = (event) => {
     const trigger = event.target?.closest?.('[data-action="management-show-late-tooltip"]');
     if (!trigger || trigger.contains(event.relatedTarget)) return;

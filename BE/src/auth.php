@@ -91,7 +91,7 @@ function user_payload(array $u): array
     return [
         'nim' => $u['nim'],
         'namaPengguna' => $u['nama_pengguna'],
-        'noWhatsapp' => $u['no_whatsapp'] ?? null,
+        'noWhatsapp' => $u['no_whatsapp'] ?? '',
         'role' => $u['role'],
         'isPj' => $u['is_pj'],
         'idOrganisasi' => $u['id_organisasi'],

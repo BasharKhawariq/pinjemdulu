@@ -8,6 +8,8 @@ import { checkSession } from './services/auth.js';
 import { renderSidebar, renderMobileDrawer, STORAGE_KEY_SIDEBAR, STORAGE_KEY_SIDEBAR_GROUPS } from './ui/sidebar.js';
 import { renderNavbar } from './ui/navbar.js';
 import { renderFooter } from './ui/footer.js';
+import { renderModal } from './ui/modal.js';
+import { renderIcon } from './ui/icons.js';
 import { handleRouteChange, navigate } from './router.js';
 import { getPageTitle } from './lib/navigation.js';
 import { refreshBadges, resetLiveBadgeCounts } from './services/badge.js';
@@ -15,16 +17,17 @@ import { refreshBadges, resetLiveBadgeCounts } from './services/badge.js';
 function initApp() {
   if (typeof document === 'undefined') return;
 
-  // Kunci scroll pada viewport tanpa mengubah posisi atau ukuran body.
-  // Ini menjaga navbar sticky dan konten tetap pada posisi scroll semula.
+  // Kunci scroll viewport sambil mengimbangi lebar scrollbar yang disembunyikan.
+  // Body tidak dibuat fixed/hidden agar navbar sticky tetap stabil.
   function setupModalScrollLock() {
     const htmlElement = document.documentElement;
-    if (!htmlElement) return;
+    const bodyElement = document.body;
+    if (!htmlElement || !bodyElement) return;
 
     const saved = {
       overflow: null,
-      scrollbarGutter: null,
       overscrollBehavior: null,
+      bodyPaddingRight: null,
       locked: false,
     };
 
@@ -40,22 +43,124 @@ function initApp() {
       }
     };
 
+    const modalRootSelector =
+      '[data-modal-backdrop], [data-modal-overlay], [data-management-modal-backdrop], dialog[open]';
+    const prefersReducedMotion = () =>
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const animatedNativeDialogs = new WeakSet();
+
+    const prepareExitClone = (clone) => {
+      clone.setAttribute('data-modal-exit-clone', 'true');
+      clone.setAttribute('aria-hidden', 'true');
+      clone.setAttribute('inert', '');
+      clone.inert = true;
+      clone.removeAttribute('id');
+      clone.querySelectorAll('[id]').forEach((element) => element.removeAttribute('id'));
+      clone.querySelectorAll('.pd-fade-in, .pd-pop-in').forEach((element) => {
+        element.classList.remove('pd-fade-in', 'pd-pop-in');
+      });
+    };
+
+    const removeExitCloneLater = (clone) => {
+      window.setTimeout(() => clone.remove(), 560);
+    };
+
+    const hasReplacementDialog = (dialog) => {
+      const titleId = dialog.getAttribute('aria-labelledby');
+      if (!titleId) return false;
+      return [...document.querySelectorAll('[role="dialog"], dialog[open]')].some(
+        (candidate) =>
+          candidate !== dialog &&
+          !candidate.closest('[data-modal-exit-clone]') &&
+          candidate.getAttribute('aria-labelledby') === titleId
+      );
+    };
+
+    const animateNativeDialogExit = (dialog) => {
+      if (
+        !dialog ||
+        animatedNativeDialogs.has(dialog) ||
+        prefersReducedMotion() ||
+        dialog.hasAttribute('data-modal-exit-content') ||
+        hasReplacementDialog(dialog)
+      ) {
+        return;
+      }
+      animatedNativeDialogs.add(dialog);
+
+      const backdrop = document.createElement('div');
+      backdrop.className =
+        'pd-modal-exit-native fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4';
+      backdrop.setAttribute('data-modal-exit-clone', 'true');
+      backdrop.setAttribute('aria-hidden', 'true');
+      backdrop.setAttribute('inert', '');
+      backdrop.inert = true;
+
+      const clone = dialog.cloneNode(true);
+      prepareExitClone(clone);
+      clone.removeAttribute('data-modal-exit-clone');
+      clone.setAttribute('data-modal-exit-content', 'true');
+      clone.setAttribute('open', '');
+      backdrop.appendChild(clone);
+      document.body.appendChild(backdrop);
+      removeExitCloneLater(backdrop);
+    };
+
+    const animateRemovedModal = (modal) => {
+      if (!modal || modal.hasAttribute('data-modal-exit-clone')) return;
+      if (modal.matches('dialog')) {
+        animateNativeDialogExit(modal);
+        return;
+      }
+      if (prefersReducedMotion()) return;
+      if (modal.id && document.getElementById(modal.id)) return;
+
+      const dialog = modal.querySelector('[role="dialog"], dialog');
+      if (dialog && hasReplacementDialog(dialog)) return;
+
+      const clone = modal.cloneNode(true);
+      prepareExitClone(clone);
+      document.body.appendChild(clone);
+      removeExitCloneLater(clone);
+    };
+
+    const collectModalRoots = (node) => {
+      if (!node || node.nodeType !== 1) return [];
+      const roots = [
+        ...(node.matches(modalRootSelector) ? [node] : []),
+        ...node.querySelectorAll(modalRootSelector),
+      ];
+      return roots.filter(
+        (candidate) => !roots.some((other) => other !== candidate && other.contains(candidate))
+      );
+    };
+
     const hasActivePopup = () => Boolean(document.querySelector(
       'dialog[open], [data-modal-backdrop], [data-modal-overlay], [data-management-modal-backdrop], #mobile-drawer-backdrop.opacity-100'
     ));
 
     const lockPageScroll = () => {
       if (saved.locked) return;
-      saved.locked = true;
+      const scrollbarWidth = Math.max(0, window.innerWidth - htmlElement.clientWidth);
+      const currentBodyPaddingRight =
+        Number.parseFloat(window.getComputedStyle(bodyElement).paddingRight) || 0;
 
+      saved.locked = true;
       saved.overflow = snapshotProperty(htmlElement, 'overflow');
-      saved.scrollbarGutter = snapshotProperty(htmlElement, 'scrollbar-gutter');
       saved.overscrollBehavior = snapshotProperty(htmlElement, 'overscroll-behavior');
+      saved.bodyPaddingRight = snapshotProperty(bodyElement, 'padding-right');
 
       // Kunci scroll viewport saja. Jangan mengubah body menjadi fixed/hidden,
       // karena body adalah induk navbar sticky dan perubahan itu menggeser shell.
+      // Padding mengimbangi lebar scrollbar yang hilang tanpa menyisakan gutter.
+      if (scrollbarWidth > 0) {
+        bodyElement.style.setProperty(
+          'padding-right',
+          `${currentBodyPaddingRight + scrollbarWidth}px`,
+          'important'
+        );
+      }
       htmlElement.style.setProperty('overflow', 'hidden');
-      htmlElement.style.setProperty('scrollbar-gutter', 'stable');
       htmlElement.style.setProperty('overscroll-behavior', 'none');
     };
 
@@ -64,8 +169,8 @@ function initApp() {
       saved.locked = false;
 
       restoreProperty(htmlElement, 'overflow', saved.overflow);
-      restoreProperty(htmlElement, 'scrollbar-gutter', saved.scrollbarGutter);
       restoreProperty(htmlElement, 'overscroll-behavior', saved.overscrollBehavior);
+      restoreProperty(bodyElement, 'padding-right', saved.bodyPaddingRight);
     };
 
     const syncScrollLock = () => {
@@ -73,16 +178,42 @@ function initApp() {
       else unlockPageScroll();
     };
 
-    const observer = new MutationObserver(syncScrollLock);
+    const observer = new MutationObserver((records) => {
+      records.forEach((record) => {
+        if (
+          record.type === 'attributes' &&
+          record.attributeName === 'open' &&
+          record.target.matches('dialog')
+        ) {
+          if (record.target.hasAttribute('open')) {
+            animatedNativeDialogs.delete(record.target);
+          } else if (record.oldValue !== null) {
+            animateNativeDialogExit(record.target);
+          }
+        }
+        record.removedNodes?.forEach((node) => {
+          collectModalRoots(node).forEach(animateRemovedModal);
+        });
+      });
+      syncScrollLock();
+    });
     observer.observe(document.documentElement, {
       subtree: true,
       childList: true,
       attributes: true,
+      attributeOldValue: true,
       attributeFilter: ['open', 'class', 'style', 'aria-hidden'],
     });
 
     // Menangani dialog native yang ditutup melalui method close().
-    document.addEventListener('close', syncScrollLock, true);
+    document.addEventListener(
+      'close',
+      (event) => {
+        if (event.target?.tagName === 'DIALOG') animateNativeDialogExit(event.target);
+        syncScrollLock();
+      },
+      true
+    );
     document.addEventListener('toggle', syncScrollLock, true);
     syncScrollLock();
   }
@@ -185,6 +316,44 @@ function initApp() {
   }
 
   let drawerOpen = false;
+  let logoutTrigger = null;
+
+  function closeLogoutConfirm({ restoreFocus = true } = {}) {
+    const modal = document.getElementById('logout-confirm-modal');
+    modal?.remove();
+
+    if (restoreFocus) logoutTrigger?.focus();
+    logoutTrigger = null;
+  }
+
+  function openLogoutConfirm(trigger) {
+    if (document.getElementById('logout-confirm-modal')) return;
+
+    logoutTrigger = trigger;
+    const mount = document.createElement('template');
+    mount.innerHTML = renderModal({
+      id: 'logout-confirm-modal',
+      title: 'Keluar dari akun?',
+      description: 'Apakah Anda yakin ingin keluar?',
+      variant: 'cancel',
+      maxWidth: 'max-w-sm',
+      showCloseButton: true,
+      closeAction: 'cancel-logout',
+      actions: [
+        { label: 'Batal', action: 'cancel-logout', variant: 'outline' },
+        { label: 'Ya, keluar', action: 'confirm-logout', variant: 'destructive' },
+      ],
+    });
+
+    const modal = mount.content.firstElementChild;
+    if (!modal) {
+      logoutTrigger = null;
+      return;
+    }
+
+    document.body.appendChild(modal);
+    modal.querySelector('[data-action="cancel-logout"]')?.focus();
+  }
 
   // Mainkan animasi masuk halaman setiap kali rute berubah.
   // Class dihapus dan ditambah ulang dengan pemaksaan reflow agar animasi tidak terlewat.
@@ -228,6 +397,7 @@ function initApp() {
       sidebarContainer.innerHTML = renderSidebar({ user, currentHash, collapsed });
       const nav = sidebarContainer.querySelector('nav[aria-label="Navigasi Utama"]');
       if (nav) nav.scrollTop = previousNavScrollTop;
+      if (collapsed) persistSidebarGroupState();
     }
 
     if (navbarContainer) {
@@ -271,6 +441,29 @@ function initApp() {
       toggle.setAttribute('title', label);
       toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
     }
+
+    if (collapsed) {
+      closeSidebarSubmenus(aside);
+      persistSidebarGroupState();
+    }
+  }
+
+  function closeSidebarSubmenus(aside) {
+    aside.querySelectorAll('[data-action="toggle-group"][data-group]').forEach((button) => {
+      const sub = button.closest('li')?.querySelector('.pd-sb-sub');
+      if (!sub) return;
+
+      sub.setAttribute('data-open', 'false');
+      button.setAttribute('aria-expanded', 'false');
+
+      const chevron = button.querySelector('[data-chevron]');
+      if (chevron) {
+        chevron.innerHTML = renderIcon(
+          'ChevronDown',
+          'h-4 w-4 transition-colors sidebar-nav-group-chevron-svg'
+        );
+      }
+    });
   }
 
   function persistSidebarGroupState() {
@@ -309,6 +502,11 @@ function initApp() {
   document.addEventListener('click', (e) => {
     const actionEl = e.target.closest('[data-action]');
     if (!actionEl) {
+      const logoutModal = document.getElementById('logout-confirm-modal');
+      if (logoutModal && e.target === logoutModal) {
+        closeLogoutConfirm();
+        return;
+      }
       if (drawerOpen && e.target.closest('a[href^="#/"]')) {
         drawerOpen = false;
         renderShell();
@@ -344,13 +542,23 @@ function initApp() {
         chevronIcon?.classList.toggle('rotate-180', willOpen);
       }
     } else if (action === 'logout') {
+      openLogoutConfirm(actionEl);
+    } else if (action === 'cancel-logout') {
+      closeLogoutConfirm();
+    } else if (action === 'confirm-logout') {
+      closeLogoutConfirm({ restoreFocus: false });
       logout();
       navigate('#/login');
     }
   });
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && drawerOpen) {
+    if (e.key !== 'Escape') return;
+    if (document.getElementById('logout-confirm-modal')) {
+      closeLogoutConfirm();
+      return;
+    }
+    if (drawerOpen) {
       drawerOpen = false;
       renderShell();
     }

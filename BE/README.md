@@ -29,6 +29,10 @@ Syarat: PHP 8.1+ dengan ekstensi `pdo_pgsql`, `curl`, `fileinfo`, `mbstring`.
 4. Jalankan: `php -S localhost:8000 -t public public/index.php`
 5. Uji: `curl localhost:8000/api/health`
 
+Untuk database yang sudah berisi data, jalankan `database/03_wajibkan_no_whatsapp.sql`.
+Migrasi akan berhenti dan menampilkan akun yang nomor WhatsApp-nya masih kosong/NULL;
+isi nomor asli akun tersebut terlebih dahulu, lalu jalankan ulang migrasi.
+
 Login data uji (password awal = NIM): PJ HMTI `2441720001`, Peminjam BEM `2441720013`.
 
 ```bash

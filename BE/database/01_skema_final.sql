@@ -38,14 +38,15 @@ CREATE TABLE pengguna (
   nim            varchar(20)  PRIMARY KEY,
   id_organisasi  integer      NOT NULL REFERENCES organisasi (id_organisasi) ON UPDATE CASCADE ON DELETE RESTRICT,
   nama_pengguna  varchar(100) NOT NULL CHECK (btrim(nama_pengguna) <> ''),
-  no_whatsapp    varchar(20),
+  no_whatsapp    varchar(20) NOT NULL,
   password_hash  text         NOT NULL,
   role           role_pengguna NOT NULL DEFAULT 'Peminjam',
   status_akun    boolean      NOT NULL DEFAULT true,
   created_at     timestamptz  NOT NULL DEFAULT now(),
   updated_at     timestamptz  NOT NULL DEFAULT now(),
   -- hanya hash bcrypt ($2a$10$ + 53 karakter) yang boleh tersimpan
-  CONSTRAINT ck_pengguna_hash CHECK (password_hash ~ '^\$2[abxy]\$[0-9]{2}\$.{53}$')
+  CONSTRAINT ck_pengguna_hash CHECK (password_hash ~ '^\$2[abxy]\$[0-9]{2}\$.{53}$'),
+  CONSTRAINT ck_pengguna_no_whatsapp_not_blank CHECK (btrim(no_whatsapp) <> '')
 );
 
 CREATE TABLE kategori (
@@ -726,10 +727,13 @@ END $$;
 -- Password default = NIM (di-hash oleh trigger trg_pengguna_password)
 CREATE FUNCTION sp_tambah_pengguna(p_pj_nim varchar, p_nim varchar, p_nama varchar,
                                    p_id_organisasi integer, p_role role_pengguna DEFAULT 'Peminjam',
-                                   p_no_whatsapp varchar DEFAULT NULL)
+                                   p_no_whatsapp varchar DEFAULT '')
 RETURNS varchar LANGUAGE plpgsql SET search_path = public AS $$
 BEGIN
   PERFORM fn_pastikan_pj(p_pj_nim, p_id_organisasi);   -- PJ hanya menambah pengguna ke OKI-nya sendiri
+  IF p_no_whatsapp IS NULL OR btrim(p_no_whatsapp) = '' THEN
+    RAISE EXCEPTION 'Nomor WhatsApp wajib diisi';
+  END IF;
   INSERT INTO pengguna (nim, id_organisasi, nama_pengguna, role, no_whatsapp) VALUES (p_nim, p_id_organisasi, p_nama, p_role, p_no_whatsapp);
   RETURN p_nim;
 EXCEPTION WHEN unique_violation THEN
@@ -1076,24 +1080,24 @@ INSERT INTO kategori (nama_kategori) VALUES
   ('Elektronik'), ('Audio'), ('Furnitur'), ('Acara'), ('ATK'), ('Dokumentasi');
 
 -- password_hash TIDAK diisi => trigger menjadikannya hash dari NIM
-INSERT INTO pengguna (nim, id_organisasi, nama_pengguna, role, status_akun)
-SELECT v.nim, o.id_organisasi, v.nama, v.role::role_pengguna, v.aktif
+INSERT INTO pengguna (nim, id_organisasi, nama_pengguna, no_whatsapp, role, status_akun)
+SELECT v.nim, o.id_organisasi, v.nama, v.no_whatsapp, v.role::role_pengguna, v.aktif
 FROM (VALUES
-  ('2441720001', 'HMTI',     'Rizky Pratama',    'Penanggung Jawab', true),
-  ('2441720006', 'HMTI',     'Hendra Kurniawan', 'Penanggung Jawab', true),
-  ('2441720002', 'BEM',      'Nadia Putri',      'Penanggung Jawab', true),
-  ('2441720003', 'THEATRISIC', 'Dimas Saputra',    'Penanggung Jawab', true),
-  ('2441720004', 'HME',      'Salsa Maharani',   'Penanggung Jawab', true),
-  ('2441720005', 'OPA GANENDRA GIRI',   'Bagas Wicaksono',  'Penanggung Jawab', true),
-  ('2441720011', 'HMTI',     'Fajar Nugroho',    'Peminjam', true),
-  ('2441720012', 'HMTI',     'Citra Lestari',    'Peminjam', true),
-  ('2441720018', 'HMTI',     'Dewi Anggraini',   'Peminjam', false),
-  ('2441720013', 'BEM',      'Andi Setiawan',    'Peminjam', true),
-  ('2441720017', 'BEM',      'Yoga Prasetyo',    'Peminjam', true),
-  ('2441720014', 'THEATRISIC', 'Putri Ayu',        'Peminjam', true),
-  ('2441720015', 'HME',      'Rendra Mahendra',  'Peminjam', true),
-  ('2441720016', 'OPA GANENDRA GIRI',   'Lina Marlina',     'Peminjam', true)
-) AS v(nim, oki, nama, role, aktif)
+  ('2441720001', 'HMTI', 'Rizky Pratama', '+6281200000001', 'Penanggung Jawab', true),
+  ('2441720006', 'HMTI', 'Hendra Kurniawan', '+6281200000002', 'Penanggung Jawab', true),
+  ('2441720002', 'BEM', 'Nadia Putri', '+6281200000003', 'Penanggung Jawab', true),
+  ('2441720003', 'THEATRISIC', 'Dimas Saputra', '+6281200000004', 'Penanggung Jawab', true),
+  ('2441720004', 'HME', 'Salsa Maharani', '+6281200000005', 'Penanggung Jawab', true),
+  ('2441720005', 'OPA GANENDRA GIRI', 'Bagas Wicaksono', '+6281200000006', 'Penanggung Jawab', true),
+  ('2441720011', 'HMTI', 'Fajar Nugroho', '+6281200000007', 'Peminjam', true),
+  ('2441720012', 'HMTI', 'Citra Lestari', '+6281200000008', 'Peminjam', true),
+  ('2441720018', 'HMTI', 'Dewi Anggraini', '+6281200000009', 'Peminjam', false),
+  ('2441720013', 'BEM', 'Andi Setiawan', '+6281200000010', 'Peminjam', true),
+  ('2441720017', 'BEM', 'Yoga Prasetyo', '+6281200000011', 'Peminjam', true),
+  ('2441720014', 'THEATRISIC', 'Putri Ayu', '+6281200000012', 'Peminjam', true),
+  ('2441720015', 'HME', 'Rendra Mahendra', '+6281200000013', 'Peminjam', true),
+  ('2441720016', 'OPA GANENDRA GIRI', 'Lina Marlina', '+6281200000014', 'Peminjam', true)
+) AS v(nim, oki, nama, no_whatsapp, role, aktif)
 JOIN organisasi o ON o.singkatan = v.oki;
 
 INSERT INTO inventaris (id_organisasi, id_kategori, nama_barang, total_unit, kondisi, deskripsi)

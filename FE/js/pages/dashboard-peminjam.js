@@ -434,6 +434,21 @@ function renderDetailModal() {
   `;
 }
 
+// Modal ditempatkan pada host terpisah agar buka/tutup modal tidak perlu
+// membangun ulang seluruh dashboard (yang memicu ulang animasi kartu & tabel).
+function openDetailModal(id) {
+  const rows = activeTab === 'pengembalian' ? getPengembalianTableRows() : getPeminjamanTableRows();
+  detailRow = rows.find((item) => String(item.id) === String(id)) || null;
+  const host = rootElement?.querySelector('[data-detail-modal-host]');
+  if (host) host.innerHTML = renderDetailModal();
+}
+
+function closeDetailModal() {
+  detailRow = null;
+  const host = rootElement?.querySelector('[data-detail-modal-host]');
+  if (host) host.innerHTML = '';
+}
+
 function renderDashboardContent(ctx = {}) {
   const user = ctx.user || currentUser;
   const userName = user?.nama || 'Maitri Sakti';
@@ -506,7 +521,7 @@ function renderDashboardContent(ctx = {}) {
         </div>
       </div>
 
-      ${renderDetailModal()}
+      <div data-detail-modal-host>${renderDetailModal()}</div>
     </section>
   `;
 }
@@ -561,8 +576,7 @@ export async function mount(root, ctx = {}) {
     const actionEl = event.target.closest('[data-action]');
     if (!actionEl) {
       if (event.target.matches('[data-modal-overlay]')) {
-        detailRow = null;
-        if (rootElement) rootElement.innerHTML = renderDashboardContent(ctx);
+        closeDetailModal();
       }
       return;
     }
@@ -579,16 +593,12 @@ export async function mount(root, ctx = {}) {
     }
 
     if (action === 'open-detail') {
-      const id = actionEl.dataset.id;
-      const rows = activeTab === 'pengembalian' ? getPengembalianTableRows() : getPeminjamanTableRows();
-      detailRow = rows.find((item) => String(item.id) === String(id)) || null;
-      if (rootElement) rootElement.innerHTML = renderDashboardContent(ctx);
+      openDetailModal(actionEl.dataset.id);
       return;
     }
 
     if (action === 'close-detail') {
-      detailRow = null;
-      if (rootElement) rootElement.innerHTML = renderDashboardContent(ctx);
+      closeDetailModal();
     }
   };
 

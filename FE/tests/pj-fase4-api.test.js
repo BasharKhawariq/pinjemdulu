@@ -112,7 +112,7 @@ test('Integrasi Real API Fase 4: Alur Penanggung Jawab (PJ Dimas Saputra)', asyn
     assert.ok(deleted.success, 'Kategori harus berhasil dihapus');
   });
 
-  const testNim = `99${String(Date.now()).slice(-8)}`;
+  const testNim = `99${String(Date.now()).slice(-10)}`;
   await t.test('6. Kelola Pengguna: GET, POST, PUT /api/kelola-pengguna', async () => {
     const users = await getUsers();
     assert.ok(Array.isArray(users), 'Daftar pengguna harus array');
@@ -123,6 +123,7 @@ test('Integrasi Real API Fase 4: Alur Penanggung Jawab (PJ Dimas Saputra)', asyn
       nim: testNim,
       nama: 'Mahasiswa Anggota Uji',
       role: 'Peminjam',
+      noWhatsapp: '+6281200000020',
     });
     assert.ok(createdUser, 'Pengguna baru berhasil ditambahkan');
 
@@ -143,4 +144,3 @@ test('Integrasi Real API Fase 4: Alur Penanggung Jawab (PJ Dimas Saputra)', asyn
     assert.ok(Array.isArray(pjReqList), 'Daftar pengajuan PJ harus array');
   });
 });
-
